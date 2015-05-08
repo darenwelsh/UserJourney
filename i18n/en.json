@@ -1,15 +1,15 @@
 {
-	"wiretap": "Wiretap",
-	"wiretap-desc": "[[Special:Wiretap|Tracks page views]] and offers several data displays",
-	"wiretap-viewmode": "View",
-	"wiretap-hits": "Individual hits",
-	"wiretap-dailytotals": "Daily hits totals",
-	"wiretap-dailytotalschart": "Daily hits totals chart",
-	"wiretap-dailyunique-user-hits": "Unique user-hits",
-	"wiretap-dailyunique-user-page-hits": "Unique user-page-hits",
-	"wiretap-filteruser": "filter",
-	"wiretap-filterpage": "filter",
-	"wiretap-unfilter": "Unfilter",
-	"wiretap-rawdata": "Data",
-	"wiretap-chart": "Chart"
+	"userjourney": "UserJourney",
+	"userjourney-desc": "[[Special:UserJourney|Tracks user journey]]",
+	"userjourney-viewmode": "View",
+	"userjourney-hits": "Individual hits",
+	"userjourney-dailytotals": "Daily hits totals",
+	"userjourney-dailytotalschart": "Daily hits totals chart",
+	"userjourney-dailyunique-user-hits": "Unique user-hits",
+	"userjourney-dailyunique-user-page-hits": "Unique user-page-hits",
+	"userjourney-filteruser": "filter",
+	"userjourney-filterpage": "filter",
+	"userjourney-unfilter": "Unfilter",
+	"userjourney-rawdata": "Data",
+	"userjourney-chart": "Chart"
 }

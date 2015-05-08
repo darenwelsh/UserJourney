@@ -9,6 +9,7 @@
  *
  * This shim maintains compatibility back to MediaWiki 1.17.
  */
+
 $messages = array();
 if ( !function_exists( 'wfJsonI18nShimf2b01d837887d3daWiretap' ) ) {
 	function wfJsonI18nShimf2b01d837887d3daWiretap( $cache, $code, &$cachedData ) {
