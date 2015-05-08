@@ -2,64 +2,48 @@
 
 $wgExtensionCredits['specialpage'][] = array(
 	'path' => __FILE__,
-	'name' => 'Wiretap',
+	'name' => 'UserJourney',
 	'author'=> array(
-		'[https://www.mediawiki.org/wiki/User:Jamesmontalvo3 James Montalvo]'
+		'[https://www.mediawiki.org/wiki/User:Darenwelsh Daren Welsh]'
 	),
-	'descriptionmsg' => 'wiretap-desc',
+	'descriptionmsg' => 'userjourney-desc',
 	'version' => 0.1,
-	'url' => 'https://www.mediawiki.org/wiki/Extension:Wiretap',
+	'url' => 'https://www.mediawiki.org/wiki/Extension:UserJourney',
 );
 
-$wgExtensionMessagesFiles['Wiretap'] = __DIR__ . '/Wiretap.i18n.php';
-$GLOBALS['wgMessagesDirs']['Wiretap'] = __DIR__ . '/i18n';
-$wgExtensionMessagesFiles['WiretapAlias'] = __DIR__ . '/Wiretap.alias.php';
+$wgExtensionMessagesFiles['UserJourney'] = __DIR__ . '/UserJourney.i18n.php';
+$GLOBALS['wgMessagesDirs']['UserJourney'] = __DIR__ . '/i18n';
+$wgExtensionMessagesFiles['UserJourneyAlias'] = __DIR__ . '/UserJourney.alias.php';
 
-$wgAutoloadClasses['Wiretap'] = __DIR__ . '/Wiretap.body.php'; // autoload body class
-$wgAutoloadClasses['SpecialWiretap'] = __DIR__ . '/SpecialWiretap.php'; // autoload special page class
+$wgAutoloadClasses['UserJourney'] = __DIR__ . '/UserJourney.body.php'; // autoload body class
+$wgAutoloadClasses['SpecialUserJourney'] = __DIR__ . '/SpecialUserJourney.php'; // autoload special page class
 
-$wgSpecialPages['Wiretap'] = 'SpecialWiretap'; // register special page
+$wgSpecialPages['UserJourney'] = 'SpecialUserJourney'; // register special page
 
-// $wgHooks['ParserAfterTidy'][] = 'Wiretap::updateTable';
-// $wgHooks['BeforePageDisplay'][] = 'Wiretap::updateTable';
-
-// collects wiretap info from hook that provides necessary inputs
+// collects extension info from hook that provides necessary inputs
 // but does not record the information in the database
-$wgHooks['BeforeInitialize'][] = 'Wiretap::updateTable';
+$wgHooks['BeforeInitialize'][] = 'UserJourney::updateTable';
 
 // records the information at the latest possible time in order to
 // record the length of time required to build the page.
-$wgHooks['AfterFinalPageOutput'][] = 'Wiretap::recordInDatabase';
+$wgHooks['AfterFinalPageOutput'][] = 'UserJourney::recordInDatabase';
 
 // update database (using maintenance/update.php)
-$wgHooks['LoadExtensionSchemaUpdates'][] = 'Wiretap::updateDatabase';
-
-
+$wgHooks['LoadExtensionSchemaUpdates'][] = 'UserJourney::updateDatabase';
 
 $wiretapResourceTemplate = array(
 	'localBasePath' => __DIR__ . '/modules',
-	'remoteExtPath' => 'Wiretap/modules',
+	'remoteExtPath' => 'UserJourney/modules',
 );
 
 $wgResourceModules += array(
 
-	// 'ext.wiretap.base' => $watchAnalyticsResourceTemplate + array(
-	// 	'styles' => 'base/ext.wiretap.base.css',
-	// ),
-
-	'ext.wiretap.charts' => $wiretapResourceTemplate + array(
+/*	'ext.wiretap.charts' => $wiretapResourceTemplate + array(
 		'styles' => 'charts/ext.wiretap.charts.css',
 		'scripts' => array(
 			'charts/Chart.js',
 			'charts/ext.wiretap.charts.js',
 		),
-		// 'messages' => array(
-		// 	'watchanalytics-pause-visualization',
-		// 	'watchanalytics-unpause-visualization',
-		// ),
-		// 'dependencies' => array(
-		// 	'base',
-		// ),
 
 	),
 
@@ -67,13 +51,6 @@ $wgResourceModules += array(
 		'scripts' => array(
 			'd3js/ext.wiretap.d3.js',
 		),
-		// 'messages' => array(
-		// 	'watchanalytics-pause-visualization',
-		// 	'watchanalytics-unpause-visualization',
-		// ),
-		// 'dependencies' => array(
-		// 	'base',
-		// ),
 
 	),
 
@@ -86,14 +63,11 @@ $wgResourceModules += array(
 			'nvd3js/nv.d3.js',
 			'nvd3js/ext.wiretap.nvd3.js',
 		),
-		// 'messages' => array(
-		// 	'watchanalytics-pause-visualization',
-		// 	'watchanalytics-unpause-visualization',
-		// ),
 		'dependencies' => array(
 			'ext.wiretap.d3.js',
 		),
 
 	),
+*/
 
 );
