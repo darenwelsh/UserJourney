@@ -1,12 +1,12 @@
 <?php
 
-class SpecialWiretap extends SpecialPage {
+class SpecialUserJourney extends SpecialPage {
 
 	public $mMode;
 
 	public function __construct() {
 		parent::__construct( 
-			"Wiretap", // 
+			"UserJourney", // 
 			"",  // rights required to view
 			true // show in Special:SpecialPages
 		);
@@ -53,17 +53,17 @@ class SpecialWiretap extends SpecialPage {
 		global $wgRequest;
 		
 		// show the names of the different views
-		$navLine = '<strong>' . wfMsg( 'wiretap-viewmode' ) . ':</strong> ';
+		$navLine = '<strong>' . wfMsg( 'userjourney-viewmode' ) . ':</strong> ';
 
 		$filterUser = $wgRequest->getVal( 'filterUser' );
 		$filterPage = $wgRequest->getVal( 'filterPage' );
 		
 		if ( $filterUser || $filterPage ) {
 			
-			$WiretapTitle = SpecialPage::getTitleFor( 'Wiretap' );
+			$UserJourneyTitle = SpecialPage::getTitleFor( 'UserJourney' );
 			$unfilterLink = ': (' . Xml::element( 'a',
-				array( 'href' => $WiretapTitle->getLocalURL() ),
-				wfMsg( 'wiretap-unfilter' )
+				array( 'href' => $UserJourneyTitle->getLocalURL() ),
+				wfMsg( 'userjourney-unfilter' )
 			) . ')';
 
 		}
@@ -73,21 +73,21 @@ class SpecialWiretap extends SpecialPage {
 		
 		$navLine .= "<ul>";
 
-		$navLine .= "<li>" . $this->createHeaderLink( 'wiretap-hits' ) . $unfilterLink . "</li>";
+		$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-hits' ) . $unfilterLink . "</li>";
 
-		$navLine .= "<li>" . wfMessage( 'wiretap-dailytotals' )->text() 
-			. ": (" . $this->createHeaderLink( 'wiretap-rawdata', 'total-hits-data' )
-			. ") (" . $this->createHeaderLink( 'wiretap-chart', 'total-hits-chart' )
+		$navLine .= "<li>" . wfMessage( 'userjourney-dailytotals' )->text() 
+			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'total-hits-data' )
+			. ") (" . $this->createHeaderLink( 'userjourney-chart', 'total-hits-chart' )
 			. ")</li>";
 		
-		$navLine .= "<li>" . wfMessage( 'wiretap-dailyunique-user-hits' )->text() 
-			. ": (" . $this->createHeaderLink( 'wiretap-rawdata', 'unique-user-data' )
-			. ") (" . $this->createHeaderLink( 'wiretap-chart', 'unique-user-chart' )
+		$navLine .= "<li>" . wfMessage( 'userjourney-dailyunique-user-hits' )->text() 
+			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'unique-user-data' )
+			. ") (" . $this->createHeaderLink( 'userjourney-chart', 'unique-user-chart' )
 			. ")</li>";
 
-		$navLine .= "<li>" . wfMessage( 'wiretap-dailyunique-user-page-hits' )->text() 
-			. ": (" . $this->createHeaderLink( 'wiretap-rawdata', 'unique-user-page-data' )
-			. ") (" . $this->createHeaderLink( 'wiretap-chart', 'unique-user-page-chart' )
+		$navLine .= "<li>" . wfMessage( 'userjourney-dailyunique-user-page-hits' )->text() 
+			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'unique-user-page-data' )
+			. ") (" . $this->createHeaderLink( 'userjourney-chart', 'unique-user-page-chart' )
 			. ")</li>";
 			
 		$navLine .= "</ul>";
@@ -99,7 +99,7 @@ class SpecialWiretap extends SpecialPage {
 	
 	function createHeaderLink($msg, $query_param = '' ) {
 	
-		$WiretapTitle = SpecialPage::getTitleFor( 'Wiretap' );
+		$UserJourneyTitle = SpecialPage::getTitleFor( 'UserJourney' );
 
 		if ( $this->mMode == $query_param ) {
 			return Xml::element( 'strong',
@@ -108,7 +108,7 @@ class SpecialWiretap extends SpecialPage {
 			);
 		} else {
 			return Xml::element( 'a',
-				array( 'href' => $WiretapTitle->getLocalURL( array( 'show' => $query_param ) ) ),
+				array( 'href' => $UserJourneyTitle->getLocalURL( array( 'show' => $query_param ) ) ),
 				wfMsg( $msg )
 			);
 		}
@@ -118,9 +118,9 @@ class SpecialWiretap extends SpecialPage {
 	public function hitsList () {
 		global $wgOut, $wgRequest;
 
-		$wgOut->setPageTitle( 'Wiretap' );
+		$wgOut->setPageTitle( 'UserJourney' );
 
-		$pager = new WiretapPager();
+		$pager = new UserJourneyPager();
 		$pager->filterUser = $wgRequest->getVal( 'filterUser' );
 		$pager->filterPage = $wgRequest->getVal( 'filterPage' );
 		
@@ -145,7 +145,7 @@ class SpecialWiretap extends SpecialPage {
 	public function totals () {
 		global $wgOut;
 
-		$wgOut->setPageTitle( 'Wiretap: Daily Totals' );
+		$wgOut->setPageTitle( 'UserJourney: Daily Totals' );
 
 		$html = '<table class="wikitable"><tr><th>Date</th><th>Hits</th></tr>';
 		// $html = $form;
@@ -155,23 +155,23 @@ class SpecialWiretap extends SpecialPage {
 		// else {
 			// $html .= '<p>' . wfMsgHTML('listusers-noresult') . '</p>';
 		// }
-		// SELECT wiretap.hit_year, wiretap.hit_month, wiretap.hit_day, count(*) AS num_hits
-		// FROM wiretap
-		// WHERE wiretap.hit_timestamp>20131001000000 
-		// GROUP BY wiretap.hit_year, wiretap.hit_month, wiretap.hit_day
-		// ORDER BY wiretap.hit_year DESC, wiretap.hit_month DESC, wiretap.hit_day DESC
+		// SELECT userjourney.hit_year, userjourney.hit_month, userjourney.hit_day, count(*) AS num_hits
+		// FROM userjourney
+		// WHERE userjourney.hit_timestamp>20131001000000 
+		// GROUP BY userjourney.hit_year, userjourney.hit_month, userjourney.hit_day
+		// ORDER BY userjourney.hit_year DESC, userjourney.hit_month DESC, userjourney.hit_day DESC
 		// LIMIT 100000;
 		$dbr = wfGetDB( DB_SLAVE );
 
 		$res = $dbr->select(
-			array('w' => 'wiretap'),
+			array('w' => 'userjourney'),
 			array(
 				"w.hit_year AS year", 
 				"w.hit_month AS month",
 				"w.hit_day AS day",
 				"count(*) AS num_hits",
 			),
-			null, // CONDITIONS? 'wiretap.hit_timestamp>20131001000000',
+			null, // CONDITIONS? 'userjourney.hit_timestamp>20131001000000',
 			__METHOD__,
 			array(
 				"DISTINCT",
@@ -196,22 +196,22 @@ class SpecialWiretap extends SpecialPage {
 	public function totalsChart () {
 		global $wgOut;
 
-		$wgOut->setPageTitle( 'Wiretap: Daily Totals Chart' );
-		$wgOut->addModules( 'ext.wiretap.charts' );
+		$wgOut->setPageTitle( 'UserJourney: Daily Totals Chart' );
+		$wgOut->addModules( 'ext.userjourney.charts' );
 
-		$html = '<canvas id="wiretapChart" width="400" height="400"></canvas>';
+		$html = '<canvas id="userjourneyChart" width="400" height="400"></canvas>';
 
 		$dbr = wfGetDB( DB_SLAVE );
 
 		$res = $dbr->select(
-			array('w' => 'wiretap'),
+			array('w' => 'userjourney'),
 			array(
 				"w.hit_year AS year", 
 				"w.hit_month AS month",
 				"w.hit_day AS day",
 				"count(*) AS num_hits",
 			),
-			null, //'w.hit_timestamp > 20140801000000', //null, // CONDITIONS? 'wiretap.hit_timestamp>20131001000000',
+			null, //'w.hit_timestamp > 20140801000000', //null, // CONDITIONS? 'userjourney.hit_timestamp>20131001000000',
 			__METHOD__,
 			array(
 				"DISTINCT",
@@ -240,7 +240,7 @@ class SpecialWiretap extends SpecialPage {
 		}
 		
 		//$html .= "<pre>" . print_r( $data, true ) . "</pre>";
-		$html .= "<script type='text/template-json' id='wiretap-data'>" . json_encode( $data ) . "</script>";
+		$html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
 		$wgOut->addHTML( $html );
 
@@ -262,9 +262,9 @@ class SpecialWiretap extends SpecialPage {
 		}
 		
 		$res = $dbr->select(
-			array('w' => 'wiretap'),
+			array('w' => 'userjourney'),
 			$fields,
-			null, // CONDITIONS? 'wiretap.hit_timestamp>20131001000000',
+			null, // CONDITIONS? 'userjourney.hit_timestamp>20131001000000',
 			__METHOD__,
 			array(
 				// "DISTINCT",
@@ -297,7 +297,7 @@ class SpecialWiretap extends SpecialPage {
 			$pageTitleText = "Daily Unique User-Hits";
 		}
 		
-		$wgOut->setPageTitle( 'Wiretap: ' . $pageTitleText );
+		$wgOut->setPageTitle( 'UserJourney: ' . $pageTitleText );
 
 		$html = '<table class="wikitable"><tr><th>Date</th><th>Hits</th></tr>';
 		
@@ -324,10 +324,10 @@ class SpecialWiretap extends SpecialPage {
 			$pageTitleText = "Daily Unique User-Hits";
 		}
 		
-		$wgOut->setPageTitle( "Wiretap: $pageTitleText Chart" );
-		$wgOut->addModules( 'ext.wiretap.charts.nvd3' );
+		$wgOut->setPageTitle( "UserJourney: $pageTitleText Chart" );
+		$wgOut->addModules( 'ext.userjourney.charts.nvd3' );
 
-		$html = '<div id="wiretap-chart"><svg height="400px"></svg></div>';
+		$html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
 
 		$rows = $this->getUniqueRows( $showUniquePageHits, "ASC" );
 
@@ -362,7 +362,7 @@ class SpecialWiretap extends SpecialPage {
 		);
 
 		//$html .= "<pre>" . print_r( $data, true ) . "</pre>";
-		$html .= "<script type='text/template-json' id='wiretap-data'>" . json_encode( $data ) . "</script>";
+		$html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
 		$wgOut->addHTML( $html );
 	
@@ -371,22 +371,22 @@ class SpecialWiretap extends SpecialPage {
 	public function totalsChart2 () {
 		global $wgOut;
 
-		$wgOut->setPageTitle( 'Wiretap: Daily Totals Chart' );
-		$wgOut->addModules( 'ext.wiretap.charts.nvd3' );
+		$wgOut->setPageTitle( 'UserJourney: Daily Totals Chart' );
+		$wgOut->addModules( 'ext.userjourney.charts.nvd3' );
 
-		$html = '<div id="wiretap-chart"><svg height="400px"></svg></div>';
+		$html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
 
 		$dbr = wfGetDB( DB_SLAVE );
 
 		$res = $dbr->select(
-			array('w' => 'wiretap'),
+			array('w' => 'userjourney'),
 			array(
 				"w.hit_year AS year", 
 				"w.hit_month AS month",
 				"w.hit_day AS day",
 				"count(*) AS num_hits",
 			),
-			null, //'w.hit_timestamp > 20140801000000', //null, // CONDITIONS? 'wiretap.hit_timestamp>20131001000000',
+			null, //'w.hit_timestamp > 20140801000000', //null, // CONDITIONS? 'userjourney.hit_timestamp>20131001000000',
 			__METHOD__,
 			array(
 				"DISTINCT",
@@ -429,14 +429,14 @@ class SpecialWiretap extends SpecialPage {
 		);
 
 		//$html .= "<pre>" . print_r( $data, true ) . "</pre>";
-		$html .= "<script type='text/template-json' id='wiretap-data'>" . json_encode( $data ) . "</script>";
+		$html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
 		$wgOut->addHTML( $html );
 	}
 
 }
 
-class WiretapPager extends ReverseChronologicalPager {
+class UserJourneyPager extends ReverseChronologicalPager {
 	protected $rowCount = 0;
 	public $filterUser;
 	public $filterPage;
@@ -483,7 +483,7 @@ class WiretapPager extends ReverseChronologicalPager {
 		}
 		
 		return array(
-			'tables' => 'wiretap',
+			'tables' => 'userjourney',
 			'fields' => array( 
 				'page_id',
 				'page_name',
@@ -505,10 +505,10 @@ class WiretapPager extends ReverseChronologicalPager {
 			// do nothing for now...
 		}
 		else {
-			$url = Title::newFromText('Special:Wiretap')->getLocalUrl(
+			$url = Title::newFromText('Special:UserJourney')->getLocalUrl(
 				array( 'filterUser' => $row->user_name )
 			);
-			$msg = wfMsg( 'wiretap-filteruser' );
+			$msg = wfMsg( 'userjourney-filteruser' );
 			
 			$name .= ' (' . Xml::element(
 				'a',
@@ -532,10 +532,10 @@ class WiretapPager extends ReverseChronologicalPager {
 			// do nothing for now...
 		}
 		else {
-			$url = Title::newFromText('Special:Wiretap')->getLocalUrl(
+			$url = Title::newFromText('Special:UserJourney')->getLocalUrl(
 				array( 'filterPage' => $row->page_name )
 			);
-			$msg = wfMsg( 'wiretap-filterpage' );
+			$msg = wfMsg( 'userjourney-filterpage' );
 			
 			$page .= ' (' . Xml::element(
 				'a',

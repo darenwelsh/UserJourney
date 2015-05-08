@@ -17,26 +17,21 @@ $GLOBALS['wgMessagesDirs']['UserJourney'] = __DIR__ . '/i18n';
 // Necessary?
 //$wgExtensionMessagesFiles['UserJourneyAlias'] = __DIR__ . '/UserJourney.alias.php';
 
-// ******Commented out until it is ready
-//$wgAutoloadClasses['UserJourney'] = __DIR__ . '/UserJourney.body.php'; // autoload body class
+$wgAutoloadClasses['UserJourney'] = __DIR__ . '/UserJourney.body.php'; // autoload body class
 
-// ******Commented out until it is ready
-//$wgAutoloadClasses['SpecialUserJourney'] = __DIR__ . '/SpecialUserJourney.php'; // autoload special page class
-//$wgSpecialPages['UserJourney'] = 'SpecialUserJourney'; // register special page
+$wgAutoloadClasses['SpecialUserJourney'] = __DIR__ . '/SpecialUserJourney.php'; // autoload special page class
+$wgSpecialPages['UserJourney'] = 'SpecialUserJourney'; // register special page
 
 // collects extension info from hook that provides necessary inputs
 // but does not record the information in the database
-// ******Commented out until it is ready
-//$wgHooks['BeforeInitialize'][] = 'UserJourney::updateTable';
+$wgHooks['BeforeInitialize'][] = 'UserJourney::updateTable';
 
 // records the information at the latest possible time in order to
 // record the length of time required to build the page.
-// ******Commented out until it is ready
-//$wgHooks['AfterFinalPageOutput'][] = 'UserJourney::recordInDatabase';
+$wgHooks['AfterFinalPageOutput'][] = 'UserJourney::recordInDatabase';
 
 // update database (using maintenance/update.php)
-// ******Commented out until it is ready
-//$wgHooks['LoadExtensionSchemaUpdates'][] = 'UserJourney::updateDatabase';
+$wgHooks['LoadExtensionSchemaUpdates'][] = 'UserJourney::updateDatabase';
 
 $wiretapResourceTemplate = array(
 	'localBasePath' => __DIR__ . '/modules',

@@ -1,6 +1,6 @@
 <?php
 
-class Wiretap {
+class UserJourney {
 
 	static $referers = null;
 	
@@ -14,7 +14,7 @@ class Wiretap {
 		$output->enableClientCache( false );
 		$output->addMeta( 'http:Pragma', 'no-cache' );
 
-		global $wgRequestTime, $egWiretapCurrentHit;
+		global $wgRequestTime, $egUJCurrentHit;
 
 		$now = time();
 		$hit = array(
@@ -39,22 +39,22 @@ class Wiretap {
 		$hit['referer_title'] = self::getRefererTitleText( $request->getVal('refererpage') );
 
 		// @TODO: this is by no means the ideal way to do this...but it'll do for now...
-		$egWiretapCurrentHit = $hit;
+		$egUJCurrentHit = $hit;
 
 		return true;
 
 	}
 		
 	public static function recordInDatabase (  ) { // could have param &$output
-		global $wgRequestTime, $egWiretapCurrentHit;
+		global $wgRequestTime, $egUJCurrentHit;
 
 		// calculate response time now, in the last hook (that I know of).
-		$egWiretapCurrentHit['response_time'] = round( ( microtime( true ) - $wgRequestTime ) * 1000 );
+		$egUJCurrentHit['response_time'] = round( ( microtime( true ) - $wgRequestTime ) * 1000 );
 		
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->insert(
-			'wiretap',
-			$egWiretapCurrentHit,
+			'userjourney',
+			$egUJCurrentHit,
 			__METHOD__
 		);
 		return true;
@@ -63,17 +63,17 @@ class Wiretap {
 	public static function updateDatabase( DatabaseUpdater $updater ) {
 		global $wgDBprefix;
 
-		$wiretapTable = $wgDBprefix . 'wiretap';
+		$userJourneyTable = $wgDBprefix . 'userjourney';
 		$schemaDir = __DIR__ . '/schema';
 		
 		$updater->addExtensionTable(
-			$wiretapTable,
-			"$schemaDir/Wiretap.sql"
+			$userJourneyTable,
+			"$schemaDir/UserJourney.sql"
 		);
 		$updater->addExtensionField(
-			$wiretapTable,
-			'response_time',
-			"$schemaDir/patch-1-response-time.sql"
+			$userjourneyTable
+			// 'response_time',
+			// "$schemaDir/patch-1-response-time.sql"
 		);
 
 		return true;
@@ -90,7 +90,6 @@ class Wiretap {
 	 **/
 	public static function getRefererTitleText ( $refererpage=null ) {
 		
-		// global $egWiretapReferers;
 		global $wgScriptPath;
 	
 		if ( $refererpage )

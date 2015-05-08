@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS /*_*/wiretap (
+CREATE TABLE IF NOT EXISTS /*_*/userjourney (
 	page_id INT(8) UNSIGNED NOT NULL,
 	page_name VARCHAR(255) DEFAULT NULL,
 	user_name VARCHAR(255) DEFAULT NULL,
