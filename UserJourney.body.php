@@ -9,7 +9,7 @@ class UserJourney {
 	 *
 	 *
 	 **/
-	public static function updateTable( &$title, &$article, &$output, &$user, $request, $mediaWiki ) {
+	public static function updateTable( /*&$user_points,*/ &$title, &$article, &$output, &$user, $request, $mediaWiki ) {
 		
 		$output->enableClientCache( false );
 		$output->addMeta( 'http:Pragma', 'no-cache' );
@@ -18,6 +18,7 @@ class UserJourney {
 
 		$now = time();
 		$hit = array(
+			'user_points' => 1, //Eventually this will be a variable based on action specifics
 			'page_id' => $title->getArticleId(),
 			'page_name' => $title->getFullText(),
 			'user_name' => $user->getName(),

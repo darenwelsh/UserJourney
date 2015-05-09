@@ -131,7 +131,7 @@ class SpecialUserJourney extends SpecialPage {
 		if ( $body ) {
 			$html .= $pager->getNavigationBar();
 			$html .= '<table class="wikitable sortable" width="100%" cellspacing="0" cellpadding="0">';
-			$html .= '<tr><th>Username</th><th>Page</th><th>Time</th><th>Referal Page</th></tr>';
+			$html .= '<tr><th>Username</th><th>Page</th><th>Time</th><th>Referal Page</th><th>Points</th></tr>';
 			$html .= $body;
 			$html .= '</table>';
 			$html .= $pager->getNavigationBar();
@@ -491,6 +491,7 @@ class UserJourneyPager extends ReverseChronologicalPager {
 				// "concat(substr(hit_timestamp, 1, 4),'-',substr(hit_timestamp,5,2),'-',substr(hit_timestamp,7,2),' ',substr(hit_timestamp,9,2),':',substr(hit_timestamp,11,2),':',substr(hit_timestamp,13,2)) AS hit_timestamp",
 				'hit_timestamp',
 				'referer_title',
+				'user_points',
 			),
 			'conds' => $conds
 		);
@@ -554,7 +555,7 @@ class UserJourneyPager extends ReverseChronologicalPager {
 		global $wgLang;
 		$timestamp = $wgLang->timeanddate( wfTimestamp( TS_MW, $row->hit_timestamp ), true );
 
-		return "<tr><td>$name</td><td>$page</td><td>$timestamp</td><td>$referer</td></tr>\n";
+		return "<tr><td>$name</td><td>$page</td><td>$timestamp</td><td>$referer</td><td>$user_points</td></tr>\n";
 	}
 
 	function getForm() {

@@ -1,4 +1,7 @@
 CREATE TABLE IF NOT EXISTS /*_*/userjourney (
+	user_points INT(9) DEFAULT NULL, /* points given for this one action */
+
+
 	page_id INT(8) UNSIGNED NOT NULL,
 	page_name VARCHAR(255) DEFAULT NULL,
 	user_name VARCHAR(255) DEFAULT NULL,
