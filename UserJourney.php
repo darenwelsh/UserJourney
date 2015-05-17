@@ -33,6 +33,9 @@ $wgHooks['AfterFinalPageOutput'][] = 'UserJourney::recordInDatabase';
 // update database (using maintenance/update.php)
 $wgHooks['LoadExtensionSchemaUpdates'][] = 'UserJourney::updateDatabase';
 
+// After save page request has been completed
+$wgHooks['PageContentSaveComplete'][] = 'UserJourney::saveComplete';
+
 $wiretapResourceTemplate = array(
 	'localBasePath' => __DIR__ . '/modules',
 	'remoteExtPath' => 'UserJourney/modules',

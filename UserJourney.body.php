@@ -9,7 +9,53 @@ class UserJourney {
 	 *
 	 *
 	 **/
-	public static function updateTable( /*&$user_points,*/ &$title, &$article, &$output, &$user, $request, $mediaWiki ) {
+
+
+	// After save page request has been completed
+	public static function saveComplete( $article, $user, $content, $summary, $isMinor, $isWatch, 
+		$section, $flags, $revision, $status, $baseRevId ) {
+		
+		// $output->enableClientCache( false );
+		// $output->addMeta( 'http:Pragma', 'no-cache' );
+
+		global $wgRequestTime, $egUJCurrentHit;
+
+		$now = time();
+		$hit = array(
+			'user_points' => 3, //Eventually this will be a variable based on action specifics
+			'page_id' => "1",//$title->getArticleId(),
+			'page_name' => "test name", //$title->getFullText(),
+			'user_name' => $user->getName(),
+			'hit_timestamp' => wfTimestampNow(),
+			
+			'hit_year' => date('Y',$now),
+			'hit_month' => date('m',$now),
+			'hit_day' => date('d',$now),
+			'hit_hour' => date('H',$now),
+			'hit_weekday' => date('w',$now), // 0' => sunday, 1=monday, ... , 6=saturday
+
+			// 'page_action' => NULL //$request->getVal( 'action' ),
+			// 'oldid' => NULL //$request->getVal( 'oldid' ),
+			// 'diff' => NULL //$request->getVal( 'diff' ),
+
+		);
+
+		// $hit['referer_url'] = NULL //isset($_SERVER["HTTP_REFERER"]) ? $_SERVER["HTTP_REFERER"] : null;
+		// $hit['referer_title'] = NULL //self::getRefererTitleText( $request->getVal('refererpage') );
+
+		// @TODO: this is by no means the ideal way to do this...but it'll do for now...
+		$egUJCurrentHit = $hit;
+
+		self::recordInDatabase;
+		self::updateDatabase;
+
+		// return true;
+
+	}
+
+
+
+	public static function updateTable( &$title, &$article, &$output, &$user, $request, $mediaWiki ) {
 		
 		$output->enableClientCache( false );
 		$output->addMeta( 'http:Pragma', 'no-cache' );
@@ -124,4 +170,7 @@ class UserJourney {
 		
 	}
 	
+
+
+
 }
