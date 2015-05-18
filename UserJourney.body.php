@@ -20,9 +20,39 @@ class UserJourney {
 
 		global $wgRequestTime, $egUJCurrentHit;
 
+		//Logic to only reward 1st view of a given page per day
+		$ts = date("Ymd000000", time() );
+		$pid = $article->getTitle()->getArticleId();
+		$usr = $user->getName();
+
+		$dbr = wfGetDB( DB_SLAVE );
+
+		$res = $dbr->select(
+			array('uj' => 'userjourney'),
+			array(
+				"uj.page_id AS page_id",
+				"uj.hit_timestamp AS hit_timestamp",
+				"uj.user_name AS user_name",
+			),
+			array(
+				"uj.hit_timestamp>$ts",
+				"uj.user_name" => $usr,
+				"uj.page_id=$pid",
+			),
+			__METHOD__,
+			array(
+				"LIMIT" => "1",
+			),
+			null // join conditions
+		);
+
+		if( $dbr->fetchRow( $res ) ) {
+			$user_points = 0;
+		} else $user_points = 3;
+
 		$now = time();
 		$hit = array(
-			'user_points' => 3, //Eventually this will be a variable based on action specifics
+			'user_points' => $user_points, //Eventually this will be a variable based on action specifics
 			// 'page_id' => "1",//$title->getArticleId(),
 			'page_name' => $article->getTitle(),
 			'user_name' => $user->getName(),
@@ -33,7 +63,6 @@ class UserJourney {
 			'hit_day' => date('d',$now),
 			'hit_hour' => date('H',$now),
 			'hit_weekday' => date('w',$now), // 0' => sunday, 1=monday, ... , 6=saturday
-			// 'action' => "save page",
 
 			'page_action' => "Edit page", //$request->getVal( 'action' ),
 			// 'oldid' => NULL //$request->getVal( 'oldid' ),
@@ -78,7 +107,7 @@ class UserJourney {
 			'hit_hour' => date('H',$now),
 			'hit_weekday' => date('w',$now), // 0' => sunday, 1=monday, ... , 6=saturday
 
-			'page_action' => $request->getVal( 'action' ),
+			'page_action' => "View page", //$request->getVal( 'action' ),
 			'oldid' => $request->getVal( 'oldid' ),
 			'diff' => $request->getVal( 'diff' ),
 			// 'action' => "view page",
