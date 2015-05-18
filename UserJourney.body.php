@@ -23,8 +23,8 @@ class UserJourney {
 		$now = time();
 		$hit = array(
 			'user_points' => 3, //Eventually this will be a variable based on action specifics
-			'page_id' => "1",//$title->getArticleId(),
-			'page_name' => "test name", //$title->getFullText(),
+			// 'page_id' => "1",//$title->getArticleId(),
+			'page_name' => $article->getTitle(),
 			'user_name' => $user->getName(),
 			'hit_timestamp' => wfTimestampNow(),
 			
@@ -33,8 +33,9 @@ class UserJourney {
 			'hit_day' => date('d',$now),
 			'hit_hour' => date('H',$now),
 			'hit_weekday' => date('w',$now), // 0' => sunday, 1=monday, ... , 6=saturday
+			// 'action' => "save page",
 
-			// 'page_action' => NULL //$request->getVal( 'action' ),
+			'page_action' => "Edit page", //$request->getVal( 'action' ),
 			// 'oldid' => NULL //$request->getVal( 'oldid' ),
 			// 'diff' => NULL //$request->getVal( 'diff' ),
 
@@ -46,10 +47,11 @@ class UserJourney {
 		// @TODO: this is by no means the ideal way to do this...but it'll do for now...
 		$egUJCurrentHit = $hit;
 
-		self::recordInDatabase;
-		self::updateDatabase;
+		self::recordInDatabase();
+		// self::updateDatabase();
 
-		// return true;
+
+		return true;
 
 	}
 
@@ -79,6 +81,7 @@ class UserJourney {
 			'page_action' => $request->getVal( 'action' ),
 			'oldid' => $request->getVal( 'oldid' ),
 			'diff' => $request->getVal( 'diff' ),
+			// 'action' => "view page",
 
 		);
 
@@ -117,11 +120,11 @@ class UserJourney {
 			$userJourneyTable,
 			"$schemaDir/UserJourney.sql"
 		);
-		$updater->addExtensionField(
-			$userjourneyTable
+		// $updater->addExtensionField(
+			// $userjourneyTable
 			// 'response_time',
 			// "$schemaDir/patch-1-response-time.sql"
-		);
+		// );
 
 		return true;
 	}

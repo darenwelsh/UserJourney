@@ -19,6 +19,7 @@ $GLOBALS['wgMessagesDirs']['UserJourney'] = __DIR__ . '/i18n';
 
 $wgAutoloadClasses['UserJourney'] = __DIR__ . '/UserJourney.body.php'; // autoload body class
 
+// Special Page
 $wgAutoloadClasses['SpecialUserJourney'] = __DIR__ . '/SpecialUserJourney.php'; // autoload special page class
 $wgSpecialPages['UserJourney'] = 'SpecialUserJourney'; // register special page
 
@@ -41,7 +42,7 @@ $wiretapResourceTemplate = array(
 	'remoteExtPath' => 'UserJourney/modules',
 );
 
-$wgResourceModules += array(
+// $wgResourceModules += array(
 
 /*	'ext.wiretap.charts' => $wiretapResourceTemplate + array(
 		'styles' => 'charts/ext.wiretap.charts.css',
@@ -75,4 +76,4 @@ $wgResourceModules += array(
 	),
 */
 
-);
+// );
