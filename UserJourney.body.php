@@ -4,40 +4,58 @@ class UserJourney {
 
 	static $referers = null;
 	
-	/**
+	/*
+	 * Future Hooks to implement
+		
+		for badge Necromancer
+		public static function onArticleUndelete( Title $title, $create, $comment, $oldPageID){}
+		$wgHooks['Article'Undelete'][] = 'MyExtensionHooks::onArticleUndelete';
+
+		for watching an article (need to prevent watch/unwatch endless cycle for points)
+		public static function onWatchArticleComplete( $user, $article){}
+		$wgHooks['WatchArticleComplete'][] = 'MyExtensionHook::onWatchArticleComplete';
+
+		for completing file upload
+		public static function onUploadComplete ( &$image){}
+		$wgHooks['UploadComplete'][] = 'MyExtensionHooks::onUploadComplete';
+
+		Add starter badge system (small values to test at first):
+		* New Editor for first edit
+		* Editor for 10 edits
+		* Contributor for 20 edits
+
 	 *
 	 *
-	 *
-	 **/
+	 */
 
 
 	// After save page request has been completed
 	public static function saveComplete( $article, $user, $content, $summary, $isMinor, $isWatch, 
 		$section, $flags, $revision, $status, $baseRevId ) {
-		
-		// $output->enableClientCache( false );
-		// $output->addMeta( 'http:Pragma', 'no-cache' );
 
 		global $wgRequestTime, $egUJCurrentHit;
 
-		//Logic to only reward 1st view of a given page per day
+		//Logic to only reward 1st save of a given page per day
 		$ts = date("Ymd000000", time() );
-		$pid = $article->getTitle()->getArticleId();
+		$ptitle = $article->getTitle();
+		$pid = $ptitle->getArticleId();
 		$usr = $user->getName();
 
 		$dbr = wfGetDB( DB_SLAVE );
 
-		$res = $dbr->select(
+		$userHasSavedThisPageToday = $dbr->select(
 			array('uj' => 'userjourney'),
 			array(
 				"uj.page_id AS page_id",
 				"uj.hit_timestamp AS hit_timestamp",
 				"uj.user_name AS user_name",
+				"uj.page_action AS page_action",
 			),
 			array(
 				"uj.hit_timestamp>$ts",
 				"uj.user_name" => $usr,
 				"uj.page_id=$pid",
+				"uj.page_action" => "Edit page",
 			),
 			__METHOD__,
 			array(
@@ -46,14 +64,41 @@ class UserJourney {
 			null // join conditions
 		);
 
-		if( $dbr->fetchRow( $res ) ) {
-			$user_points = 0;
-		} else $user_points = 3;
+		//add new $dbr->select query for first edit and award 10 bonus points, then do one for 10 edits, etc
+		$listOfUserRevisions = $dbr->select(
+			array('uj' => 'userjourney'),
+			array(
+				"uj.page_id AS page_id",
+				"uj.hit_timestamp AS hit_timestamp",
+				"uj.user_name AS user_name",
+				"uj.page_action AS page_action",
+			),
+			array(
+				//"uj.hit_timestamp>$ts",
+				"uj.user_name" => $usr,
+				//"uj.page_id=$pid",//need to calc unique page saves per day?
+				"uj.page_action" => "Edit page",
+			),
+			__METHOD__,
+			array(
+				//"LIMIT" => "1",
+			),
+			null // join conditions
+		);
+		$numberOfUserRevisions = $dbr->numRows( $listOfUserRevisions );
+
+		if( $dbr->numRows( $userHasSavedThisPageToday ) == 0 ) {
+			$user_points = 3; 
+		} else if ( $numberOfUserRevisions == 10 ) {
+			$user_points = 10;
+			$user_badge = "10th Edit";
+		} else $user_points = 0;
 
 		$now = time();
 		$hit = array(
 			'user_points' => $user_points, //Eventually this will be a variable based on action specifics
-			// 'page_id' => "1",//$title->getArticleId(),
+			'user_badge' => $user_badge,
+			'page_id' => $pid,
 			'page_name' => $article->getTitle(),
 			'user_name' => $user->getName(),
 			'hit_timestamp' => wfTimestampNow(),
@@ -64,21 +109,13 @@ class UserJourney {
 			'hit_hour' => date('H',$now),
 			'hit_weekday' => date('w',$now), // 0' => sunday, 1=monday, ... , 6=saturday
 
-			'page_action' => "Edit page", //$request->getVal( 'action' ),
-			// 'oldid' => NULL //$request->getVal( 'oldid' ),
-			// 'diff' => NULL //$request->getVal( 'diff' ),
+			'page_action' => "Edit page", 
 
 		);
 
-		// $hit['referer_url'] = NULL //isset($_SERVER["HTTP_REFERER"]) ? $_SERVER["HTTP_REFERER"] : null;
-		// $hit['referer_title'] = NULL //self::getRefererTitleText( $request->getVal('refererpage') );
-
-		// @TODO: this is by no means the ideal way to do this...but it'll do for now...
 		$egUJCurrentHit = $hit;
 
 		self::recordInDatabase();
-		// self::updateDatabase();
-
 
 		return true;
 
@@ -86,16 +123,48 @@ class UserJourney {
 
 
 
-	public static function updateTable( &$title, &$article, &$output, &$user, $request, $mediaWiki ) {
+	public static function pageView( &$title, &$article, &$output, &$user, $request, $mediaWiki ) {
 		
 		$output->enableClientCache( false );
 		$output->addMeta( 'http:Pragma', 'no-cache' );
 
 		global $wgRequestTime, $egUJCurrentHit;
 
+		//Logic to only reward 1st view of a given page per day
+		$ts = date("Ymd000000", time() );
+		$pid = $title->getArticleId();
+		$usr = $user->getName();
+
+		$dbr = wfGetDB( DB_SLAVE );
+
+		$res = $dbr->select(
+			array('uj' => 'userjourney'),
+			array(
+				"uj.page_id AS page_id",
+				"uj.hit_timestamp AS hit_timestamp",
+				"uj.user_name AS user_name",
+				"uj.page_action AS page_action",
+			),
+			array(
+				"uj.hit_timestamp>$ts",
+				"uj.user_name" => $usr,
+				"uj.page_id=$pid",
+				"uj.page_action" => "View page",
+			),
+			__METHOD__,
+			array(
+				"LIMIT" => "1",
+			),
+			null // join conditions
+		);
+
+		if( $dbr->fetchRow( $res ) ) {
+			$user_points = 0;
+		} else $user_points = 1;
+
 		$now = time();
 		$hit = array(
-			'user_points' => 1, //Eventually this will be a variable based on action specifics
+			'user_points' => $user_points, //Eventually this will be a variable based on action specifics
 			'page_id' => $title->getArticleId(),
 			'page_name' => $title->getFullText(),
 			'user_name' => $user->getName(),
@@ -110,14 +179,12 @@ class UserJourney {
 			'page_action' => "View page", //$request->getVal( 'action' ),
 			'oldid' => $request->getVal( 'oldid' ),
 			'diff' => $request->getVal( 'diff' ),
-			// 'action' => "view page",
 
 		);
 
 		$hit['referer_url'] = isset($_SERVER["HTTP_REFERER"]) ? $_SERVER["HTTP_REFERER"] : null;
 		$hit['referer_title'] = self::getRefererTitleText( $request->getVal('refererpage') );
 
-		// @TODO: this is by no means the ideal way to do this...but it'll do for now...
 		$egUJCurrentHit = $hit;
 
 		return true;

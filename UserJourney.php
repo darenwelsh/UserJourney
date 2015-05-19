@@ -25,7 +25,7 @@ $wgSpecialPages['UserJourney'] = 'SpecialUserJourney'; // register special page
 
 // collects extension info from hook that provides necessary inputs
 // but does not record the information in the database
-$wgHooks['BeforeInitialize'][] = 'UserJourney::updateTable';
+$wgHooks['BeforeInitialize'][] = 'UserJourney::pageView';
 
 // records the information at the latest possible time in order to
 // record the length of time required to build the page.
