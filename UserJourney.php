@@ -23,9 +23,15 @@ $wgAutoloadClasses['UserJourney'] = __DIR__ . '/UserJourney.body.php'; // autolo
 $wgAutoloadClasses['SpecialUserJourney'] = __DIR__ . '/SpecialUserJourney.php'; // autoload special page class
 $wgSpecialPages['UserJourney'] = 'SpecialUserJourney'; // register special page
 
+// 1 of the earliest hooks in page load
+// $wgHooks['ArticlePageDataBefore'][] = 'UserJourney::onArticlePageDataBefore'; 
+
 // collects extension info from hook that provides necessary inputs
 // but does not record the information in the database
-$wgHooks['BeforeInitialize'][] = 'UserJourney::pageView';
+$wgHooks['BeforeInitialize'][] = 'UserJourney::onBeforeInitialize';
+
+// After save page request has been completed
+$wgHooks['PageContentSaveComplete'][] = 'UserJourney::onPageContentSaveComplete';
 
 // records the information at the latest possible time in order to
 // record the length of time required to build the page.
@@ -34,8 +40,8 @@ $wgHooks['AfterFinalPageOutput'][] = 'UserJourney::recordInDatabase';
 // update database (using maintenance/update.php)
 $wgHooks['LoadExtensionSchemaUpdates'][] = 'UserJourney::updateDatabase';
 
-// After save page request has been completed
-$wgHooks['PageContentSaveComplete'][] = 'UserJourney::saveComplete';
+// 1 of the last hooks in page load
+$wgHooks['BeforePageDisplay'][] = 'UserJourney::onBeforePageDisplay';
 
 $wiretapResourceTemplate = array(
 	'localBasePath' => __DIR__ . '/modules',

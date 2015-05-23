@@ -6,6 +6,15 @@ class UserJourney {
 	
 	/*
 	 * Future Hooks to implement
+
+		 for completing a review
+		 Since there is no hook or event related to reviewing a watched page revision,
+		 I will use two hooks to determine this:  One early in page load; one late.
+		 public static function onArticlePageDataBefore( $article, $fields){}
+		 $wgHooks['ArticlePageDataBefore'][] = 'MyExtensionHooks::onArticlePageDataBefore';
+
+		 onAfterFinalPgeOutput( $output)
+		 AfterFinalPageOutput
 		
 		for badge Necromancer
 		public static function onArticleUndelete( Title $title, $create, $comment, $oldPageID){}
@@ -29,8 +38,115 @@ class UserJourney {
 	 */
 
 
+	// 1 of the earliest hooks in page load
+	public static function onArticlePageDataBefore( $article, $fields ){
+
+
+
+		return true;
+
+	}
+
+
+	public static function onBeforeInitialize( &$title, &$article, &$output, &$user, $request, $mediaWiki ) {
+		
+		$output->enableClientCache( false );
+		$output->addMeta( 'http:Pragma', 'no-cache' );
+
+		global $wgRequestTime, $egUJCurrentHit;
+
+		//Logic to only reward 1st view of a given page per day
+		$ts = date("Ymd000000", time() );
+		$pid = $title->getArticleId();
+		$usr = $user->getName();
+		// $articleNS = $article->showNamespaceHeader();
+		$usr = $user->getName();
+
+		$dbr = wfGetDB( DB_SLAVE );
+
+		$userUnreviewedPages = $dbr->select(
+			array('wl' => 'watchlist'),
+			array(
+				"wl.wl_user AS wl_user",
+				"wl.wl_namespace AS wl_namespace",
+				"wl.wl_title AS wl_title",
+				"wl.wl_notificationtimestamp AS wl_notificationTS",
+			),
+			array(
+				"wl.wl_user" => $usr,
+				"wl.wl_namespace" => $articleNS,
+				"wl.wl_title" => $title,
+				"wl.wl_notificationtimestamp" => !NULL,
+			),
+			__METHOD__,
+			array(
+				// "LIMIT" => "1",
+			),
+			null // join conditions
+		);
+
+		$numUserUnreviewedPages = $dbr->numRows( $userUnreviewedPages );
+		if ($numUserUnreviewedPages > 0 ) {
+			print_r("At least 1");
+		}
+
+		$res = $dbr->select(
+			array('uj' => 'userjourney'),
+			array(
+				"uj.page_id AS page_id",
+				"uj.hit_timestamp AS hit_timestamp",
+				"uj.user_name AS user_name",
+				"uj.page_action AS page_action",
+			),
+			array(
+				"uj.hit_timestamp>$ts",
+				"uj.user_name" => $usr,
+				"uj.page_id=$pid",
+				"uj.page_action" => "View page",
+			),
+			__METHOD__,
+			array(
+				"LIMIT" => "1",
+			),
+			null // join conditions
+		);
+
+		if( $dbr->fetchRow( $res ) ) {
+			$user_points = 0;
+		} else $user_points = 1;
+
+		$now = time();
+		$hit = array(
+			'user_points' => $user_points, //Eventually this will be a variable based on action specifics
+			'page_id' => $title->getArticleId(),
+			'page_name' => $title->getFullText(),
+			'user_name' => $user->getName(),
+			'hit_timestamp' => wfTimestampNow(),
+			
+			'hit_year' => date('Y',$now),
+			'hit_month' => date('m',$now),
+			'hit_day' => date('d',$now),
+			'hit_hour' => date('H',$now),
+			'hit_weekday' => date('w',$now), // 0' => sunday, 1=monday, ... , 6=saturday
+
+			'page_action' => "View page", //$request->getVal( 'action' ),
+			'oldid' => $request->getVal( 'oldid' ),
+			'diff' => $request->getVal( 'diff' ),
+
+		);
+
+		$hit['referer_url'] = isset($_SERVER["HTTP_REFERER"]) ? $_SERVER["HTTP_REFERER"] : null;
+		$hit['referer_title'] = self::getRefererTitleText( $request->getVal('refererpage') );
+
+		$egUJCurrentHit = $hit;
+
+		return true;
+
+	}
+
+
 	// After save page request has been completed
-	public static function saveComplete( $article, $user, $content, $summary, $isMinor, $isWatch, 
+	public static function onPageContentSaveComplete( $article, $user, $content, $summary, $isMinor, $isWatch, 
 		$section, $flags, $revision, $status, $baseRevId ) {
 
 		global $wgRequestTime, $egUJCurrentHit;
@@ -121,73 +237,11 @@ class UserJourney {
 
 	}
 
+	public static function onBeforePageDisplay( OutputPage &$out, Skin &$skin ){
 
-
-	public static function pageView( &$title, &$article, &$output, &$user, $request, $mediaWiki ) {
 		
-		$output->enableClientCache( false );
-		$output->addMeta( 'http:Pragma', 'no-cache' );
 
-		global $wgRequestTime, $egUJCurrentHit;
-
-		//Logic to only reward 1st view of a given page per day
-		$ts = date("Ymd000000", time() );
-		$pid = $title->getArticleId();
-		$usr = $user->getName();
-
-		$dbr = wfGetDB( DB_SLAVE );
-
-		$res = $dbr->select(
-			array('uj' => 'userjourney'),
-			array(
-				"uj.page_id AS page_id",
-				"uj.hit_timestamp AS hit_timestamp",
-				"uj.user_name AS user_name",
-				"uj.page_action AS page_action",
-			),
-			array(
-				"uj.hit_timestamp>$ts",
-				"uj.user_name" => $usr,
-				"uj.page_id=$pid",
-				"uj.page_action" => "View page",
-			),
-			__METHOD__,
-			array(
-				"LIMIT" => "1",
-			),
-			null // join conditions
-		);
-
-		if( $dbr->fetchRow( $res ) ) {
-			$user_points = 0;
-		} else $user_points = 1;
-
-		$now = time();
-		$hit = array(
-			'user_points' => $user_points, //Eventually this will be a variable based on action specifics
-			'page_id' => $title->getArticleId(),
-			'page_name' => $title->getFullText(),
-			'user_name' => $user->getName(),
-			'hit_timestamp' => wfTimestampNow(),
-			
-			'hit_year' => date('Y',$now),
-			'hit_month' => date('m',$now),
-			'hit_day' => date('d',$now),
-			'hit_hour' => date('H',$now),
-			'hit_weekday' => date('w',$now), // 0' => sunday, 1=monday, ... , 6=saturday
-
-			'page_action' => "View page", //$request->getVal( 'action' ),
-			'oldid' => $request->getVal( 'oldid' ),
-			'diff' => $request->getVal( 'diff' ),
-
-		);
-
-		$hit['referer_url'] = isset($_SERVER["HTTP_REFERER"]) ? $_SERVER["HTTP_REFERER"] : null;
-		$hit['referer_title'] = self::getRefererTitleText( $request->getVal('refererpage') );
-
-		$egUJCurrentHit = $hit;
-
-		return true;
+		return false;
 
 	}
 		
