@@ -5,6 +5,11 @@ class UserJourney {
 	static $referers = null;
 	
 	/*
+	* Short issues
+	* 
+	* Need to address multiple hits displayed on page save
+	* 
+	* 
 	 * Future Hooks to implement
 
 		 for completing a review
