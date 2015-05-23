@@ -53,7 +53,16 @@ class UserJourney {
 		$output->enableClientCache( false );
 		$output->addMeta( 'http:Pragma', 'no-cache' );
 
-		global $wgRequestTime, $egUJCurrentHit;
+		global $wgRequestTime, 
+			$egCurrentHit, //data about this page load
+			$egUserUnreviewedPages; //table of unreviewed pages upon begin page load
+			//$egUserPoints, //how many points to allocate for this page load
+			//$egUserActions; //list of actions performed in this page load
+			//$egUserBadges; //list of badges awarded in this page load
+			
+		$UserPoints = 0; // init global for user points
+		$UserActions = ""; // init blank
+		$UserBadges = ""; // init blank
 
 		//Logic to only reward 1st view of a given page per day
 		$ts = date("Ymd000000", time() );
@@ -64,7 +73,7 @@ class UserJourney {
 
 		$dbr = wfGetDB( DB_SLAVE );
 
-		$userUnreviewedPages = $dbr->select(
+		$egUserUnreviewedPages = $dbr->select(
 			array('wl' => 'watchlist'),
 			array(
 				"wl.wl_user AS wl_user",
@@ -74,9 +83,9 @@ class UserJourney {
 			),
 			array(
 				"wl.wl_user" => $usr,
-				"wl.wl_namespace" => $articleNS,
-				"wl.wl_title" => $title,
-				"wl.wl_notificationtimestamp" => !NULL,
+				"wl.wl_namespace" => NS_MAIN,//$articleNS,
+				"wl.wl_title" => "Page_2",//$title,
+				"wl.wl_notificationtimestamp IS NOT NULL",
 			),
 			__METHOD__,
 			array(
@@ -85,9 +94,9 @@ class UserJourney {
 			null // join conditions
 		);
 
-		$numUserUnreviewedPages = $dbr->numRows( $userUnreviewedPages );
-		if ($numUserUnreviewedPages > 0 ) {
-			print_r("At least 1");
+		$numUserUnreviewedPages = $dbr->numRows( $egUserUnreviewedPages );
+		if ( $numUserUnreviewedPages > 0 ) {
+			$UserPoints += 5; //indicate user has un-reviewed page, move reward to later hook
 		}
 
 		$res = $dbr->select(
@@ -96,13 +105,13 @@ class UserJourney {
 				"uj.page_id AS page_id",
 				"uj.hit_timestamp AS hit_timestamp",
 				"uj.user_name AS user_name",
-				"uj.page_action AS page_action",
+				"uj.user_actions AS user_actions",
 			),
 			array(
 				"uj.hit_timestamp>$ts",
 				"uj.user_name" => $usr,
 				"uj.page_id=$pid",
-				"uj.page_action" => "View page",
+				"uj.user_actions" => "View",
 			),
 			__METHOD__,
 			array(
@@ -111,13 +120,22 @@ class UserJourney {
 			null // join conditions
 		);
 
+		if ( $UserActions != "" ) {
+			$UserActions += ", ";
+		}
+		$UserActions = $UserActions . "View";
+
 		if( $dbr->fetchRow( $res ) ) {
-			$user_points = 0;
-		} else $user_points = 1;
+			//Leave $egUserPoints at current value
+		} else {
+			$UserPoints += 1;
+		}
 
 		$now = time();
 		$hit = array(
-			'user_points' => $user_points, //Eventually this will be a variable based on action specifics
+			'user_points' => $UserPoints, //Eventually this will be a variable based on action specifics
+			'user_badges' => $UserBadges,
+			'user_actions' => $UserActions,
 			'page_id' => $title->getArticleId(),
 			'page_name' => $title->getFullText(),
 			'user_name' => $user->getName(),
@@ -129,7 +147,7 @@ class UserJourney {
 			'hit_hour' => date('H',$now),
 			'hit_weekday' => date('w',$now), // 0' => sunday, 1=monday, ... , 6=saturday
 
-			'page_action' => "View page", //$request->getVal( 'action' ),
+			'page_action' => $request->getVal( 'action' ),
 			'oldid' => $request->getVal( 'oldid' ),
 			'diff' => $request->getVal( 'diff' ),
 
@@ -138,7 +156,9 @@ class UserJourney {
 		$hit['referer_url'] = isset($_SERVER["HTTP_REFERER"]) ? $_SERVER["HTTP_REFERER"] : null;
 		$hit['referer_title'] = self::getRefererTitleText( $request->getVal('refererpage') );
 
-		$egUJCurrentHit = $hit;
+		$egCurrentHit = $hit;
+
+		// self::recordInDatabase(); //remove this after linking flow of hooks
 
 		return true;
 
@@ -149,7 +169,7 @@ class UserJourney {
 	public static function onPageContentSaveComplete( $article, $user, $content, $summary, $isMinor, $isWatch, 
 		$section, $flags, $revision, $status, $baseRevId ) {
 
-		global $wgRequestTime, $egUJCurrentHit;
+		global $wgRequestTime, $egCurrentHit;
 
 		//Logic to only reward 1st save of a given page per day
 		$ts = date("Ymd000000", time() );
@@ -193,7 +213,7 @@ class UserJourney {
 				//"uj.hit_timestamp>$ts",
 				"uj.user_name" => $usr,
 				//"uj.page_id=$pid",//need to calc unique page saves per day?
-				"uj.page_action" => "Edit page",
+				"uj.page_action" => "Edit",
 			),
 			__METHOD__,
 			array(
@@ -204,32 +224,38 @@ class UserJourney {
 		$numberOfUserRevisions = $dbr->numRows( $listOfUserRevisions );
 
 		if( $dbr->numRows( $userHasSavedThisPageToday ) == 0 ) {
-			$user_points = 3; 
+			$UserPoints += 3; 
 		} else if ( $numberOfUserRevisions == 10 ) {
-			$user_points = 10;
-			$user_badge = "10th Edit";
-		} else $user_points = 0;
+			$UserPoints += 10;
+			// $user_badge += "10th Edit";
+			$UserBadges += "10th Edit";
+		} else $UserPoints += 0;
+
+		if ( $egCurrentHit['user_actions'] != "" ) {
+			$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . ", ";
+		}
+		$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . "Edit";
 
 		$now = time();
-		$hit = array(
-			'user_points' => $user_points, //Eventually this will be a variable based on action specifics
-			'user_badge' => $user_badge,
-			'page_id' => $pid,
-			'page_name' => $article->getTitle(),
-			'user_name' => $user->getName(),
-			'hit_timestamp' => wfTimestampNow(),
+		// $hit = array(
+		// 	'user_points' => $UserPoints, //Eventually this will be a variable based on action specifics
+		// 	'user_badge' => $user_badge,
+		// 	'page_id' => $pid,
+		// 	'page_name' => $article->getTitle(),
+		// 	'user_name' => $user->getName(),
+		// 	'hit_timestamp' => wfTimestampNow(),
 			
-			'hit_year' => date('Y',$now),
-			'hit_month' => date('m',$now),
-			'hit_day' => date('d',$now),
-			'hit_hour' => date('H',$now),
-			'hit_weekday' => date('w',$now), // 0' => sunday, 1=monday, ... , 6=saturday
+		// 	'hit_year' => date('Y',$now),
+		// 	'hit_month' => date('m',$now),
+		// 	'hit_day' => date('d',$now),
+		// 	'hit_hour' => date('H',$now),
+		// 	'hit_weekday' => date('w',$now), // 0' => sunday, 1=monday, ... , 6=saturday
 
-			'page_action' => "Edit page", 
+		// 	'page_action' => "Edit page", 
 
-		);
+		// );
 
-		$egUJCurrentHit = $hit;
+		// $egCurrentHit = $hit;
 
 		self::recordInDatabase();
 
@@ -239,22 +265,22 @@ class UserJourney {
 
 	public static function onBeforePageDisplay( OutputPage &$out, Skin &$skin ){
 
-		
+		// print_r("test");
 
 		return false;
 
 	}
 		
 	public static function recordInDatabase (  ) { // could have param &$output
-		global $wgRequestTime, $egUJCurrentHit;
+		global $wgRequestTime, $egCurrentHit;
 
 		// calculate response time now, in the last hook (that I know of).
-		$egUJCurrentHit['response_time'] = round( ( microtime( true ) - $wgRequestTime ) * 1000 );
+		$egCurrentHit['response_time'] = round( ( microtime( true ) - $wgRequestTime ) * 1000 );
 		
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->insert(
 			'userjourney',
-			$egUJCurrentHit,
+			$egCurrentHit,
 			__METHOD__
 		);
 		return true;
