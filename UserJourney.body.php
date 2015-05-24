@@ -61,20 +61,17 @@ class UserJourney {
 		global $wgRequestTime, 
 			$egCurrentHit, //data about this page load
 			$egUserUnreviewedPages; //table of unreviewed pages upon begin page load
-			//$egUserPoints, //how many points to allocate for this page load
-			//$egUserActions; //list of actions performed in this page load
-			//$egUserBadges; //list of badges awarded in this page load
 			
-		$UserPoints = 0; // init global for user points
+		$UserPoints = 0; // init user points
 		$UserActions = ""; // init blank
 		$UserBadges = ""; // init blank
 
 		//Logic to only reward 1st view of a given page per day
 		$ts = date("Ymd000000", time() );
 		$pid = $title->getArticleId();
-		$usr = $user->getName();
+		$username = $user->getName();
 		// $articleNS = $article->showNamespaceHeader();
-		$usr = $user->getName();
+		$userid = $user->getId();
 
 		$dbr = wfGetDB( DB_SLAVE );
 
@@ -87,9 +84,9 @@ class UserJourney {
 				"wl.wl_notificationtimestamp AS wl_notificationTS",
 			),
 			array(
-				"wl.wl_user" => $usr,
-				"wl.wl_namespace" => NS_MAIN,//$articleNS,
-				"wl.wl_title" => "Page_2",//$title,
+				"wl.wl_user" => $userid,
+				// "wl.wl_namespace" => NS_MAIN,//$articleNS,
+				//"wl.wl_title" => "Page_2",//$title,
 				"wl.wl_notificationtimestamp IS NOT NULL",
 			),
 			__METHOD__,
@@ -114,7 +111,7 @@ class UserJourney {
 			),
 			array(
 				"uj.hit_timestamp>$ts",
-				"uj.user_name" => $usr,
+				"uj.user_name" => $username,
 				"uj.page_id=$pid",
 				"uj.user_actions" => "View",
 			),
@@ -180,7 +177,7 @@ class UserJourney {
 		$ts = date("Ymd000000", time() );
 		$ptitle = $article->getTitle();
 		$pid = $ptitle->getArticleId();
-		$usr = $user->getName();
+		$username = $user->getName();
 
 		$dbr = wfGetDB( DB_SLAVE );
 
@@ -194,7 +191,7 @@ class UserJourney {
 			),
 			array(
 				"uj.hit_timestamp>$ts",
-				"uj.user_name" => $usr,
+				"uj.user_name" => $username,
 				"uj.page_id=$pid",
 				"uj.page_action" => "Edit page",
 			),
@@ -216,7 +213,7 @@ class UserJourney {
 			),
 			array(
 				//"uj.hit_timestamp>$ts",
-				"uj.user_name" => $usr,
+				"uj.user_name" => $username,
 				//"uj.page_id=$pid",//need to calc unique page saves per day?
 				"uj.page_action" => "Edit",
 			),
@@ -229,38 +226,45 @@ class UserJourney {
 		$numberOfUserRevisions = $dbr->numRows( $listOfUserRevisions );
 
 		if( $dbr->numRows( $userHasSavedThisPageToday ) == 0 ) {
-			$UserPoints += 3; 
+			$egCurrentHit['user_points'] += 3; 
 		} else if ( $numberOfUserRevisions == 10 ) {
-			$UserPoints += 10;
+			$egCurrentHit['user_points'] += 10;
 			// $user_badge += "10th Edit";
-			$UserBadges += "10th Edit";
-		} else $UserPoints += 0;
+			$egCurrentHit['user_badges'] += "10th Edit";
+		}
+
 
 		if ( $egCurrentHit['user_actions'] != "" ) {
 			$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . ", ";
 		}
 		$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . "Edit";
 
-		$now = time();
-		// $hit = array(
-		// 	'user_points' => $UserPoints, //Eventually this will be a variable based on action specifics
-		// 	'user_badge' => $user_badge,
-		// 	'page_id' => $pid,
-		// 	'page_name' => $article->getTitle(),
-		// 	'user_name' => $user->getName(),
-		// 	'hit_timestamp' => wfTimestampNow(),
-			
-		// 	'hit_year' => date('Y',$now),
-		// 	'hit_month' => date('m',$now),
-		// 	'hit_day' => date('d',$now),
-		// 	'hit_hour' => date('H',$now),
-		// 	'hit_weekday' => date('w',$now), // 0' => sunday, 1=monday, ... , 6=saturday
-
-		// 	'page_action' => "Edit page", 
-
-		// );
-
-		// $egCurrentHit = $hit;
+		//delta list of unreviewed pages late in page load
+		$deltaUserUnreviewedPages = $dbr->select(
+			array('wl' => 'watchlist'),
+			array(
+				"wl.wl_user AS wl_user",
+				"wl.wl_namespace AS wl_namespace",
+				"wl.wl_title AS wl_title",
+				"wl.wl_notificationtimestamp AS wl_notificationTS",
+			),
+			array(
+				"wl.wl_user" => $userid,
+				// "wl.wl_namespace" => NS_MAIN,//$articleNS,
+				//"wl.wl_title" => "Page_2",//$title,
+				"wl.wl_notificationtimestamp IS NOT NULL",
+			),
+			__METHOD__,
+			array(
+				// "LIMIT" => "1",
+			),
+			null // join conditions
+		);
+		//need to compare delta list to eg list and react if user reviewed a page
+		// $numUserUnreviewedPages = $dbr->numRows( $egUserUnreviewedPages );
+		// if ( $numUserUnreviewedPages > 0 ) {
+		// 	$UserPoints += 5; //indicate user has un-reviewed page, move reward to later hook
+		// }
 
 		self::recordInDatabase();
 
