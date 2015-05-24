@@ -64,6 +64,7 @@ class UserJourney {
 			$egUserid;
 			//consider comparing before-after table for edge case of new page added to wl in page load
 			
+		//Temp vars contained in $egCurrentHit upon completion of this function
 		$UserPoints = 0; // init user points
 		$UserActions = ""; // init blank
 		$UserBadges = ""; // init blank
@@ -129,7 +130,7 @@ class UserJourney {
 		);
 
 		if ( $UserActions != "" ) {
-			$UserActions += ", ";
+			$UserActions = $UserActions . ", ";
 		}
 		$UserActions = $UserActions . "View";
 
@@ -172,81 +173,88 @@ class UserJourney {
 
 	}
 
+// public static function onArticleUpdateBeforeRedirect( $article, &$sectionanchor, &$extraq ) {
+// 	global $egCurrentHit;
+
+// 	$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . "Test";
+
+// 	return true;
+// }
+
 
 	// After save page request has been completed
 	public static function onPageContentSaveComplete( $article, $user, $content, $summary, $isMinor, $isWatch, 
 		$section, $flags, $revision, $status, $baseRevId ) {
 
-		global $wgRequestTime, $egCurrentHit;
+echo "test";
+		// global $wgRequestTime, $egCurrentHit;
 
 		//Logic to only reward 1st save of a given page per day
-		$ts = date("Ymd000000", time() );
-		$ptitle = $article->getTitle();
-		$pid = $ptitle->getArticleId();
-		$username = $user->getName();
+		// $ts = date("Ymd000000", time() );
+		// $ptitle = $article->getTitle();
+		// $pid = $ptitle->getArticleId();
+		// $username = $user->getName();
 
-		$dbr = wfGetDB( DB_SLAVE );
+		// if ( $egCurrentHit['user_actions'] != "" ) {
+		// 	$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . ", ";
+		// }
+		// $egCurrentHit['user_actions'] =  "Edit";
 
-		$userHasSavedThisPageToday = $dbr->select(
-			array('uj' => 'userjourney'),
-			array(
-				"uj.page_id AS page_id",
-				"uj.hit_timestamp AS hit_timestamp",
-				"uj.user_name AS user_name",
-				"uj.page_action AS page_action",
-			),
-			array(
-				"uj.hit_timestamp>$ts",
-				"uj.user_name" => $username,
-				"uj.page_id=$pid",
-				"uj.page_action" => "Edit page",
-			),
-			__METHOD__,
-			array(
-				"LIMIT" => "1",
-			),
-			null // join conditions
-		);
+		// $dbr = wfGetDB( DB_SLAVE );
 
-		//add new $dbr->select query for first edit and award 10 bonus points, then do one for 10 edits, etc
-		$listOfUserRevisions = $dbr->select(
-			array('uj' => 'userjourney'),
-			array(
-				"uj.page_id AS page_id",
-				"uj.hit_timestamp AS hit_timestamp",
-				"uj.user_name AS user_name",
-				"uj.page_action AS page_action",
-			),
-			array(
-				//"uj.hit_timestamp>$ts",
-				"uj.user_name" => $username,
-				//"uj.page_id=$pid",//need to calc unique page saves per day?
-				"uj.page_action" => "Edit",
-			),
-			__METHOD__,
-			array(
-				//"LIMIT" => "1",
-			),
-			null // join conditions
-		);
-		$numberOfUserRevisions = $dbr->numRows( $listOfUserRevisions );
+		// $userHasSavedThisPageToday = $dbr->select(
+		// 	array('uj' => 'userjourney'),
+		// 	array(
+		// 		"uj.page_id AS page_id",
+		// 		"uj.hit_timestamp AS hit_timestamp",
+		// 		"uj.user_name AS user_name",
+		// 		"uj.user_actions AS user_actions",
+		// 	),
+		// 	array(
+		// 		"uj.hit_timestamp>$ts",
+		// 		"uj.user_name" => $username,
+		// 		"uj.page_id=$pid",
+		// 		"uj.user_actions" => "Edit page",
+		// 	),
+		// 	__METHOD__,
+		// 	array(
+		// 		"LIMIT" => "1",
+		// 	),
+		// 	null // join conditions
+		// );
 
-		if( $dbr->numRows( $userHasSavedThisPageToday ) == 0 ) {
-			$egCurrentHit['user_points'] += 3; 
-		} else if ( $numberOfUserRevisions == 10 ) {
-			$egCurrentHit['user_points'] += 10;
-			// $user_badge += "10th Edit";
-			$egCurrentHit['user_badges'] += "10th Edit";
-		}
+		// //add new $dbr->select query for first edit and award 10 bonus points, then do one for 10 edits, etc
+		// $listOfUserRevisions = $dbr->select(
+		// 	array('uj' => 'userjourney'),
+		// 	array(
+		// 		"uj.page_id AS page_id",
+		// 		"uj.hit_timestamp AS hit_timestamp",
+		// 		"uj.user_name AS user_name",
+		// 		"uj.user_actions AS user_actions",
+		// 	),
+		// 	array(
+		// 		//"uj.hit_timestamp>$ts",
+		// 		"uj.user_name" => $username,
+		// 		//"uj.page_id=$pid",//need to calc unique page saves per day?
+		// 		"uj.user_actions" => "Edit",
+		// 	),
+		// 	__METHOD__,
+		// 	array(
+		// 		//"LIMIT" => "1",
+		// 	),
+		// 	null // join conditions
+		// );
+		// $numberOfUserRevisions = $dbr->numRows( $listOfUserRevisions );
 
-
-		if ( $egCurrentHit['user_actions'] != "" ) {
-			$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . ", ";
-		}
-		$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . "Edit";
+		// if( $dbr->numRows( $userHasSavedThisPageToday ) == 0 ) {
+		// 	$egCurrentHit['user_points'] += 3; 
+		// } else if ( $numberOfUserRevisions == 10 ) {
+		// 	$egCurrentHit['user_points'] += 10;
+		// 	// $user_badge += "10th Edit";
+		// 	$egCurrentHit['user_badges'] = $egCurrentHit['user_badges'] . "10th Edit";
+		// }
 
 
-		// self::recordInDatabase();
 
 		return true;
 
@@ -264,47 +272,33 @@ class UserJourney {
 
 		$dbr = wfGetDB( DB_SLAVE );
 
-		//delta list of unreviewed pages late in page load
-		//change to selectrow (see WA or Wiretap)
-		// $deltaUserUnreviewedPages = $dbr->select(
 		$deltaNumUserUnreviewedPages = $dbr->selectRow(
 			array('wl' => 'watchlist'),
 			array( 
 				"COUNT(*) AS num_unreviewed_pages",
-				// "wl.wl_user AS wl_user",
-				// "wl.wl_namespace AS wl_namespace",
-				// "wl.wl_title AS wl_title",
-				// "wl.wl_notificationtimestamp AS wl_notificationTS",
 			),
 			array(
 				"wl.wl_user" => $egUserid,
-				// "wl.wl_namespace" => NS_MAIN,//$articleNS,
-				//"wl.wl_title" => "Page_2",//$title,
 				"wl.wl_notificationtimestamp IS NOT NULL",
 			),
 			__METHOD__,
 			//OPTIONS
 			null,
-			// array(
-			// 	// "LIMIT" => "1",
-			// ),
 			null // join conditions
 		);
-		// $deltaNumUserUnreviewedPages = $dbr->selectRow( $deltaUserUnreviewedPages );
 
-		//need to compare delta list to eg list and react if user reviewed a page
-		// $compareUnreviewedPages = array_diff( $deltaNumUserUnreviewedPages, $egNumUserUnreviewedPages );
-		// $numUserUnreviewedPages = $dbr->numRows( $compareUnreviewedPages );
 		if ( $deltaNumUserUnreviewedPages != $egNumUserUnreviewedPages ) {
 			$egCurrentHit['user_points'] += 15; //indicate user has un-reviewed page, move reward to later hook
-		}
-		print_r($egNumUserUnreviewedPages);//$egNumUserUnreviewedPages);
+			if ( $egCurrentHit['user_actions'] != "" ) {
+				$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . ", ";
+			}
+			$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . "Review";
 
-		// print_r("test");
+		}
 
 		self::recordInDatabase();
 
-		return false;
+		return true;
 
 	}
 		

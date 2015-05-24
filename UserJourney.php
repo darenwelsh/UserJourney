@@ -30,12 +30,14 @@ $wgSpecialPages['UserJourney'] = 'SpecialUserJourney'; // register special page
 // but does not record the information in the database
 $wgHooks['BeforeInitialize'][] = 'UserJourney::onBeforeInitialize';
 
+// $wgHooks['ArticleUpdateBeforeRedirect'][] = 'UserJourney::onArticleUpdateBeforeRedirect';
+
 // After save page request has been completed
 $wgHooks['PageContentSaveComplete'][] = 'UserJourney::onPageContentSaveComplete';
 
 // records the information at the latest possible time in order to
 // record the length of time required to build the page.
-$wgHooks['AfterFinalPageOutput'][] = 'UserJourney::recordInDatabase';
+// $wgHooks['AfterFinalPageOutput'][] = 'UserJourney::recordInDatabase';
 
 // update database (using maintenance/update.php)
 $wgHooks['LoadExtensionSchemaUpdates'][] = 'UserJourney::updateDatabase';
