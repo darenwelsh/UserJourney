@@ -60,7 +60,9 @@ class UserJourney {
 
 		global $wgRequestTime, 
 			$egCurrentHit, //data about this page load
-			$egUserUnreviewedPages; //table of unreviewed pages upon begin page load
+			$egNumUserUnreviewedPages, //number of unreviewed pages upon begin page load
+			$egUserid;
+			//consider comparing before-after table for edge case of new page added to wl in page load
 			
 		$UserPoints = 0; // init user points
 		$UserActions = ""; // init blank
@@ -71,35 +73,39 @@ class UserJourney {
 		$pid = $title->getArticleId();
 		$username = $user->getName();
 		// $articleNS = $article->showNamespaceHeader();
-		$userid = $user->getId();
+		$egUserid = $user->getId();
 
 		$dbr = wfGetDB( DB_SLAVE );
 
-		$egUserUnreviewedPages = $dbr->select(
+		$egNumUserUnreviewedPages = $dbr->selectRow(
+		// $userUnreviewedPages = $dbr->select(
 			array('wl' => 'watchlist'),
 			array(
-				"wl.wl_user AS wl_user",
-				"wl.wl_namespace AS wl_namespace",
-				"wl.wl_title AS wl_title",
-				"wl.wl_notificationtimestamp AS wl_notificationTS",
+				"COUNT(*) AS num_unreviewed_pages",
+				// "wl.wl_user AS wl_user",
+				// "wl.wl_namespace AS wl_namespace",
+				// "wl.wl_title AS wl_title",
+				// "wl.wl_notificationtimestamp AS wl_notificationTS",
 			),
 			array(
-				"wl.wl_user" => $userid,
+				"wl.wl_user" => $egUserid,
 				// "wl.wl_namespace" => NS_MAIN,//$articleNS,
 				//"wl.wl_title" => "Page_2",//$title,
 				"wl.wl_notificationtimestamp IS NOT NULL",
 			),
 			__METHOD__,
-			array(
-				// "LIMIT" => "1",
-			),
+			null,//OPTIONS
+			// array(
+			// 	// "LIMIT" => "1",
+			// ),
 			null // join conditions
 		);
+		// $egNumUserUnreviewedPages = $dbr->selectRow( $userUnreviewedPages );
 
-		$numUserUnreviewedPages = $dbr->numRows( $egUserUnreviewedPages );
-		if ( $numUserUnreviewedPages > 0 ) {
-			$UserPoints += 5; //indicate user has un-reviewed page, move reward to later hook
-		}
+		// $numUserUnreviewedPages = $dbr->numRows( $egUserUnreviewedPages );
+		// if ( $numUserUnreviewedPages > 0 ) {
+		// 	$UserPoints += 5; //indicate user has un-reviewed page, move reward to later hook
+		// }
 
 		$res = $dbr->select(
 			array('uj' => 'userjourney'),
@@ -239,34 +245,8 @@ class UserJourney {
 		}
 		$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . "Edit";
 
-		//delta list of unreviewed pages late in page load
-		$deltaUserUnreviewedPages = $dbr->select(
-			array('wl' => 'watchlist'),
-			array(
-				"wl.wl_user AS wl_user",
-				"wl.wl_namespace AS wl_namespace",
-				"wl.wl_title AS wl_title",
-				"wl.wl_notificationtimestamp AS wl_notificationTS",
-			),
-			array(
-				"wl.wl_user" => $userid,
-				// "wl.wl_namespace" => NS_MAIN,//$articleNS,
-				//"wl.wl_title" => "Page_2",//$title,
-				"wl.wl_notificationtimestamp IS NOT NULL",
-			),
-			__METHOD__,
-			array(
-				// "LIMIT" => "1",
-			),
-			null // join conditions
-		);
-		//need to compare delta list to eg list and react if user reviewed a page
-		// $numUserUnreviewedPages = $dbr->numRows( $egUserUnreviewedPages );
-		// if ( $numUserUnreviewedPages > 0 ) {
-		// 	$UserPoints += 5; //indicate user has un-reviewed page, move reward to later hook
-		// }
 
-		self::recordInDatabase();
+		// self::recordInDatabase();
 
 		return true;
 
@@ -274,7 +254,55 @@ class UserJourney {
 
 	public static function onBeforePageDisplay( OutputPage &$out, Skin &$skin ){
 
+		global $egCurrentHit, $egNumUserUnreviewedPages, $egUserid;
+
+		//Logic to only reward 1st save of a given page per day
+		// $ts = date("Ymd000000", time() );
+		// $ptitle = $article->getTitle();
+		// $pid = $ptitle->getArticleId();
+		// $username = $user->getName();
+
+		$dbr = wfGetDB( DB_SLAVE );
+
+		//delta list of unreviewed pages late in page load
+		//change to selectrow (see WA or Wiretap)
+		// $deltaUserUnreviewedPages = $dbr->select(
+		$deltaNumUserUnreviewedPages = $dbr->selectRow(
+			array('wl' => 'watchlist'),
+			array( 
+				"COUNT(*) AS num_unreviewed_pages",
+				// "wl.wl_user AS wl_user",
+				// "wl.wl_namespace AS wl_namespace",
+				// "wl.wl_title AS wl_title",
+				// "wl.wl_notificationtimestamp AS wl_notificationTS",
+			),
+			array(
+				"wl.wl_user" => $egUserid,
+				// "wl.wl_namespace" => NS_MAIN,//$articleNS,
+				//"wl.wl_title" => "Page_2",//$title,
+				"wl.wl_notificationtimestamp IS NOT NULL",
+			),
+			__METHOD__,
+			//OPTIONS
+			null,
+			// array(
+			// 	// "LIMIT" => "1",
+			// ),
+			null // join conditions
+		);
+		// $deltaNumUserUnreviewedPages = $dbr->selectRow( $deltaUserUnreviewedPages );
+
+		//need to compare delta list to eg list and react if user reviewed a page
+		// $compareUnreviewedPages = array_diff( $deltaNumUserUnreviewedPages, $egNumUserUnreviewedPages );
+		// $numUserUnreviewedPages = $dbr->numRows( $compareUnreviewedPages );
+		if ( $deltaNumUserUnreviewedPages != $egNumUserUnreviewedPages ) {
+			$egCurrentHit['user_points'] += 15; //indicate user has un-reviewed page, move reward to later hook
+		}
+		print_r($egNumUserUnreviewedPages);//$egNumUserUnreviewedPages);
+
 		// print_r("test");
+
+		self::recordInDatabase();
 
 		return false;
 
