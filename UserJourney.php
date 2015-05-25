@@ -37,7 +37,7 @@ $wgHooks['PageContentSaveComplete'][] = 'UserJourney::onPageContentSaveComplete'
 
 // records the information at the latest possible time in order to
 // record the length of time required to build the page.
-// $wgHooks['AfterFinalPageOutput'][] = 'UserJourney::recordInDatabase';
+$wgHooks['AfterFinalPageOutput'][] = 'UserJourney::recordInDatabase';
 
 // update database (using maintenance/update.php)
 $wgHooks['LoadExtensionSchemaUpdates'][] = 'UserJourney::updateDatabase';
@@ -45,10 +45,10 @@ $wgHooks['LoadExtensionSchemaUpdates'][] = 'UserJourney::updateDatabase';
 // 1 of the last hooks in page load
 $wgHooks['BeforePageDisplay'][] = 'UserJourney::onBeforePageDisplay';
 
-$wiretapResourceTemplate = array(
-	'localBasePath' => __DIR__ . '/modules',
-	'remoteExtPath' => 'UserJourney/modules',
-);
+// $wiretapResourceTemplate = array(
+// 	'localBasePath' => __DIR__ . '/modules',
+// 	'remoteExtPath' => 'UserJourney/modules',
+// );
 
 // $wgResourceModules += array(
 

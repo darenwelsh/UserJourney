@@ -55,15 +55,24 @@ class UserJourney {
 
 	public static function onBeforeInitialize( &$title, &$article, &$output, &$user, $request, $mediaWiki ) {
 		
+// file_put_contents("/var/www/html/MWHooks.txt", "onBeforeInitializeBegin\n", FILE_APPEND);
+
 		$output->enableClientCache( false );
 		$output->addMeta( 'http:Pragma', 'no-cache' );
 
 		global $wgRequestTime, 
 			$egCurrentHit, //data about this page load
 			$egNumUserUnreviewedPages, //number of unreviewed pages upon begin page load
-			$egUserid;
+			$egUserid,
+			$egPageSave,
+			$egRecordedInDB;
 			//consider comparing before-after table for edge case of new page added to wl in page load
 			
+		//escape if this function is called following the PageContentSaveComplete hook
+		// if ( $egPageSave == true ) {
+		// 	return true;
+		// }
+
 		//Temp vars contained in $egCurrentHit upon completion of this function
 		$UserPoints = 0; // init user points
 		$UserActions = ""; // init blank
@@ -165,10 +174,18 @@ class UserJourney {
 		$hit['referer_url'] = isset($_SERVER["HTTP_REFERER"]) ? $_SERVER["HTTP_REFERER"] : null;
 		$hit['referer_title'] = self::getRefererTitleText( $request->getVal('refererpage') );
 
-		$egCurrentHit = $hit;
+		if ( $egCurrentHit ) {
+			file_put_contents("/var/www/html/MWHooks.txt", "egCurrentHit true\n", FILE_APPEND);
+			//Need to handle if this event is repeated (like redirect after save)
+		} else {
+			file_put_contents("/var/www/html/MWHooks.txt", "egCurrentHit false\n", FILE_APPEND);
+			$egCurrentHit = $hit;
+		}
+
 
 		// self::recordInDatabase(); //remove this after linking flow of hooks
 
+// file_put_contents("/var/www/html/MWHooks.txt", "onBeforeInitializeEnd\n", FILE_APPEND);
 		return true;
 
 	}
@@ -183,84 +200,89 @@ class UserJourney {
 
 
 	// After save page request has been completed
-	public static function onPageContentSaveComplete( $article, $user, $content, $summary, $isMinor, $isWatch, 
-		$section, $flags, $revision, $status, $baseRevId ) {
+	public static function onPageContentSaveComplete( $article, $user, $content, $summary, 
+		$isMinor, $isWatch, $section, $flags, $revision, $status, $baseRevId ) {
+// file_put_contents("/var/www/html/MWHooks.txt", "onPageContentSaveComplete\n", FILE_APPEND);
 
-echo "test";
-		// global $wgRequestTime, $egCurrentHit;
+		global $wgRequestTime, $egCurrentHit, $egPageSave;
+
+		$egPageSave = true;
 
 		//Logic to only reward 1st save of a given page per day
-		// $ts = date("Ymd000000", time() );
-		// $ptitle = $article->getTitle();
-		// $pid = $ptitle->getArticleId();
-		// $username = $user->getName();
+		$ts = date("Ymd000000", time() );
+		$ptitle = $article->getTitle();
+		$pid = $ptitle->getArticleId();
+		$username = $user->getName();
 
-		// if ( $egCurrentHit['user_actions'] != "" ) {
-		// 	$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . ", ";
-		// }
-		// $egCurrentHit['user_actions'] =  "Edit";
+		if ( $egCurrentHit['user_actions'] != "" ) {
+			$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . ", ";
+		}
+		$egCurrentHit['user_actions'] =  "SaveEdit";
 
-		// $dbr = wfGetDB( DB_SLAVE );
+		$dbr = wfGetDB( DB_SLAVE );
 
-		// $userHasSavedThisPageToday = $dbr->select(
-		// 	array('uj' => 'userjourney'),
-		// 	array(
-		// 		"uj.page_id AS page_id",
-		// 		"uj.hit_timestamp AS hit_timestamp",
-		// 		"uj.user_name AS user_name",
-		// 		"uj.user_actions AS user_actions",
-		// 	),
-		// 	array(
-		// 		"uj.hit_timestamp>$ts",
-		// 		"uj.user_name" => $username,
-		// 		"uj.page_id=$pid",
-		// 		"uj.user_actions" => "Edit page",
-		// 	),
-		// 	__METHOD__,
-		// 	array(
-		// 		"LIMIT" => "1",
-		// 	),
-		// 	null // join conditions
-		// );
+		$userHasSavedThisPageToday = $dbr->select(
+			array('uj' => 'userjourney'),
+			array(
+				"uj.page_id AS page_id",
+				"uj.hit_timestamp AS hit_timestamp",
+				"uj.user_name AS user_name",
+				"uj.user_actions AS user_actions",
+			),
+			array(
+				"uj.hit_timestamp>$ts",
+				"uj.user_name" => $username,
+				"uj.page_id=$pid",
+				"uj.user_actions" => "Edit page",
+			),
+			__METHOD__,
+			array(
+				"LIMIT" => "1",
+			),
+			null // join conditions
+		);
 
-		// //add new $dbr->select query for first edit and award 10 bonus points, then do one for 10 edits, etc
-		// $listOfUserRevisions = $dbr->select(
-		// 	array('uj' => 'userjourney'),
-		// 	array(
-		// 		"uj.page_id AS page_id",
-		// 		"uj.hit_timestamp AS hit_timestamp",
-		// 		"uj.user_name AS user_name",
-		// 		"uj.user_actions AS user_actions",
-		// 	),
-		// 	array(
-		// 		//"uj.hit_timestamp>$ts",
-		// 		"uj.user_name" => $username,
-		// 		//"uj.page_id=$pid",//need to calc unique page saves per day?
-		// 		"uj.user_actions" => "Edit",
-		// 	),
-		// 	__METHOD__,
-		// 	array(
-		// 		//"LIMIT" => "1",
-		// 	),
-		// 	null // join conditions
-		// );
-		// $numberOfUserRevisions = $dbr->numRows( $listOfUserRevisions );
+		//add new $dbr->select query for first edit and award 10 bonus points, then do one for 10 edits, etc
+		$listOfUserRevisions = $dbr->select(
+			array('uj' => 'userjourney'),
+			array(
+				"uj.page_id AS page_id",
+				"uj.hit_timestamp AS hit_timestamp",
+				"uj.user_name AS user_name",
+				"uj.user_actions AS user_actions",
+			),
+			array(
+				//"uj.hit_timestamp>$ts",
+				"uj.user_name" => $username,
+				//"uj.page_id=$pid",//need to calc unique page saves per day?
+				"uj.user_actions" => "Edit",
+			),
+			__METHOD__,
+			array(
+				//"LIMIT" => "1",
+			),
+			null // join conditions
+		);
+		$numberOfUserRevisions = $dbr->numRows( $listOfUserRevisions );
 
-		// if( $dbr->numRows( $userHasSavedThisPageToday ) == 0 ) {
-		// 	$egCurrentHit['user_points'] += 3; 
-		// } else if ( $numberOfUserRevisions == 10 ) {
-		// 	$egCurrentHit['user_points'] += 10;
-		// 	// $user_badge += "10th Edit";
-		// 	$egCurrentHit['user_badges'] = $egCurrentHit['user_badges'] . "10th Edit";
-		// }
+		if( $dbr->numRows( $userHasSavedThisPageToday ) == 0 ) {
+			$egCurrentHit['user_points'] += 3; 
+		} else if ( $numberOfUserRevisions == 10 ) {
+			$egCurrentHit['user_points'] += 10;
+			// $user_badge += "10th Edit";
+			$egCurrentHit['user_badges'] = $egCurrentHit['user_badges'] . "10th Edit";
+		}
 
-
+		//Unsure why I need to call this here when it seems AfterFinalPageOutput is called after this hook
+		self::recordInDatabase();
 
 		return true;
 
 	}
 
 	public static function onBeforePageDisplay( OutputPage &$out, Skin &$skin ){
+
+// file_put_contents("/var/www/html/MWHooks.txt", "onBeforePageDisplay\n", FILE_APPEND);
 
 		global $egCurrentHit, $egNumUserUnreviewedPages, $egUserid;
 
@@ -296,14 +318,16 @@ echo "test";
 
 		}
 
-		self::recordInDatabase();
+		// self::recordInDatabase();
 
 		return true;
 
 	}
 		
 	public static function recordInDatabase (  ) { // could have param &$output
-		global $wgRequestTime, $egCurrentHit;
+		global $wgRequestTime, $egCurrentHit, $egRecordedInDB;
+
+// file_put_contents("/var/www/html/MWHooks.txt", "recordInDatabase\n", FILE_APPEND);
 
 		// calculate response time now, in the last hook (that I know of).
 		$egCurrentHit['response_time'] = round( ( microtime( true ) - $wgRequestTime ) * 1000 );
