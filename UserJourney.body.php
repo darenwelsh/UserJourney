@@ -330,7 +330,21 @@ class UserJourney {
 		);
 
 		//Annunciate to user if they earned points or badge
-
+		$alertPoints = $egCurrentHit['user_points'];
+		$alertBadges = $egCurrentHit['user_badges'];
+		if ( $alertPoints > 0 || $alertBadges != "" ){
+			$alertMessage = $alertMessage . "Awesome!";
+		}
+		if ( $alertPoints > 0 ){
+			$alertMessage = $alertMessage . "\\nYou got $alertPoints points!";
+		}
+		if ( $alertBadges != "" ){
+			$alertMessage = $alertMessage . "\\nYou got the $alertBadges badge!";
+		}
+		if ( $alertMessage != "" ){
+			echo "<script type='text/javascript'>alert('$alertMessage')</script>";
+		}
+		// echo "<script type='text/javascript'>alert('Test $alertMessage')</script>";
 		return true;
 	}
 
