@@ -7,19 +7,10 @@ class UserJourney {
 	/*
 	* Short issues
 	* 
-	* Need to address multiple hits displayed on page save
+	* Need to address multiple hits displayed on page view
 	* 
 	* 
 	 * Future Hooks to implement
-
-		 for completing a review
-		 Since there is no hook or event related to reviewing a watched page revision,
-		 I will use two hooks to determine this:  One early in page load; one late.
-		 public static function onArticlePageDataBefore( $article, $fields){}
-		 $wgHooks['ArticlePageDataBefore'][] = 'MyExtensionHooks::onArticlePageDataBefore';
-
-		 onAfterFinalPgeOutput( $output)
-		 AfterFinalPageOutput
 		
 		for badge Necromancer
 		public static function onArticleUndelete( Title $title, $create, $comment, $oldPageID){}
@@ -44,17 +35,16 @@ class UserJourney {
 
 
 	// 1 of the earliest hooks in page load
-	public static function onArticlePageDataBefore( $article, $fields ){
+	// public static function onArticlePageDataBefore( $article, $fields ){
 
 
 
-		return true;
+	// 	return true;
 
-	}
+	// }
 
 
 	public static function onBeforeInitialize( &$title, &$article, &$output, &$user, $request, $mediaWiki ) {
-		
 // file_put_contents("/var/www/html/MWHooks.txt", "onBeforeInitializeBegin\n", FILE_APPEND);
 
 		$output->enableClientCache( false );
@@ -233,7 +223,7 @@ class UserJourney {
 				"uj.hit_timestamp>$ts",
 				"uj.user_name" => $username,
 				"uj.page_id=$pid",
-				"uj.user_actions" => "Edit page",
+				"uj.user_actions" => "SaveEdit",
 			),
 			__METHOD__,
 			array(
@@ -255,7 +245,7 @@ class UserJourney {
 				//"uj.hit_timestamp>$ts",
 				"uj.user_name" => $username,
 				//"uj.page_id=$pid",//need to calc unique page saves per day?
-				"uj.user_actions" => "Edit",
+				"uj.user_actions" => "SaveEdit",
 			),
 			__METHOD__,
 			array(
@@ -269,7 +259,7 @@ class UserJourney {
 			$egCurrentHit['user_points'] += 3; 
 		} else if ( $numberOfUserRevisions == 10 ) {
 			$egCurrentHit['user_points'] += 10;
-			// $user_badge += "10th Edit";
+			$user_badge = $user_badge . "10th Edit";
 			$egCurrentHit['user_badges'] = $egCurrentHit['user_badges'] . "10th Edit";
 		}
 
@@ -338,6 +328,9 @@ class UserJourney {
 			$egCurrentHit,
 			__METHOD__
 		);
+
+		//Annunciate to user if they earned points or badge
+
 		return true;
 	}
 
