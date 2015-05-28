@@ -6,10 +6,21 @@ class UserJourney {
 	
 	/*
 	* Short issues
+	*
+	* when 1 viewer goes to changed page to edit, they get 16 pts, then 1 pts (double view)
 	* 
 	* Need to address multiple hits displayed on page view
 	* 
+	* Add hook in core for modification of notificationts
+	*
+	* Add to roadmap: Create widget to share contribution stats with friends
 	* 
+	* Clean up so 1st hook establishes globals, all hooks are minimal and ref activity and logic functions
+	* 
+	* Special map views
+	* - green/red/blue teams fighting for best watching and contribution ratings
+	*
+	*
 	 * Future Hooks to implement
 		
 		for badge Necromancer
@@ -52,12 +63,13 @@ class UserJourney {
 
 		global $wgRequestTime, 
 			$egCurrentHit, //data about this page load
-			$egNumUserUnreviewedPages, //number of unreviewed pages upon begin page load
+			$egUserUnreviewedPages, //number of unreviewed pages upon begin page load
 			$egUserid,
 			$egPageSave,
 			$egRecordedInDB;
 			//consider comparing before-after table for edge case of new page added to wl in page load
 			
+		//maybe use this method to preclude 2x view logging
 		//escape if this function is called following the PageContentSaveComplete hook
 		// if ( $egPageSave == true ) {
 		// 	return true;
@@ -69,7 +81,7 @@ class UserJourney {
 		$UserBadges = ""; // init blank
 
 		//Logic to only reward 1st view of a given page per day
-		$ts = date("Ymd000000", time() );
+		$ts = date("Ymd000000", time() ); //rename to $dayStart
 		$pid = $title->getArticleId();
 		$username = $user->getName();
 		// $articleNS = $article->showNamespaceHeader();
@@ -77,49 +89,33 @@ class UserJourney {
 
 		$dbr = wfGetDB( DB_SLAVE );
 
-		$egNumUserUnreviewedPages = $dbr->selectRow(
-		// $userUnreviewedPages = $dbr->select(
+		$egUserUnreviewedPages = $dbr->selectRow(
 			array('wl' => 'watchlist'),
 			array(
-				"COUNT(*) AS num_unreviewed_pages",
+				"COUNT(*) AS number",
 				// "wl.wl_user AS wl_user",
-				// "wl.wl_namespace AS wl_namespace",
-				// "wl.wl_title AS wl_title",
-				// "wl.wl_notificationtimestamp AS wl_notificationTS",
 			),
 			array(
 				"wl.wl_user" => $egUserid,
 				// "wl.wl_namespace" => NS_MAIN,//$articleNS,
-				//"wl.wl_title" => "Page_2",//$title,
 				"wl.wl_notificationtimestamp IS NOT NULL",
 			),
 			__METHOD__,
-			null,//OPTIONS
-			// array(
-			// 	// "LIMIT" => "1",
-			// ),
-			null // join conditions
+			null,
+			null 
 		);
-		// $egNumUserUnreviewedPages = $dbr->selectRow( $userUnreviewedPages );
 
-		// $numUserUnreviewedPages = $dbr->numRows( $egUserUnreviewedPages );
-		// if ( $numUserUnreviewedPages > 0 ) {
-		// 	$UserPoints += 5; //indicate user has un-reviewed page, move reward to later hook
-		// }
-
-		$res = $dbr->select(
+		$userViewsOfThisPageToday = $dbr->selectRow(
 			array('uj' => 'userjourney'),
 			array(
-				"uj.page_id AS page_id",
-				"uj.hit_timestamp AS hit_timestamp",
-				"uj.user_name AS user_name",
-				"uj.user_actions AS user_actions",
+				"COUNT(*) AS number",
 			),
 			array(
 				"uj.hit_timestamp>$ts",
 				"uj.user_name" => $username,
 				"uj.page_id=$pid",
 				"uj.user_actions" => "View",
+				// "uj.user_actions LIKE %View%",
 			),
 			__METHOD__,
 			array(
@@ -127,13 +123,14 @@ class UserJourney {
 			),
 			null // join conditions
 		);
+		$numUserViewsOfThisPageToday = $userViewsOfThisPageToday->number;
 
 		if ( $UserActions != "" ) {
 			$UserActions = $UserActions . ", ";
 		}
 		$UserActions = $UserActions . "View";
 
-		if( $dbr->fetchRow( $res ) ) {
+		if( $numUserViewsOfThisPageToday > 0 ) {
 			//Leave $egUserPoints at current value
 		} else {
 			$UserPoints += 1;
@@ -274,7 +271,7 @@ class UserJourney {
 
 // file_put_contents("/var/www/html/MWHooks.txt", "onBeforePageDisplay\n", FILE_APPEND);
 
-		global $egCurrentHit, $egNumUserUnreviewedPages, $egUserid;
+		global $egCurrentHit, $egUserUnreviewedPages, $egUserid;
 
 		//Logic to only reward 1st save of a given page per day
 		// $ts = date("Ymd000000", time() );
@@ -284,10 +281,10 @@ class UserJourney {
 
 		$dbr = wfGetDB( DB_SLAVE );
 
-		$deltaNumUserUnreviewedPages = $dbr->selectRow(
+		$deltaUserUnreviewedPages = $dbr->selectRow(
 			array('wl' => 'watchlist'),
 			array( 
-				"COUNT(*) AS num_unreviewed_pages",
+				"COUNT(*) AS number",
 			),
 			array(
 				"wl.wl_user" => $egUserid,
@@ -299,7 +296,7 @@ class UserJourney {
 			null // join conditions
 		);
 
-		if ( $deltaNumUserUnreviewedPages != $egNumUserUnreviewedPages ) {
+		if ( $deltaUserUnreviewedPages->number != $egUserUnreviewedPages->number ) {
 			$egCurrentHit['user_points'] += 15; //indicate user has un-reviewed page, move reward to later hook
 			if ( $egCurrentHit['user_actions'] != "" ) {
 				$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . ", ";
@@ -330,6 +327,7 @@ class UserJourney {
 		);
 
 		//Annunciate to user if they earned points or badge
+		//Issue: Doesn't annunciate on page save earning points
 		$alertPoints = $egCurrentHit['user_points'];
 		$alertBadges = $egCurrentHit['user_badges'];
 		if ( $alertPoints > 0 || $alertBadges != "" ){
