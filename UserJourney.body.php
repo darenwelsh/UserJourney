@@ -162,10 +162,10 @@ class UserJourney {
 		$hit['referer_title'] = self::getRefererTitleText( $request->getVal('refererpage') );
 
 		if ( $egCurrentHit ) {
-			file_put_contents("/var/www/html/MWHooks.txt", "egCurrentHit true\n", FILE_APPEND);
+			// file_put_contents("/var/www/html/MWHooks.txt", "egCurrentHit true\n", FILE_APPEND);
 			//Need to handle if this event is repeated (like redirect after save)
 		} else {
-			file_put_contents("/var/www/html/MWHooks.txt", "egCurrentHit false\n", FILE_APPEND);
+			// file_put_contents("/var/www/html/MWHooks.txt", "egCurrentHit false\n", FILE_APPEND);
 			$egCurrentHit = $hit;
 		}
 
@@ -330,6 +330,7 @@ class UserJourney {
 		//Issue: Doesn't annunciate on page save earning points
 		$alertPoints = $egCurrentHit['user_points'];
 		$alertBadges = $egCurrentHit['user_badges'];
+		$alertMessage = NULL;
 		if ( $alertPoints > 0 || $alertBadges != "" ){
 			$alertMessage = $alertMessage . "Awesome!";
 		}
