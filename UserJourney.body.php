@@ -418,3 +418,4 @@ echo "<script type='text/javascript'>alert('$alertPoints and $alertBadges')</scr
 
 
 }
+
