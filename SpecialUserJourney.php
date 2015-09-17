@@ -23,7 +23,10 @@ class SpecialUserJourney extends SpecialPage {
 
 		$wgOut->addHTML( $this->getPageHeader() );
 		
-		if ($this->mMode == 'total-hits-data') {
+		if ($this->mMode == 'hits-list') {
+			$this->hitsList();
+		}
+		else if ($this->mMode == 'total-hits-data') {
 			$this->totals();
 		}
 		else if ( $this->mMode == 'total-hits-chart' ) {
@@ -45,7 +48,7 @@ class SpecialUserJourney extends SpecialPage {
 		}
 
 		else {
-			$this->hitsList();
+			$this->overview();
 		}
 	}
 	
@@ -73,7 +76,9 @@ class SpecialUserJourney extends SpecialPage {
 		
 		$navLine .= "<ul>";
 
-		$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-hits' ) . $unfilterLink . "</li>";
+		$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-overview' ) . $unfilterLink . "</li>";
+
+		$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-hits', 'hits-list' ) . $unfilterLink . "</li>";
 
 		$navLine .= "<li>" . wfMessage( 'userjourney-dailytotals' )->text() 
 			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'total-hits-data' )
@@ -114,6 +119,25 @@ class SpecialUserJourney extends SpecialPage {
 		}
 
 	}
+
+	public function overview () {
+		global $wgOut, $wgRequest;
+
+		$wgOut->setPageTitle( 'UserJourney' );
+
+		$pager = new UserJourneyPager();
+		$pager->filterUser = $wgRequest->getVal( 'filterUser' );
+		$pager->filterPage = $wgRequest->getVal( 'filterPage' );
+		
+		// $form = $pager->getForm();
+		$body = $pager->getBody();
+		$html = '';
+		// $html = $form;
+
+		$html .= '<p>Test</p>';
+		$wgOut->addHTML( $html );
+	}
+	
 	
 	public function hitsList () {
 		global $wgOut, $wgRequest;

@@ -5,58 +5,11 @@ class UserJourney {
 	static $referers = null;
 	
 	/*
-	* Short issues
-	*
-	* when 1 viewer goes to changed page to edit, they get 16 pts, then 1 pts (double view)
-	* 
-	* Need to address multiple hits displayed on page view
-	* 
-	* Add hook in core for modification of notificationts
-	*
-	* Add to roadmap: Create widget to share contribution stats with friends
-	* 
-	* Clean up so 1st hook establishes globals, all hooks are minimal and ref activity and logic functions
-	* 
-	* Special map views
-	* - green/red/blue teams fighting for best watching and contribution ratings
-	*
-	*
-	 * Future Hooks to implement
-		
-		for badge Necromancer
-		public static function onArticleUndelete( Title $title, $create, $comment, $oldPageID){}
-		$wgHooks['Article'Undelete'][] = 'MyExtensionHooks::onArticleUndelete';
-
-		for watching an article (need to prevent watch/unwatch endless cycle for points)
-		public static function onWatchArticleComplete( $user, $article){}
-		$wgHooks['WatchArticleComplete'][] = 'MyExtensionHook::onWatchArticleComplete';
-
-		for completing file upload
-		public static function onUploadComplete ( &$image){}
-		$wgHooks['UploadComplete'][] = 'MyExtensionHooks::onUploadComplete';
-
-		Add starter badge system (small values to test at first):
-		* New Editor for first edit
-		* Editor for 10 edits
-		* Contributor for 20 edits
-
 	 *
 	 *
 	 */
 
-
-	// 1 of the earliest hooks in page load
-	// public static function onArticlePageDataBefore( $article, $fields ){
-
-
-
-	// 	return true;
-
-	// }
-
-
 	public static function onBeforeInitialize( &$title, &$article, &$output, &$user, $request, $mediaWiki ) {
-// file_put_contents("/var/www/html/MWHooks.txt", "onBeforeInitializeBegin\n", FILE_APPEND);
 
 		$output->enableClientCache( false );
 		$output->addMeta( 'http:Pragma', 'no-cache' );
@@ -333,7 +286,9 @@ class UserJourney {
 		$alertPoints = $egCurrentHit['user_points'];
 		$alertBadges = $egCurrentHit['user_badges'];
 		$alertMessage = ""; //NULL;
-echo "<script type='text/javascript'>alert('$alertPoints and $alertBadges')</script>";
+		$alertAction = $egCurrentHit['page_action'];
+// echo "<script type='text/javascript'>alert('$alertPoints and $alertBadges')</script>";
+echo "<script>console.log( 'Notifications: $alertPoints Points, $alertBadges Badges, and $alertMessage Message. Event: $alertAction' );</script>";
 
 		if ( $alertPoints > 0 || $alertBadges != "" ){
 			$alertMessage = $alertMessage . "Awesome!";
