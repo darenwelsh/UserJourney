@@ -3,25 +3,50 @@
 class UserJourney {
 
 	static $referers = null;
-	
+
 	/*
 	 *
 	 *
 	 */
+
+
+	/*
+		To get hooks on a page load:
+
+		global $hookLogFile;
+		if ( ! isset( $hookLogFile ) ) {
+			$hookLogFile = __DIR__ . "/../hooklog/" . date( "Ymd_His", time() ) . "_" . rand() . ".txt";
+			file_put_contents( $hookLogFile, $_SERVER["REQUEST_URI"] . "\n", FILE_APPEND );
+		}
+		file_put_contents( $hookLogFile, "$event\n", FILE_APPEND );
+
+	*/
+
+
+	// 1 of the earliest hooks in page load
+	// public static function onArticlePageDataBefore( $article, $fields ){
+
+
+
+	// 	return true;
+
+	// }
+
+
 
 	public static function onBeforeInitialize( &$title, &$article, &$output, &$user, $request, $mediaWiki ) {
 
 		$output->enableClientCache( false );
 		$output->addMeta( 'http:Pragma', 'no-cache' );
 
-		global $wgRequestTime, 
+		global $wgRequestTime,
 			$egCurrentHit, //data about this page load
 			$egUserUnreviewedPages, //number of unreviewed pages upon begin page load
 			$egUserid,
 			$egPageSave,
 			$egRecordedInDB;
 			//consider comparing before-after table for edge case of new page added to wl in page load
-			
+
 		//maybe use this method to preclude 2x view logging
 		//escape if this function is called following the PageContentSaveComplete hook
 		// if ( $egPageSave == true ) {
@@ -55,7 +80,7 @@ class UserJourney {
 			),
 			__METHOD__,
 			null,
-			null 
+			null
 		);
 
 		$userViewsOfThisPageToday = $dbr->selectRow(
@@ -98,7 +123,7 @@ class UserJourney {
 			'page_name' => $title->getFullText(),
 			'user_name' => $user->getName(),
 			'hit_timestamp' => wfTimestampNow(),
-			
+
 			'hit_year' => date('Y',$now),
 			'hit_month' => date('m',$now),
 			'hit_day' => date('d',$now),
@@ -140,7 +165,7 @@ class UserJourney {
 
 
 	// After save page request has been completed
-	public static function onPageContentSaveComplete( $article, $user, $content, $summary, 
+	public static function onPageContentSaveComplete( $article, $user, $content, $summary,
 		$isMinor, $isWatch, $section, $flags, $revision, $status, $baseRevId ) {
 // file_put_contents("/var/www/html/MWHooks.txt", "onPageContentSaveComplete\n", FILE_APPEND);
 
@@ -206,7 +231,7 @@ class UserJourney {
 		$numberOfUserRevisions = $dbr->numRows( $listOfUserRevisions );
 
 		if( $dbr->numRows( $userHasSavedThisPageToday ) == 0 ) {
-			$egCurrentHit['user_points'] += 3; 
+			$egCurrentHit['user_points'] += 3;
 		} else if ( $numberOfUserRevisions == 10 ) {
 			$egCurrentHit['user_points'] += 10;
 			$user_badge = $user_badge . "10th Edit";
@@ -238,7 +263,7 @@ class UserJourney {
 
 		$deltaUserUnreviewedPages = $dbr->selectRow(
 			array('wl' => 'watchlist'),
-			array( 
+			array(
 				"COUNT(*) AS number",
 			),
 			array(
@@ -265,7 +290,7 @@ class UserJourney {
 		return true;
 
 	}
-		
+
 	public static function recordInDatabase (  ) { // could have param &$output
 		global $wgRequestTime, $egCurrentHit, $egRecordedInDB;
 
@@ -273,7 +298,7 @@ class UserJourney {
 
 		// calculate response time now, in the last hook (that I know of).
 		$egCurrentHit['response_time'] = round( ( microtime( true ) - $wgRequestTime ) * 1000 );
-		
+
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->insert(
 			'userjourney',
@@ -311,7 +336,7 @@ echo "<script>console.log( 'Notifications: $alertPoints Points, $alertBadges Bad
 
 		$userJourneyTable = $wgDBprefix . 'userjourney';
 		$schemaDir = __DIR__ . '/schema';
-		
+
 		$updater->addExtensionTable(
 			$userJourneyTable,
 			"$schemaDir/UserJourney.sql"
@@ -324,7 +349,7 @@ echo "<script>console.log( 'Notifications: $alertPoints Points, $alertBadges Bad
 
 		return true;
 	}
-	
+
 	/**
 	 *	See WebRequest::getPathInfo() for ideas/info
 	 *  Make better use of: $wgScript, $wgScriptPath, $wgArticlePath;
@@ -335,40 +360,40 @@ echo "<script>console.log( 'Notifications: $alertPoints Points, $alertBadges Bad
 	 *    wfRestoreWarnings();
 	 **/
 	public static function getRefererTitleText ( $refererpage=null ) {
-		
+
 		global $wgScriptPath;
-	
+
 		if ( $refererpage )
 			return $refererpage;
 		else if ( ! isset($_SERVER["HTTP_REFERER"]) )
 			return null;
-	
+
 		$wikiBaseUrl = WebRequest::detectProtocol() . '://' . $_SERVER['HTTP_HOST'] . $wgScriptPath;
-		
-		// if referer URL starts 
+
+		// if referer URL starts
 		if ( strpos($_SERVER["HTTP_REFERER"], $wikiBaseUrl) === 0 ) {
-			
+
 			$questPos = strpos( $_SERVER['HTTP_REFERER'], '?' );
 			$hashPos = strpos( $_SERVER['HTTP_REFERER'], '#' );
-			
+
 			if ($hashPos !== false) {
 				$queryStringLength = $hashPos - $questPos;
 				$queryString = substr($_SERVER['HTTP_REFERER'], $questPos+1, $queryStringLength);
 			} else {
 				$queryString = substr($_SERVER['HTTP_REFERER'], $questPos+1);
 			}
-						
+
 			$query = array();
 			parse_str( $queryString, $query );
 
 			return isset($query['title']) ? $query['title'] : false;
-		
+
 		}
 		else
 			return false;
-		
+
 	}
-	
+
 
 
 
