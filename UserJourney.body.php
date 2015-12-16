@@ -11,7 +11,7 @@ class UserJourney {
 	* 
 	* Need to address multiple hits displayed on page view
 	* 
-	* Add hook in core for modification of notificationts
+	* Add hook in core for modification of notifications
 	*
 	* Add to roadmap: Create widget to share contribution stats with friends
 	* 
@@ -43,6 +43,18 @@ class UserJourney {
 	 *
 	 *
 	 */
+
+	/*
+		To get hooks on a page load:
+
+		global $hookLogFile;
+		if ( ! isset( $hookLogFile ) ) {
+			$hookLogFile = __DIR__ . "/../hooklog/" . date( "Ymd_His", time() ) . "_" . rand() . ".txt";
+			file_put_contents( $hookLogFile, $_SERVER["REQUEST_URI"] . "\n", FILE_APPEND );
+		}
+		file_put_contents( $hookLogFile, "$event\n", FILE_APPEND );
+
+	*/
 
 
 	// 1 of the earliest hooks in page load
