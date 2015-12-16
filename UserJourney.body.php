@@ -272,6 +272,8 @@ class UserJourney {
 			$egCurrentHit['user_badges'] = $egCurrentHit['user_badges'] . "10th Edit";
 		}
 
+	echo "<script type='text/javascript'>alert('test')</script>";
+	$egCurrentHit['user_badges'] = "Test";
 		//Unsure why I need to call this here when it seems AfterFinalPageOutput is called after this hook
 		self::recordInDatabase();
 
@@ -342,7 +344,9 @@ class UserJourney {
 		//Issue: Doesn't annunciate on page save earning points
 		$alertPoints = $egCurrentHit['user_points'];
 		$alertBadges = $egCurrentHit['user_badges'];
-		$alertMessage = NULL;
+		$alertMessage = ""; //NULL;
+echo "<script type='text/javascript'>alert('$alertPoints and $alertBadges')</script>";
+
 		if ( $alertPoints > 0 || $alertBadges != "" ){
 			$alertMessage = $alertMessage . "Awesome!";
 		}
@@ -426,3 +430,4 @@ class UserJourney {
 
 
 }
+
