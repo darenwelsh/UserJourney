@@ -238,7 +238,7 @@ class UserJourney {
 			$egCurrentHit['user_badges'] = $egCurrentHit['user_badges'] . "10th Edit";
 		}
 
-	echo "<script type='text/javascript'>alert('test')</script>";
+	// echo "<script type='text/javascript'>alert('test')</script>";
 	$egCurrentHit['user_badges'] = "Test";
 		//Unsure why I need to call this here when it seems AfterFinalPageOutput is called after this hook
 		self::recordInDatabase();
@@ -313,7 +313,7 @@ class UserJourney {
 		$alertMessage = ""; //NULL;
 		$alertAction = $egCurrentHit['page_action'];
 // echo "<script type='text/javascript'>alert('$alertPoints and $alertBadges')</script>";
-echo "<script>console.log( 'Notifications: $alertPoints Points, $alertBadges Badges, and $alertMessage Message. Event: $alertAction' );</script>";
+// echo "<script>console.log( 'Notifications: $alertPoints Points, $alertBadges Badges, and $alertMessage Message. Event: $alertAction' );</script>";
 
 		if ( $alertPoints > 0 || $alertBadges != "" ){
 			$alertMessage = $alertMessage . "Awesome!";
@@ -325,7 +325,7 @@ echo "<script>console.log( 'Notifications: $alertPoints Points, $alertBadges Bad
 			$alertMessage = $alertMessage . "\\nYou got the $alertBadges badge!";
 		}
 		if ( $alertMessage != "" ){
-			echo "<script type='text/javascript'>alert('$alertMessage')</script>";
+			// echo "<script type='text/javascript'>alert('$alertMessage')</script>";
 		}
 		// echo "<script type='text/javascript'>alert('Test $alertMessage')</script>";
 		return true;
