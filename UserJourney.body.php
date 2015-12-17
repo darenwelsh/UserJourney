@@ -1,26 +1,27 @@
 <?php
 
+
 class UserJourney {
 
 	static $referers = null;
 
-	/*
-	 *
-	 *
-	 */
 
 
-	/*
-		To get hooks on a page load:
 
-		global $hookLogFile;
-		if ( ! isset( $hookLogFile ) ) {
-			$hookLogFile = __DIR__ . "/../hooklog/" . date( "Ymd_His", time() ) . "_" . rand() . ".txt";
-			file_put_contents( $hookLogFile, $_SERVER["REQUEST_URI"] . "\n", FILE_APPEND );
-		}
-		file_put_contents( $hookLogFile, "$event\n", FILE_APPEND );
 
-	*/
+		// To get hooks on a page load:
+
+		// global $hookLogFile;
+		// if ( ! isset( $hookLogFile ) ) {
+		// 	$hookLogFile = __DIR__ . "/../hooklog/" . date( "Ymd_His", time() ) . "_" . rand() . ".txt";
+		// 	file_put_contents( $hookLogFile, $_SERVER["REQUEST_URI"] . "\n", FILE_APPEND );
+		// }
+		// file_put_contents( $hookLogFile, "$event\n", FILE_APPEND );
+
+
+
+
+
 
 
 	// 1 of the earliest hooks in page load
@@ -31,6 +32,8 @@ class UserJourney {
 	// 	return true;
 
 	// }
+
+
 
 
 
@@ -150,24 +153,24 @@ class UserJourney {
 
 		// self::recordInDatabase(); //remove this after linking flow of hooks
 
-// file_put_contents("/var/www/html/MWHooks.txt", "onBeforeInitializeEnd\n", FILE_APPEND);
+		// file_put_contents("/var/www/html/MWHooks.txt", "onBeforeInitializeEnd\n", FILE_APPEND);
 		return true;
 
 	}
 
-// public static function onArticleUpdateBeforeRedirect( $article, &$sectionanchor, &$extraq ) {
-// 	global $egCurrentHit;
+	// public static function onArticleUpdateBeforeRedirect( $article, &$sectionanchor, &$extraq ) {
+	// 	global $egCurrentHit;
 
-// 	$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . "Test";
+	// 	$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . "Test";
 
-// 	return true;
-// }
+	// 	return true;
+	// }
 
 
 	// After save page request has been completed
 	public static function onPageContentSaveComplete( $article, $user, $content, $summary,
 		$isMinor, $isWatch, $section, $flags, $revision, $status, $baseRevId ) {
-// file_put_contents("/var/www/html/MWHooks.txt", "onPageContentSaveComplete\n", FILE_APPEND);
+		// file_put_contents("/var/www/html/MWHooks.txt", "onPageContentSaveComplete\n", FILE_APPEND);
 
 		global $wgRequestTime, $egCurrentHit, $egPageSave;
 
@@ -238,8 +241,8 @@ class UserJourney {
 			$egCurrentHit['user_badges'] = $egCurrentHit['user_badges'] . "10th Edit";
 		}
 
-	// echo "<script type='text/javascript'>alert('test')</script>";
-	$egCurrentHit['user_badges'] = "Test";
+		// echo "<script type='text/javascript'>alert('test')</script>";
+		$egCurrentHit['user_badges'] = "Test";
 		//Unsure why I need to call this here when it seems AfterFinalPageOutput is called after this hook
 		self::recordInDatabase();
 
@@ -249,7 +252,7 @@ class UserJourney {
 
 	public static function onBeforePageDisplay( OutputPage &$out, Skin &$skin ){
 
-// file_put_contents("/var/www/html/MWHooks.txt", "onBeforePageDisplay\n", FILE_APPEND);
+		// file_put_contents("/var/www/html/MWHooks.txt", "onBeforePageDisplay\n", FILE_APPEND);
 
 		global $egCurrentHit, $egUserUnreviewedPages, $egUserid;
 
@@ -294,7 +297,7 @@ class UserJourney {
 	public static function recordInDatabase (  ) { // could have param &$output
 		global $wgRequestTime, $egCurrentHit, $egRecordedInDB;
 
-// file_put_contents("/var/www/html/MWHooks.txt", "recordInDatabase\n", FILE_APPEND);
+		// file_put_contents("/var/www/html/MWHooks.txt", "recordInDatabase\n", FILE_APPEND);
 
 		// calculate response time now, in the last hook (that I know of).
 		$egCurrentHit['response_time'] = round( ( microtime( true ) - $wgRequestTime ) * 1000 );
@@ -312,8 +315,8 @@ class UserJourney {
 		$alertBadges = $egCurrentHit['user_badges'];
 		$alertMessage = ""; //NULL;
 		$alertAction = $egCurrentHit['page_action'];
-// echo "<script type='text/javascript'>alert('$alertPoints and $alertBadges')</script>";
-// echo "<script>console.log( 'Notifications: $alertPoints Points, $alertBadges Badges, and $alertMessage Message. Event: $alertAction' );</script>";
+		// echo "<script type='text/javascript'>alert('$alertPoints and $alertBadges')</script>";
+		// echo "<script>console.log( 'Notifications: $alertPoints Points, $alertBadges Badges, and $alertMessage Message. Event: $alertAction' );</script>";
 
 		if ( $alertPoints > 0 || $alertBadges != "" ){
 			$alertMessage = $alertMessage . "Awesome!";
@@ -350,15 +353,15 @@ class UserJourney {
 		return true;
 	}
 
-	/**
-	 *	See WebRequest::getPathInfo() for ideas/info
-	 *  Make better use of: $wgScript, $wgScriptPath, $wgArticlePath;
-	 *
-	 *  Other recommendations:
-	 *    wfSuppressWarnings();
-	 *    $a = parse_url( $url );
-	 *    wfRestoreWarnings();
-	 **/
+	//
+	//	See WebRequest::getPathInfo() for ideas/info
+	//  Make better use of: $wgScript, $wgScriptPath, $wgArticlePath;
+	//
+	//  Other recommendations:
+	//    wfSuppressWarnings();
+	//    $a = parse_url( $url );
+	//    wfRestoreWarnings();
+	//
 	public static function getRefererTitleText ( $refererpage=null ) {
 
 		global $wgScriptPath;
@@ -397,5 +400,7 @@ class UserJourney {
 
 
 
+
 }
+
 

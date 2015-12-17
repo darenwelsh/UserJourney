@@ -1,17 +1,283 @@
 <?php
 
+// class ContributionScores extends IncludableSpecialPage {
+class SpecialUserJourney extends IncludableSpecialPage {
+   public function __construct() {
+       // parent::__construct( 'ContributionScores' );
+   	parent::__construct( 'UserJourney' );
+   }
+
+   /// Generates a "Contribution Scores" table for a given LIMIT and date range
+   /**
+    * Function generates Contribution Scores tables in HTML format (not wikiText)
+    *
+    * @param $days int Days in the past to run report for
+    * @param $limit int Maximum number of users to return (default 50)
+    * @param $title Title (default null)
+    * @param $options array of options (default none; nosort/notools)
+    * @return Html Table representing the requested Contribution Scores.
+    */
+   function genContributionScoreTable( $days, $limit, $title = null, $options = 'none' ) {
+       global $wgContribScoreIgnoreBots, $wgContribScoreIgnoreBlockedUsers, $wgContribScoresUseRealName;
+
+       $opts = explode( ',', strtolower( $options ) );
+
+       $dbr = wfGetDB( DB_SLAVE );
+
+       $userTable = $dbr->tableName( 'user' );
+       $userGroupTable = $dbr->tableName( 'user_groups' );
+       $revTable = $dbr->tableName( 'revision' );
+       $ipBlocksTable = $dbr->tableName( 'ipblocks' );
+
+       $sqlWhere = "";
+       $nextPrefix = "WHERE";
+
+       if ( $days > 0 ) {
+           $date = time() - ( 60 * 60 * 24 * $days );
+           $dateString = $dbr->timestamp( $date );
+           $sqlWhere .= " {$nextPrefix} rev_timestamp > '$dateString'";
+           $nextPrefix = "AND";
+       }
+
+       if ( $wgContribScoreIgnoreBlockedUsers ) {
+           $sqlWhere .= " {$nextPrefix} rev_user NOT IN " .
+               "(SELECT ipb_user FROM {$ipBlocksTable} WHERE ipb_user <> 0)";
+           $nextPrefix = "AND";
+       }
+
+       if ( $wgContribScoreIgnoreBots ) {
+           $sqlWhere .= " {$nextPrefix} rev_user NOT IN " .
+               "(SELECT ug_user FROM {$userGroupTable} WHERE ug_group='bot')";
+       }
+
+       $sqlMostPages = "SELECT rev_user,
+                        COUNT(DISTINCT rev_page) AS page_count,
+                        COUNT(rev_id) AS rev_count
+                        FROM {$revTable}
+                        {$sqlWhere}
+                        GROUP BY rev_user
+                        ORDER BY page_count DESC
+                        LIMIT {$limit}";
+
+       $sqlMostRevs = "SELECT rev_user,
+                        COUNT(DISTINCT rev_page) AS page_count,
+                        COUNT(rev_id) AS rev_count
+                        FROM {$revTable}
+                        {$sqlWhere}
+                        GROUP BY rev_user
+                        ORDER BY rev_count DESC
+                        LIMIT {$limit}";
+
+       $sql = "SELECT user_id, " .
+           "user_name, " .
+           "user_real_name, " .
+           "page_count, " .
+           "rev_count, " .
+           "page_count+SQRT(rev_count-page_count)*2 AS wiki_rank " .
+           "FROM $userTable u JOIN (($sqlMostPages) UNION ($sqlMostRevs)) s ON (user_id=rev_user) " .
+           "ORDER BY wiki_rank DESC " .
+           "LIMIT $limit";
+
+       $res = $dbr->query( $sql );
+
+       $sortable = in_array( 'nosort', $opts ) ? '' : ' sortable';
+
+       $output = "<table class=\"wikitable contributionscores plainlinks{$sortable}\" >\n" .
+           "<tr class='header'>\n" .
+           Html::element( 'th', array(), $this->msg( 'contributionscores-rank' )->text() ) .
+           Html::element( 'th', array(), $this->msg( 'contributionscores-score' )->text() ) .
+           Html::element( 'th', array(), $this->msg( 'contributionscores-pages' )->text() ) .
+           Html::element( 'th', array(), $this->msg( 'contributionscores-changes' )->text() ) .
+           Html::element( 'th', array(), $this->msg( 'contributionscores-username' )->text() );
+
+       $altrow = '';
+       $user_rank = 1;
+
+       $lang = $this->getLanguage();
+       foreach ( $res as $row ) {
+           // Use real name if option used and real name present.
+           if ( $wgContribScoresUseRealName && $row->user_real_name !== '' ) {
+               $userLink = Linker::userLink(
+                   $row->user_id,
+                   $row->user_name,
+                   $row->user_real_name
+               );
+           } else {
+               $userLink = Linker::userLink(
+                   $row->user_id,
+                   $row->user_name
+               );
+           }
+
+           $output .= Html::closeElement( 'tr' );
+           $output .= "<tr class='{$altrow}'>\n" .
+               "<td class='content' style='padding-right:10px;text-align:right;'>" .
+               $lang->formatNum( round( $user_rank, 0 ) ) .
+               "\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
+               $lang->formatNum( round( $row->wiki_rank, 0 ) ) .
+               "\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
+               $lang->formatNum( $row->page_count ) .
+               "\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
+               $lang->formatNum( $row->rev_count ) .
+               "\n</td><td class='content'>" .
+               $userLink;
+
+           # Option to not display user tools
+           if ( !in_array( 'notools', $opts ) ) {
+               $output .= Linker::userToolLinks( $row->user_id, $row->user_name );
+           }
+
+           $output .= Html::closeElement( 'td' ) . "\n";
+
+           if ( $altrow == '' && empty( $sortable ) ) {
+               $altrow = 'odd ';
+           } else {
+               $altrow = '';
+           }
+
+           $user_rank++;
+       }
+       $output .= Html::closeElement( 'tr' );
+       $output .= Html::closeElement( 'table' );
+
+       $dbr->freeResult( $res );
+
+       if ( !empty( $title ) ) {
+           $output = Html::rawElement( 'table',
+               array(
+                   'style' => 'border-spacing: 0; padding: 0',
+                   'class' => 'contributionscores-wrapper',
+                   'lang' => htmlspecialchars( $lang->getCode() ),
+                   'dir' => $lang->getDir()
+               ),
+               "\n" .
+               "<tr>\n" .
+               "<td style='padding: 0px;'>{$title}</td>\n" .
+               "</tr>\n" .
+               "<tr>\n" .
+               "<td style='padding: 0px;'>{$output}</td>\n" .
+               "</tr>\n"
+           );
+       }
+
+       return $output;
+   }
+
+   function execute( $par ) {
+       $this->setHeaders();
+
+       if ( $this->including() ) {
+           $this->showInclude( $par );
+       } else {
+           $this->showPage();
+       }
+
+       return true;
+   }
+
+   /**
+    * Called when being included on a normal wiki page.
+    * Cache is disabled so it can depend on the user language.
+    * @param $par
+    */
+   function showInclude( $par ) {
+       $days = null;
+       $limit = null;
+       $options = 'none';
+
+       if ( !empty( $par ) ) {
+           $params = explode( '/', $par );
+
+           $limit = intval( $params[0] );
+
+           if ( isset( $params[1] ) ) {
+               $days = intval( $params[1] );
+           }
+
+           if ( isset( $params[2] ) ) {
+               $options = $params[2];
+           }
+       }
+
+       if ( empty( $limit ) || $limit < 1 || $limit > CONTRIBUTIONSCORES_MAXINCLUDELIMIT ) {
+           $limit = 10;
+       }
+       if ( is_null( $days ) || $days < 0 ) {
+           $days = 7;
+       }
+
+       if ( $days > 0 ) {
+           $reportTitle = $this->msg( 'contributionscores-days' )->numParams( $days )->text();
+       } else {
+           $reportTitle = $this->msg( 'contributionscores-allrevisions' )->text();
+       }
+       $reportTitle .= ' ' . $this->msg( 'contributionscores-top' )->numParams( $limit )->text();
+       $title = Xml::element( 'h4',
+               array( 'class' => 'contributionscores-title' ),
+               $reportTitle
+           ) . "\n";
+       $this->getOutput()->addHTML( $this->genContributionScoreTable(
+           $days,
+           $limit,
+           $title,
+           $options
+       ) );
+   }
+
+   /**
+    * Show the special page
+    */
+   function showPage() {
+       global $wgContribScoreReports;
+
+       if ( !is_array( $wgContribScoreReports ) ) {
+           $wgContribScoreReports = array(
+               array( 7, 50 ),
+               array( 30, 50 ),
+               array( 0, 50 )
+           );
+       }
+
+       $out = $this->getOutput();
+       $out->addWikiMsg( 'contributionscores-info' );
+
+       foreach ( $wgContribScoreReports as $scoreReport ) {
+           list( $days, $revs ) = $scoreReport;
+           if ( $days > 0 ) {
+               $reportTitle = $this->msg( 'contributionscores-days' )->numParams( $days )->text();
+           } else {
+               $reportTitle = $this->msg( 'contributionscores-allrevisions' )->text();
+           }
+           $reportTitle .= ' ' . $this->msg( 'contributionscores-top' )->numParams( $revs )->text();
+           $title = Xml::element( 'h2',
+                   array( 'class' => 'contributionscores-title' ),
+                   $reportTitle
+               ) . "\n";
+           $out->addHTML( $title );
+           $out->addHTML( $this->genContributionScoreTable( $days, $revs ) );
+       }
+   }
+
+   protected function getGroupName() {
+       return 'wiki';
+   }
+}
+
+// COMMENT OUT OLD STUFF FOR NOW
+/*
+
 class SpecialUserJourney extends SpecialPage {
 
 	public $mMode;
 
 	public function __construct() {
-		parent::__construct( 
-			"UserJourney", // 
+		parent::__construct(
+			"UserJourney", //
 			"",  // rights required to view
 			true // show in Special:SpecialPages
 		);
 	}
-	
+
 	function execute( $parser = null ) {
 		global $wgRequest, $wgOut;
 
@@ -22,7 +288,7 @@ class SpecialUserJourney extends SpecialPage {
 		//$fileactions = array('actions...?');
 
 		$wgOut->addHTML( $this->getPageHeader() );
-		
+
 		if ($this->mMode == 'hits-list') {
 			$this->hitsList();
 		}
@@ -32,14 +298,14 @@ class SpecialUserJourney extends SpecialPage {
 		else if ( $this->mMode == 'total-hits-chart' ) {
 			$this->totalsChart2();
 		}
-			
+
 		else if ( $this->mMode == 'unique-user-data' ) {
 			$this->uniqueTotals( false );
 		}
 		else if ( $this->mMode == 'unique-user-chart' ) {
 			$this->uniqueTotalsChart( false );
 		}
-		
+
 		else if ( $this->mMode == 'unique-user-page-data' ) {
 			$this->uniqueTotals( true );
 		}
@@ -51,18 +317,18 @@ class SpecialUserJourney extends SpecialPage {
 			$this->overview();
 		}
 	}
-	
+
 	public function getPageHeader() {
 		global $wgRequest;
-		
+
 		// show the names of the different views
 		$navLine = '<strong>' . wfMsg( 'userjourney-viewmode' ) . ':</strong> ';
 
 		$filterUser = $wgRequest->getVal( 'filterUser' );
 		$filterPage = $wgRequest->getVal( 'filterPage' );
-		
+
 		if ( $filterUser || $filterPage ) {
-			
+
 			$UserJourneyTitle = SpecialPage::getTitleFor( 'UserJourney' );
 			$unfilterLink = ': (' . Xml::element( 'a',
 				array( 'href' => $UserJourneyTitle->getLocalURL() ),
@@ -73,37 +339,37 @@ class SpecialUserJourney extends SpecialPage {
 		else {
 			$unfilterLink = '';
 		}
-		
+
 		$navLine .= "<ul>";
 
 		$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-overview' ) . $unfilterLink . "</li>";
 
 		$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-hits', 'hits-list' ) . $unfilterLink . "</li>";
 
-		$navLine .= "<li>" . wfMessage( 'userjourney-dailytotals' )->text() 
+		$navLine .= "<li>" . wfMessage( 'userjourney-dailytotals' )->text()
 			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'total-hits-data' )
 			. ") (" . $this->createHeaderLink( 'userjourney-chart', 'total-hits-chart' )
 			. ")</li>";
-		
-		$navLine .= "<li>" . wfMessage( 'userjourney-dailyunique-user-hits' )->text() 
+
+		$navLine .= "<li>" . wfMessage( 'userjourney-dailyunique-user-hits' )->text()
 			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'unique-user-data' )
 			. ") (" . $this->createHeaderLink( 'userjourney-chart', 'unique-user-chart' )
 			. ")</li>";
 
-		$navLine .= "<li>" . wfMessage( 'userjourney-dailyunique-user-page-hits' )->text() 
+		$navLine .= "<li>" . wfMessage( 'userjourney-dailyunique-user-page-hits' )->text()
 			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'unique-user-page-data' )
 			. ") (" . $this->createHeaderLink( 'userjourney-chart', 'unique-user-page-chart' )
 			. ")</li>";
-			
+
 		$navLine .= "</ul>";
 
 		$out = Xml::tags( 'p', null, $navLine ) . "\n";
-		
+
 		return $out;
 	}
-	
+
 	function createHeaderLink($msg, $query_param = '' ) {
-	
+
 		$UserJourneyTitle = SpecialPage::getTitleFor( 'UserJourney' );
 
 		if ( $this->mMode == $query_param ) {
@@ -128,7 +394,7 @@ class SpecialUserJourney extends SpecialPage {
 		$pager = new UserJourneyPager();
 		$pager->filterUser = $wgRequest->getVal( 'filterUser' );
 		$pager->filterPage = $wgRequest->getVal( 'filterPage' );
-		
+
 		// $form = $pager->getForm();
 		$body = $pager->getBody();
 		$html = '';
@@ -137,8 +403,8 @@ class SpecialUserJourney extends SpecialPage {
 		$html .= '<p>Test</p>';
 		$wgOut->addHTML( $html );
 	}
-	
-	
+
+
 	public function hitsList () {
 		global $wgOut, $wgRequest;
 
@@ -147,7 +413,7 @@ class SpecialUserJourney extends SpecialPage {
 		$pager = new UserJourneyPager();
 		$pager->filterUser = $wgRequest->getVal( 'filterUser' );
 		$pager->filterPage = $wgRequest->getVal( 'filterPage' );
-		
+
 		// $form = $pager->getForm();
 		$body = $pager->getBody();
 		$html = '';
@@ -159,13 +425,13 @@ class SpecialUserJourney extends SpecialPage {
 			$html .= $body;
 			$html .= '</table>';
 			$html .= $pager->getNavigationBar();
-		} 
+		}
 		else {
 			$html .= '<p>' . wfMsgHTML('listusers-noresult') . '</p>';
 		}
 		$wgOut->addHTML( $html );
 	}
-	
+
 	public function totals () {
 		global $wgOut;
 
@@ -174,14 +440,14 @@ class SpecialUserJourney extends SpecialPage {
 		$html = '<table class="wikitable"><tr><th>Date</th><th>Hits</th></tr>';
 		// $html = $form;
 		// if ( $body ) {
-		
-		// } 
+
+		// }
 		// else {
 			// $html .= '<p>' . wfMsgHTML('listusers-noresult') . '</p>';
 		// }
 		// SELECT userjourney.hit_year, userjourney.hit_month, userjourney.hit_day, count(*) AS num_hits
 		// FROM userjourney
-		// WHERE userjourney.hit_timestamp>20131001000000 
+		// WHERE userjourney.hit_timestamp>20131001000000
 		// GROUP BY userjourney.hit_year, userjourney.hit_month, userjourney.hit_day
 		// ORDER BY userjourney.hit_year DESC, userjourney.hit_month DESC, userjourney.hit_day DESC
 		// LIMIT 100000;
@@ -190,7 +456,7 @@ class SpecialUserJourney extends SpecialPage {
 		$res = $dbr->select(
 			array('w' => 'userjourney'),
 			array(
-				"w.hit_year AS year", 
+				"w.hit_year AS year",
 				"w.hit_month AS month",
 				"w.hit_day AS day",
 				"count(*) AS num_hits",
@@ -206,13 +472,13 @@ class SpecialUserJourney extends SpecialPage {
 			null // join conditions
 		);
 		while( $row = $dbr->fetchRow( $res ) ) {
-		
+
 			list($year, $month, $day, $hits) = array($row['year'], $row['month'], $row['day'], $row['num_hits']);
 			$html .= "<tr><td>$year-$month-$day</td><td>$hits</td></tr>";
-		
+
 		}
 		$html .= "</table>";
-		
+
 		$wgOut->addHTML( $html );
 
 	}
@@ -230,7 +496,7 @@ class SpecialUserJourney extends SpecialPage {
 		$res = $dbr->select(
 			array('w' => 'userjourney'),
 			array(
-				"w.hit_year AS year", 
+				"w.hit_year AS year",
 				"w.hit_month AS month",
 				"w.hit_day AS day",
 				"count(*) AS num_hits",
@@ -248,12 +514,12 @@ class SpecialUserJourney extends SpecialPage {
 		$previous = null;
 
 		while( $row = $dbr->fetchRow( $res ) ) {
-		
+
 			list($year, $month, $day, $hits) = array($row['year'], $row['month'], $row['day'], $row['num_hits']);
 
 			$currentDateString = "$year-$month-$day";
 			$current = new DateTime( $currentDateString );
-			
+
 			while ( $previous && $previous->modify( '+1 day' )->format( 'Y-m-d') !== $currentDateString ) {
 				$data[ $previous->format( 'Y-m-d' ) ] = 0;
 			}
@@ -262,14 +528,14 @@ class SpecialUserJourney extends SpecialPage {
 
 			$previous = new DateTime( $currentDateString );
 		}
-		
+
 		//$html .= "<pre>" . print_r( $data, true ) . "</pre>";
 		$html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
 		$wgOut->addHTML( $html );
 
 	}
-	
+
 	protected function getUniqueRows ( $uniquePageHits = true, $order = "DESC" ) {
 
 		$dbr = wfGetDB( DB_SLAVE );
@@ -277,14 +543,14 @@ class SpecialUserJourney extends SpecialPage {
 		$fields = array(
 			"CONCAT(w.hit_year, '-', w.hit_month, '-', w.hit_day) AS date",
 		);
-		
+
 		if ( $uniquePageHits ) {
 			$fields[] = "COUNT(DISTINCT(CONCAT(w.user_name,'UNIQUESEPARATOR',w.page_id))) as hits";
 		}
 		else {
-			$fields[] = "COUNT(DISTINCT(w.user_name)) as hits";		
+			$fields[] = "COUNT(DISTINCT(w.user_name)) as hits";
 		}
-		
+
 		$res = $dbr->select(
 			array('w' => 'userjourney'),
 			$fields,
@@ -301,16 +567,16 @@ class SpecialUserJourney extends SpecialPage {
 
 		$output = array();
 		while( $row = $dbr->fetchRow( $res ) ) {
-		
+
 			// list($year, $month, $day, $hits) = array($row['year'], $row['month'], $row['day'], $row['hits']);
-			
+
 			$output[] = array( 'date' => $row['date'], 'hits' => $row['hits'] );
-		
+
 		}
-		
+
 		return $output;
 	}
-	
+
 	public function uniqueTotals ( $showUniquePageHits = false ) {
 		global $wgOut;
 
@@ -320,25 +586,25 @@ class SpecialUserJourney extends SpecialPage {
 		else {
 			$pageTitleText = "Daily Unique User-Hits";
 		}
-		
+
 		$wgOut->setPageTitle( 'UserJourney: ' . $pageTitleText );
 
 		$html = '<table class="wikitable"><tr><th>Date</th><th>Hits</th></tr>';
-		
+
 		$rows = $this->getUniqueRows( $showUniquePageHits, "DESC" );
-		
+
 		foreach($rows as $row) {
 			$html .= "<tr><td>{$row['date']}</td><td>{$row['hits']}</td></tr>";
 		}
-		
+
 		$html .= "</table>";
-		
+
 		$wgOut->addHTML( $html );
 
 	}
-	
+
 	public function uniqueTotalsChart ( $showUniquePageHits = false ) {
-	
+
 		global $wgOut;
 
 		if ( $showUniquePageHits ) {
@@ -347,7 +613,7 @@ class SpecialUserJourney extends SpecialPage {
 		else {
 			$pageTitleText = "Daily Unique User-Hits";
 		}
-		
+
 		$wgOut->setPageTitle( "UserJourney: $pageTitleText Chart" );
 		$wgOut->addModules( 'ext.userjourney.charts.nvd3' );
 
@@ -358,11 +624,11 @@ class SpecialUserJourney extends SpecialPage {
 		$previous = null;
 
 		foreach ( $rows as $row ) {
-		
+
 			list($currentDateString, $hits) = array($row['date'], $row['hits']);
 
 			$current = new DateTime( $currentDateString );
-			
+
 			while ( $previous && $previous->modify( '+1 day' )->format( 'Y-m-d') !== $currentDateString ) {
 				$data[] = array(
 					'x' => $previous->getTimestamp() * 1000, // x value timestamp in milliseconds
@@ -377,7 +643,7 @@ class SpecialUserJourney extends SpecialPage {
 
 			$previous = new DateTime( $currentDateString );
 		}
-		
+
 		$data = array(
 			array(
 				'key' => $pageTitleText,
@@ -389,7 +655,7 @@ class SpecialUserJourney extends SpecialPage {
 		$html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
 		$wgOut->addHTML( $html );
-	
+
 	}
 
 	public function totalsChart2 () {
@@ -405,7 +671,7 @@ class SpecialUserJourney extends SpecialPage {
 		$res = $dbr->select(
 			array('w' => 'userjourney'),
 			array(
-				"w.hit_year AS year", 
+				"w.hit_year AS year",
 				"w.hit_month AS month",
 				"w.hit_day AS day",
 				"count(*) AS num_hits",
@@ -424,12 +690,12 @@ class SpecialUserJourney extends SpecialPage {
 		$previous = null;
 
 		while( $row = $dbr->fetchRow( $res ) ) {
-		
+
 			list($year, $month, $day, $hits) = array($row['year'], $row['month'], $row['day'], $row['num_hits']);
 
 			$currentDateString = "$year-$month-$day";
 			$current = new DateTime( $currentDateString );
-			
+
 			while ( $previous && $previous->modify( '+1 day' )->format( 'Y-m-d') !== $currentDateString ) {
 				$data[] = array(
 					'x' => $previous->getTimestamp() * 1000, // x value timestamp in milliseconds
@@ -444,7 +710,7 @@ class SpecialUserJourney extends SpecialPage {
 
 			$previous = new DateTime( $currentDateString );
 		}
-		
+
 		$data = array(
 			array(
 				'key' => 'Daily Hits',
@@ -464,7 +730,7 @@ class UserJourneyPager extends ReverseChronologicalPager {
 	protected $rowCount = 0;
 	public $filterUser;
 	public $filterPage;
-	
+
 	function __construct() {
 		parent::__construct();
 		// global $wgRequest;
@@ -477,7 +743,7 @@ class UserJourneyPager extends ReverseChronologicalPager {
 	function getIndexField() {
 		return "hit_timestamp";
 	}
-	
+
 	function getExtraSortFields() {
 		return array();
 	}
@@ -485,7 +751,7 @@ class UserJourneyPager extends ReverseChronologicalPager {
 	function isNavigationBarShown() {
 		return true;
 	}
-	
+
 	function getQueryInfo() {
 		$conds = array();
 		// if ( $this->filterUsers ) {
@@ -498,17 +764,17 @@ class UserJourneyPager extends ReverseChronologicalPager {
 			// $excludeUsers .= implode( "', '", $this->ignoreUserList ) . "')";
 			// $conds[] = $excludeUsers;
 		// }
-		
+
 		if ( $this->filterUser ) {
 			$conds[] = "user_name = '{$this->filterUser}'";
 		}
 		if ( $this->filterPage ) {
 			$conds[] = "page_name = '{$this->filterPage}'";
 		}
-		
+
 		return array(
 			'tables' => 'userjourney',
-			'fields' => array( 
+			'fields' => array(
 				'page_id',
 				'page_name',
 				'user_name',
@@ -527,7 +793,7 @@ class UserJourneyPager extends ReverseChronologicalPager {
 	function formatRow( $row ) {
 		$userPage = Title::makeTitle( NS_USER, $row->user_name );
 		$name = $this->getSkin()->makeLinkObj( $userPage, htmlspecialchars( $userPage->getText() ) );
-		
+
 
 		if ( $this->filterUser ) {
 			// do nothing for now...
@@ -537,7 +803,7 @@ class UserJourneyPager extends ReverseChronologicalPager {
 				array( 'filterUser' => $row->user_name )
 			);
 			$msg = wfMsg( 'userjourney-filteruser' );
-			
+
 			$name .= ' (' . Xml::element(
 				'a',
 				array( 'href' => $url ),
@@ -545,17 +811,17 @@ class UserJourneyPager extends ReverseChronologicalPager {
 			) . ')';
 		}
 
-		
+
 		$pageTitle = Title::newFromID( $row->page_id );
 		if ( ! $pageTitle )
 			$pageTitle = Title::newFromText( $row->page_name );
-		
+
 		if ( ! $pageTitle )
 			$page = $row->page_name; // if somehow still no page, just show text
 		else
 			$page = $this->getSkin()->link( $pageTitle );
 
-			
+
 		if ( $this->filterPage ) {
 			// do nothing for now...
 		}
@@ -564,14 +830,14 @@ class UserJourneyPager extends ReverseChronologicalPager {
 				array( 'filterPage' => $row->page_name )
 			);
 			$msg = wfMsg( 'userjourney-filterpage' );
-			
+
 			$page .= ' (' . Xml::element(
 				'a',
 				array( 'href' => $url ),
 				$msg
 			) . ')';
 		}
-		
+
 		if ( $row->referer_title ) {
 			$referer = Title::newFromText( $row->referer_title );
 			$referer = $this->getSkin()->link( $referer );
@@ -583,7 +849,7 @@ class UserJourneyPager extends ReverseChronologicalPager {
 		$badge = $row->user_badges;
 		$pageAction = $row->page_action;
 		$userAction = $row->user_actions;
-		
+
 		global $wgLang;
 		$timestamp = $wgLang->timeanddate( wfTimestamp( TS_MW, $row->hit_timestamp ), true );
 
@@ -601,10 +867,10 @@ class UserJourneyPager extends ReverseChronologicalPager {
 		return $out;
 	}
 
-	/**
-	 * Preserve filter offset parameters when paging
-	 * @return array
-	 */
+	//
+	// Preserve filter offset parameters when paging
+	// @return array
+	//
 	function getDefaultQuery() {
 		$query = parent::getDefaultQuery();
 		// if( $this->filterUsers != '' )
@@ -615,3 +881,5 @@ class UserJourneyPager extends ReverseChronologicalPager {
 	}
 
 }
+
+*/
