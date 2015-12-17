@@ -7,6 +7,158 @@ class SpecialUserJourney extends IncludableSpecialPage {
    	parent::__construct( 'UserJourney' );
    }
 
+   /// Generates a "User Journey" table for a given user and date range
+   /**
+    * Function generates Contribution Scores tables in HTML format (not wikiText)
+    *
+    * @param $days int Days in the past to run report for
+    * @param $user int User to report information about
+    * @return Html Table representing the requested Contribution Scores.
+    */
+   function genUserJourneyTable( $user, $days ) {
+		global $wgContribScoreIgnoreBots, $wgContribScoreIgnoreBlockedUsers, $wgContribScoresUseRealName;
+
+		$dbr = wfGetDB( DB_SLAVE );
+
+       $userTable = $dbr->tableName( 'user' );
+       $userGroupTable = $dbr->tableName( 'user_groups' );
+       $revTable = $dbr->tableName( 'revision' );
+       $ipBlocksTable = $dbr->tableName( 'ipblocks' );
+
+       $sqlWhere = "";
+       $nextPrefix = "WHERE";
+
+       if ( $days > 0 ) {
+           $date = time() - ( 60 * 60 * 24 * $days );
+           $dateString = $dbr->timestamp( $date );
+           $sqlWhere .= " {$nextPrefix} rev_timestamp > '$dateString'";
+           $nextPrefix = "AND";
+       }
+
+       if ( $wgContribScoreIgnoreBlockedUsers ) {
+           $sqlWhere .= " {$nextPrefix} rev_user NOT IN " .
+               "(SELECT ipb_user FROM {$ipBlocksTable} WHERE ipb_user <> 0)";
+           $nextPrefix = "AND";
+       }
+
+       if ( $wgContribScoreIgnoreBots ) {
+           $sqlWhere .= " {$nextPrefix} rev_user NOT IN " .
+               "(SELECT ug_user FROM {$userGroupTable} WHERE ug_group='bot')";
+       }
+
+       $sqlMostPages = "SELECT rev_user,
+                        COUNT(DISTINCT rev_page) AS page_count,
+                        COUNT(rev_id) AS rev_count
+                        FROM {$revTable}
+                        {$sqlWhere}
+                        GROUP BY rev_user
+                        ORDER BY page_count DESC
+                        LIMIT {$limit}";
+
+       $sqlMostRevs = "SELECT rev_user,
+                        COUNT(DISTINCT rev_page) AS page_count,
+                        COUNT(rev_id) AS rev_count
+                        FROM {$revTable}
+                        {$sqlWhere}
+                        GROUP BY rev_user
+                        ORDER BY rev_count DESC
+                        LIMIT {$limit}";
+
+       $sql = "SELECT user_id, " .
+           "user_name, " .
+           "user_real_name, " .
+           "page_count, " .
+           "rev_count, " .
+           "page_count+SQRT(rev_count-page_count)*2 AS wiki_rank " .
+           "FROM $userTable u JOIN (($sqlMostPages) UNION ($sqlMostRevs)) s ON (user_id=rev_user) " .
+           "ORDER BY wiki_rank DESC " .
+           "LIMIT $limit";
+
+       $res = $dbr->query( $sql );
+
+       $sortable = in_array( 'nosort', $opts ) ? '' : ' sortable';
+
+       $output = "<table class=\"wikitable contributionscores plainlinks{$sortable}\" >\n" .
+           "<tr class='header'>\n" .
+           Html::element( 'th', array(), $this->msg( 'contributionscores-rank' )->text() ) .
+           Html::element( 'th', array(), $this->msg( 'contributionscores-score' )->text() ) .
+           Html::element( 'th', array(), $this->msg( 'contributionscores-pages' )->text() ) .
+           Html::element( 'th', array(), $this->msg( 'contributionscores-changes' )->text() ) .
+           Html::element( 'th', array(), $this->msg( 'contributionscores-username' )->text() );
+
+       $altrow = '';
+       $user_rank = 1;
+
+       $lang = $this->getLanguage();
+       foreach ( $res as $row ) {
+           // Use real name if option used and real name present.
+           if ( $wgContribScoresUseRealName && $row->user_real_name !== '' ) {
+               $userLink = Linker::userLink(
+                   $row->user_id,
+                   $row->user_name,
+                   $row->user_real_name
+               );
+           } else {
+               $userLink = Linker::userLink(
+                   $row->user_id,
+                   $row->user_name
+               );
+           }
+
+           $output .= Html::closeElement( 'tr' );
+           $output .= "<tr class='{$altrow}'>\n" .
+               "<td class='content' style='padding-right:10px;text-align:right;'>" .
+               $lang->formatNum( round( $user_rank, 0 ) ) .
+               "\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
+               $lang->formatNum( round( $row->wiki_rank, 0 ) ) .
+               "\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
+               $lang->formatNum( $row->page_count ) .
+               "\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
+               $lang->formatNum( $row->rev_count ) .
+               "\n</td><td class='content'>" .
+               $userLink;
+
+           # Option to not display user tools
+           if ( !in_array( 'notools', $opts ) ) {
+               $output .= Linker::userToolLinks( $row->user_id, $row->user_name );
+           }
+
+           $output .= Html::closeElement( 'td' ) . "\n";
+
+           if ( $altrow == '' && empty( $sortable ) ) {
+               $altrow = 'odd ';
+           } else {
+               $altrow = '';
+           }
+
+           $user_rank++;
+       }
+       $output .= Html::closeElement( 'tr' );
+       $output .= Html::closeElement( 'table' );
+
+       $dbr->freeResult( $res );
+
+       if ( !empty( $title ) ) {
+           $output = Html::rawElement( 'table',
+               array(
+                   'style' => 'border-spacing: 0; padding: 0',
+                   'class' => 'contributionscores-wrapper',
+                   'lang' => htmlspecialchars( $lang->getCode() ),
+                   'dir' => $lang->getDir()
+               ),
+               "\n" .
+               "<tr>\n" .
+               "<td style='padding: 0px;'>{$title}</td>\n" .
+               "</tr>\n" .
+               "<tr>\n" .
+               "<td style='padding: 0px;'>{$output}</td>\n" .
+               "</tr>\n"
+           );
+       }
+
+       return $output;
+   }
+
    /// Generates a "Contribution Scores" table for a given LIMIT and date range
    /**
     * Function generates Contribution Scores tables in HTML format (not wikiText)
@@ -240,6 +392,15 @@ class SpecialUserJourney extends IncludableSpecialPage {
 
        $out = $this->getOutput();
        $out->addWikiMsg( 'contributionscores-info' );
+
+		//Add new section calling new function to generate personal scores over time
+       // $reportTitle .= ' ' . $this->msg( 'contributionscores-top' )->numParams( $revs )->text();
+       // $title = Xml::element( 'h2',
+       //         array( 'class' => 'contributionscores-title' ),
+       //         $reportTitle
+       //     ) . "\n";
+       //$out->addHTML( $title );
+       // $out->addHTML( $this->genUserJourneyTable( $user, $days ) );
 
        foreach ( $wgContribScoreReports as $scoreReport ) {
            list( $days, $revs ) = $scoreReport;
