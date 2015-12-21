@@ -24,6 +24,8 @@ class SpecialUserJourney extends IncludableSpecialPage {
        $userGroupTable = $dbr->tableName( 'user_groups' );
        $revTable = $dbr->tableName( 'revision' );
        $ipBlocksTable = $dbr->tableName( 'ipblocks' );
+       $limit = 500; //TO-DO need ot fix up
+       $opts = '';
 
        $sqlWhere = "";
        $nextPrefix = "WHERE";
@@ -31,7 +33,10 @@ class SpecialUserJourney extends IncludableSpecialPage {
        if ( $days > 0 ) {
            $date = time() - ( 60 * 60 * 24 * $days );
            $dateString = $dbr->timestamp( $date );
+           $dateString2 = $dbr->timestamp( $date + (60 * 60 * 24) );
            $sqlWhere .= " {$nextPrefix} rev_timestamp > '$dateString'";
+           $sqlWhere .= " AND rev_timestamp < '$dateString2'";
+           // $sqlWhere .= " AND rev_user IN array( 'rev_user' => $user->getID() )";
            $nextPrefix = "AND";
        }
 
@@ -78,13 +83,14 @@ class SpecialUserJourney extends IncludableSpecialPage {
 
        $sortable = in_array( 'nosort', $opts ) ? '' : ' sortable';
 
-       $output = "<table class=\"wikitable contributionscores plainlinks{$sortable}\" >\n" .
-           "<tr class='header'>\n" .
-           Html::element( 'th', array(), $this->msg( 'contributionscores-rank' )->text() ) .
-           Html::element( 'th', array(), $this->msg( 'contributionscores-score' )->text() ) .
-           Html::element( 'th', array(), $this->msg( 'contributionscores-pages' )->text() ) .
-           Html::element( 'th', array(), $this->msg( 'contributionscores-changes' )->text() ) .
-           Html::element( 'th', array(), $this->msg( 'contributionscores-username' )->text() );
+       $output = "";
+       // $output = "<table class=\"wikitable contributionscores plainlinks{$sortable}\" >\n" .
+       //     "<tr class='header'>\n" .
+       //     Html::element( 'th', array(), $this->msg( 'contributionscores-rank' )->text() ) .
+       //     Html::element( 'th', array(), $this->msg( 'contributionscores-score' )->text() ) .
+       //     Html::element( 'th', array(), $this->msg( 'contributionscores-pages' )->text() ) .
+       //     Html::element( 'th', array(), $this->msg( 'contributionscores-changes' )->text() ) .
+       //     Html::element( 'th', array(), $this->msg( 'contributionscores-username' )->text() );
 
        $altrow = '';
        $user_rank = 1;
@@ -108,6 +114,8 @@ class SpecialUserJourney extends IncludableSpecialPage {
            $output .= Html::closeElement( 'tr' );
            $output .= "<tr class='{$altrow}'>\n" .
                "<td class='content' style='padding-right:10px;text-align:right;'>" .
+               date('Y-m-d', strtotime($dateString)) .
+               "\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
                $lang->formatNum( round( $user_rank, 0 ) ) .
                "\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
                $lang->formatNum( round( $row->wiki_rank, 0 ) ) .
@@ -133,8 +141,8 @@ class SpecialUserJourney extends IncludableSpecialPage {
 
            $user_rank++;
        }
-       $output .= Html::closeElement( 'tr' );
-       $output .= Html::closeElement( 'table' );
+       // $output .= Html::closeElement( 'tr' );
+       // $output .= Html::closeElement( 'table' );
 
        $dbr->freeResult( $res );
 
@@ -394,13 +402,31 @@ class SpecialUserJourney extends IncludableSpecialPage {
        $out->addWikiMsg( 'contributionscores-info' );
 
 		//Add new section calling new function to generate personal scores over time
-       // $reportTitle .= ' ' . $this->msg( 'contributionscores-top' )->numParams( $revs )->text();
-       // $title = Xml::element( 'h2',
-       //         array( 'class' => 'contributionscores-title' ),
-       //         $reportTitle
-       //     ) . "\n";
-       //$out->addHTML( $title );
+       $reportTitle .= ' ' . $this->msg( 'contributionscores-top' )->numParams( $revs )->text();
+       $title = Xml::element( 'h2',
+               array( 'class' => 'contributionscores-title' ),
+               $reportTitle
+           ) . "\n";
+       $out->addHTML( $title );
        // $out->addHTML( $this->genUserJourneyTable( $user, $days ) );
+       $out->addHTML( "<table class=\"wikitable contributionscores plainlinks sortable\" >\n" .
+           "<tr class='header'>\n" .
+           Html::element( 'th', array(), 'date' ) . //TO-DO add date message
+           Html::element( 'th', array(), $this->msg( 'contributionscores-rank' )->text() ) .
+           Html::element( 'th', array(), $this->msg( 'contributionscores-score' )->text() ) .
+           Html::element( 'th', array(), $this->msg( 'contributionscores-pages' )->text() ) .
+           Html::element( 'th', array(), $this->msg( 'contributionscores-changes' )->text() ) .
+           Html::element( 'th', array(), $this->msg( 'contributionscores-username' )->text() ) );
+       // $out->addHTML( $this->genUserJourneyTable( 'lwelsh', 1 ) );
+       // $out->addHTML( $this->genUserJourneyTable( 'lwelsh', 2 ) );
+       // $out->addHTML( $this->genUserJourneyTable( 'lwelsh', 3 ) );
+       // $out->addHTML( $this->genUserJourneyTable( 'lwelsh', 4 ) );
+       // $out->addHTML( $this->genUserJourneyTable( 'lwelsh', 5 ) );
+       // $out->addHTML( $this->genUserJourneyTable( 'lwelsh', 6 ) );
+		for($i=1; $i<30; $i++){
+			$out->addHTML( $this->genUserJourneyTable( 'lwelsh', $i ) );
+		}
+       $out->addHTML( Html::closeElement( 'tr' ) . Html::closeElement( 'table' ) );
 
        foreach ( $wgContribScoreReports as $scoreReport ) {
            list( $days, $revs ) = $scoreReport;
