@@ -7,6 +7,109 @@ class SpecialUserJourney extends IncludableSpecialPage {
    	parent::__construct( 'UserJourney' );
    }
 
+
+   /// Generates a "User Journey" plot for a given user and date range
+   /**
+    * Function generates Contribution Scores tables in HTML format (not wikiText)
+    *
+    * @param $days int Days in the past to run report for
+    * @param $user int User to report information about
+    * @return Html Table representing the requested Contribution Scores.
+    */
+   function genUserJourneyPlot( $user /*, $days */ ) {
+    global $wgContribScoreIgnoreBots, $wgContribScoreIgnoreBlockedUsers, $wgContribScoresUseRealName;
+
+    $dbr = wfGetDB( DB_SLAVE );
+
+       $userTable = $dbr->tableName( 'user' );
+       $userGroupTable = $dbr->tableName( 'user_groups' );
+       $revTable = $dbr->tableName( 'revision' );
+       $ipBlocksTable = $dbr->tableName( 'ipblocks' );
+       $limit = 500; //TO-DO need ot fix up
+       $opts = array();
+       $days = 30;
+
+       $sqlWhere = "";
+       $nextPrefix = "WHERE";
+
+       if ( $days > 0 ) {
+           $date = time() - ( 60 * 60 * 24 * $days );
+           $dateString = $dbr->timestamp( $date );
+           $dateString2 = $dbr->timestamp( $date + (60 * 60 * 24) );
+           $sqlWhere .= " {$nextPrefix} rev_timestamp > '$dateString'";
+           $sqlWhere .= " AND rev_timestamp < '$dateString2'";
+           // $sqlWhere .= " AND rev_user IN array( 'rev_user' => $user->getID() )";
+           $nextPrefix = "AND";
+       }
+
+       if ( $wgContribScoreIgnoreBlockedUsers ) {
+           $sqlWhere .= " {$nextPrefix} rev_user NOT IN " .
+               "(SELECT ipb_user FROM {$ipBlocksTable} WHERE ipb_user <> 0)";
+           $nextPrefix = "AND";
+       }
+
+       if ( $wgContribScoreIgnoreBots ) {
+           $sqlWhere .= " {$nextPrefix} rev_user NOT IN " .
+               "(SELECT ug_user FROM {$userGroupTable} WHERE ug_group='bot')";
+       }
+
+       $sqlMostPages = "SELECT rev_user,
+                        COUNT(DISTINCT rev_page) AS page_count,
+                        COUNT(rev_id) AS rev_count
+                        FROM {$revTable}
+                        {$sqlWhere}
+                        GROUP BY rev_user
+                        ORDER BY page_count DESC
+                        LIMIT {$limit}";
+
+       $sqlMostRevs = "SELECT rev_user,
+                        COUNT(DISTINCT rev_page) AS page_count,
+                        COUNT(rev_id) AS rev_count
+                        FROM {$revTable}
+                        {$sqlWhere}
+                        GROUP BY rev_user
+                        ORDER BY rev_count DESC
+                        LIMIT {$limit}";
+
+       $sql = "SELECT user_id, " .
+           "user_name, " .
+           "user_real_name, " .
+           "page_count, " .
+           "rev_count, " .
+           "page_count+SQRT(rev_count-page_count)*2 AS wiki_rank " .
+           "FROM $userTable u JOIN (($sqlMostPages) UNION ($sqlMostRevs)) s ON (user_id=rev_user) " .
+           "ORDER BY wiki_rank DESC " .
+           "LIMIT $limit";
+
+       $res = $dbr->query( $sql );
+
+        foreach ($res as $row) {
+          print_r($row);
+        }
+
+
+
+       $sortable = in_array( 'nosort', $opts ) ? '' : ' sortable';
+
+       $output = "";
+       $output .= "TEST!!";
+       // $output = "<table class=\"wikitable contributionscores plainlinks{$sortable}\" >\n" .
+       //     "<tr class='header'>\n" .
+       //     Html::element( 'th', array(), $this->msg( 'contributionscores-rank' )->text() ) .
+       //     Html::element( 'th', array(), $this->msg( 'contributionscores-score' )->text() ) .
+       //     Html::element( 'th', array(), $this->msg( 'contributionscores-pages' )->text() ) .
+       //     Html::element( 'th', array(), $this->msg( 'contributionscores-changes' )->text() ) .
+       //     Html::element( 'th', array(), $this->msg( 'contributionscores-username' )->text() );
+
+       $altrow = '';
+       $user_rank = 1;
+
+       $lang = $this->getLanguage();
+
+
+       return $output;
+   }
+
    /// Generates a "User Journey" table for a given user and date range
    /**
     * Function generates Contribution Scores tables in HTML format (not wikiText)
@@ -25,7 +128,7 @@ class SpecialUserJourney extends IncludableSpecialPage {
        $revTable = $dbr->tableName( 'revision' );
        $ipBlocksTable = $dbr->tableName( 'ipblocks' );
        $limit = 500; //TO-DO need ot fix up
-       $opts = '';
+       $opts = array();
 
        $sqlWhere = "";
        $nextPrefix = "WHERE";
@@ -400,6 +503,18 @@ class SpecialUserJourney extends IncludableSpecialPage {
 
        $out = $this->getOutput();
        $out->addWikiMsg( 'contributionscores-info' );
+
+       //TEST PLOT
+       $reportTitle = 'Plot';
+       $title = Xml::element( 'h2',
+               array( 'class' => 'contributionscores-title' ),
+               $reportTitle
+           ) . "\n";
+       $out->addHTML( $title );
+
+       $out->addHTML( $this->genUserJourneyPlot( 'lwelsh' ) );
+
+
 
 		//Add new section calling new function to generate personal scores over time
        // $reportTitle .= ' ' . $this->msg( 'contributionscores-top' )->numParams( $revs )->text();
