@@ -1,9 +1,9 @@
 
-var canvas = $("#wiretapChart");
+var canvas = $("#userjourneyChart");
 canvas.attr( "width", canvas.parent().width() - 100 );
 canvas.attr( "height", parseInt(canvas.width() * .75) );
 
-var rawData = JSON.parse( $('#wiretap-data').text() );
+var rawData = JSON.parse( $('#userjourney-data').text() );
 
 var labels = [];
 var hits = [];
@@ -42,11 +42,11 @@ var getMovingAverage = function ( dataArray, maLength ) {
 
     for ( var i = 0; i < dataArray.length; i++ ) {
         curSum = curSum + dataArray[ i ]; // add in the new value to the moving sum
-        
+
         if ( i - maLength >= 0 ) {
             // subtract oldest value still "part of" moving sum
             // if reached length of moving sum (if have 7 days in
-            // 7-day moving sum) 
+            // 7-day moving sum)
             curSum = curSum - dataArray[ i - maLength ];
         }
 

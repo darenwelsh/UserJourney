@@ -16,7 +16,7 @@ class SpecialUserJourney extends IncludableSpecialPage {
     * @param $user int User to report information about
     * @return Html Table representing the requested Contribution Scores.
     */
-   function genUserJourneyPlot( $user /*, $days */ ) {
+   function genUserJourneyPlot( $user, $days ) {
     global $wgContribScoreIgnoreBots, $wgContribScoreIgnoreBlockedUsers, $wgContribScoresUseRealName;
 
     $dbr = wfGetDB( DB_SLAVE );
@@ -27,18 +27,19 @@ class SpecialUserJourney extends IncludableSpecialPage {
        $ipBlocksTable = $dbr->tableName( 'ipblocks' );
        $limit = 500; //TO-DO need ot fix up
        $opts = array();
-       $days = 30;
+       // $days = 30;
+       $output = 0;
 
        $sqlWhere = "";
        $nextPrefix = "WHERE";
 
        if ( $days > 0 ) {
-           $date = time() - ( 60 * 60 * 24 * $days );
+           $date = time() - ( 60 * 60 * 24 * $days ) - (60*60*24*90);
            $dateString = $dbr->timestamp( $date );
            $dateString2 = $dbr->timestamp( $date + (60 * 60 * 24) );
            $sqlWhere .= " {$nextPrefix} rev_timestamp > '$dateString'";
            $sqlWhere .= " AND rev_timestamp < '$dateString2'";
-           // $sqlWhere .= " AND rev_user IN array( 'rev_user' => $user->getID() )";
+           // $sqlWhere .= " AND rev_user IN array( 'rev_user' => $user->getID() )"; //LIMIT to just $user
            $nextPrefix = "AND";
        }
 
@@ -81,18 +82,22 @@ class SpecialUserJourney extends IncludableSpecialPage {
            "ORDER BY wiki_rank DESC " .
            "LIMIT $limit";
 
+
        $res = $dbr->query( $sql );
 
-        foreach ($res as $row) {
-          print_r($row);
-        }
+        foreach( $res as $row ) {
+          if( $row->user_name == "Swray" ) {
+            //print_r($row->floor(wiki_rank);
+            $output = $row->wiki_rank;
+          }
+      };
 
 
 
        $sortable = in_array( 'nosort', $opts ) ? '' : ' sortable';
 
-       $output = "";
-       $output .= "TEST!!";
+       // $output = "";
+       // $output .= "TEST!!";
        // $output = "<table class=\"wikitable contributionscores plainlinks{$sortable}\" >\n" .
        //     "<tr class='header'>\n" .
        //     Html::element( 'th', array(), $this->msg( 'contributionscores-rank' )->text() ) .
@@ -512,7 +517,23 @@ class SpecialUserJourney extends IncludableSpecialPage {
            ) . "\n";
        $out->addHTML( $title );
 
-       $out->addHTML( $this->genUserJourneyPlot( 'lwelsh' ) );
+       $plotData = array();
+       for($i=1; $i<30; $i++){
+          // $out->addHTML( $this->genUserJourneyPlot( 'lwelsh', $i ) );
+          $plotData[$i]['date'] = $i;
+          $plotData[$i]['score'] = $this->genUserJourneyPlot( 'lwelsh', $i );
+       }
+
+       // print_r(json_encode($plotData));
+       $plotHtml = "<script type='text/template-json' id='userjourney-data'>" . json_encode( $plotData ) . "</script>";
+       $out->addHTML( $plotHtml );
+
+      // d3.json("php/data2.php", function(error, data) {
+      //   data.forEach(function(d) {
+      //     d.date = parseDate(d.date);
+      //     d.close = +d.close;
+      //   });
+
 
 
 
