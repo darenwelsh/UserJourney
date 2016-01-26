@@ -136,14 +136,6 @@ $wgHooks['LoadExtensionSchemaUpdates'][] = 'UserJourney::updateDatabase';
 // 1 of the last hooks in page load
 $wgHooks['BeforePageDisplay'][] = 'UserJourney::onBeforePageDisplay';
 
-<<<<<<< HEAD
-$wiretapResourceTemplate = array(
-	'localBasePath' => __DIR__ . '/modules',
-	'remoteExtPath' => 'UserJourney/modules',
-);
-
-$wgResourceModules += array(
-=======
  $wiretapResourceTemplate = array(
  	'localBasePath' => __DIR__ . '/modules',
  	'remoteExtPath' => 'UserJourney/modules',
