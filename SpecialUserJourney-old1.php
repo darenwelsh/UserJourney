@@ -7,126 +7,6 @@ class SpecialUserJourney extends IncludableSpecialPage {
    	parent::__construct( 'UserJourney' );
    }
 
-
-   /// Generates a "User Journey" plot for a given user and date range
-   /**
-    * Function generates Contribution Scores tables in HTML format (not wikiText)
-    *
-    * @param $days int Days in the past to run report for
-    * @param $user int User to report information about
-    * @return Html Table representing the requested Contribution Scores.
-    */
-   function genUserJourneyPlot( $user, $days  ) {
-    global $wgContribScoreIgnoreBots, $wgContribScoreIgnoreBlockedUsers, $wgContribScoresUseRealName;
-
-    $dbr = wfGetDB( DB_SLAVE );
-
-       $userTable = $dbr->tableName( 'user' );
-       $userGroupTable = $dbr->tableName( 'user_groups' );
-       $revTable = $dbr->tableName( 'revision' );
-       $ipBlocksTable = $dbr->tableName( 'ipblocks' );
-       $limit = 500; //TO-DO need ot fix up
-       $opts = array();
-	//$days = 30;
-
-       $sqlWhere = "";
-       $nextPrefix = "WHERE";
-
-       if ( $days > 0 ) {
-           $date = time() - ( 60 * 60 * 24 * $days ) - (60*60*24*90);
-           $dateString = $dbr->timestamp( $date );
-           $dateString2 = $dbr->timestamp( $date + (60 * 60 * 24) );
-           $sqlWhere .= " {$nextPrefix} rev_timestamp > '$dateString'";
-           $sqlWhere .= " AND rev_timestamp < '$dateString2'";
-          // $sqlWhere .= " AND rev_user IN array( 'rev_user' => $user->getID() )";
-	//$sqlWhere .= " AND user_name IN array( 'Lwelsh' , 'Swray' )";
-           $nextPrefix = "AND";
-       }
-
-       if ( $wgContribScoreIgnoreBlockedUsers ) {
-           $sqlWhere .= " {$nextPrefix} rev_user NOT IN " .
-               "(SELECT ipb_user FROM {$ipBlocksTable} WHERE ipb_user <> 0)";
-           $nextPrefix = "AND";
-       }
-
-       if ( $wgContribScoreIgnoreBots ) {
-           $sqlWhere .= " {$nextPrefix} rev_user NOT IN " .
-               "(SELECT ug_user FROM {$userGroupTable} WHERE ug_group='bot')";
-       }
-
-       $sqlMostPages = "SELECT rev_user,
-                        COUNT(DISTINCT rev_page) AS page_count,
-                        COUNT(rev_id) AS rev_count
-                        FROM {$revTable}
-                        {$sqlWhere}
-                        GROUP BY rev_user
-                        ORDER BY page_count DESC
-                        LIMIT {$limit}";
-
-       $sqlMostRevs = "SELECT rev_user,
-                        COUNT(DISTINCT rev_page) AS page_count,
-                        COUNT(rev_id) AS rev_count
-                        FROM {$revTable}
-                        {$sqlWhere}
-                        GROUP BY rev_user
-                        ORDER BY rev_count DESC
-                        LIMIT {$limit}";
-
-       $sql = "SELECT user_id, " .
-           "user_name, " .
-           "user_real_name, " .
-           "page_count, " .
-           "rev_count, " .
-           "page_count+SQRT(rev_count-page_count)*2 AS wiki_rank " .
-           "FROM $userTable u JOIN (($sqlMostPages) UNION ($sqlMostRevs)) s ON (user_id=rev_user) " .
-	//"WHERE user_name IN array( 'Lwelsh' ) " .
-           "ORDER BY wiki_rank DESC " .
-           "LIMIT $limit";
-
-       $res = $dbr->query( $sql );
-
-$output = 0;
-foreach( $res as $row ) { 
-	if( $row->user_name == "Swray" ) {
-		//print_r(floor($row->wiki_rank));
-		$output = $row->wiki_rank;
-	}
-};
-
-//while($row = mysql_fetch_array($res)) {
-//echo $row['fieldname'];
-//}
-
-
-//$data = array();
-    
-//    for ($x = 0; $x < mysql_num_rows($res); $x++) {
-//        $data[] = mysql_fetch_assoc($res);
-//    }
-    
-    $data = json_encode($res);
-
-       $sortable = in_array( 'nosort', $opts ) ? '' : ' sortable';
-
-       //$output = "";
-//       $output .= print_r($data);
-       // $output = "<table class=\"wikitable contributionscores plainlinks{$sortable}\" >\n" .
-       //     "<tr class='header'>\n" .
-       //     Html::element( 'th', array(), $this->msg( 'contributionscores-rank' )->text() ) .
-       //     Html::element( 'th', array(), $this->msg( 'contributionscores-score' )->text() ) .
-       //     Html::element( 'th', array(), $this->msg( 'contributionscores-pages' )->text() ) .
-       //     Html::element( 'th', array(), $this->msg( 'contributionscores-changes' )->text() ) .
-       //     Html::element( 'th', array(), $this->msg( 'contributionscores-username' )->text() );
-
-       $altrow = '';
-       $user_rank = 1;
-
-       $lang = $this->getLanguage();
-
-
-       return $output;
-   }
-
    /// Generates a "User Journey" table for a given user and date range
    /**
     * Function generates Contribution Scores tables in HTML format (not wikiText)
@@ -144,19 +24,19 @@ foreach( $res as $row ) {
        $userGroupTable = $dbr->tableName( 'user_groups' );
        $revTable = $dbr->tableName( 'revision' );
        $ipBlocksTable = $dbr->tableName( 'ipblocks' );
-       $limit = 500; //TO-DO need ot fix up
+       $limit = 500;
        $opts = array();
 
        $sqlWhere = "";
        $nextPrefix = "WHERE";
 
        if ( $days > 0 ) {
-           $date = time() - ( 60 * 60 * 24 * $days ) - (60*60*24*90);
+           $date = time() - (60 * 60 * 24 * $days ) - (68 * 60 * 60 * 24);
            $dateString = $dbr->timestamp( $date );
            $dateString2 = $dbr->timestamp( $date + (60 * 60 * 24) );
            $sqlWhere .= " {$nextPrefix} rev_timestamp > '$dateString'";
            $sqlWhere .= " AND rev_timestamp < '$dateString2'";
-           // $sqlWhere .= " AND rev_user IN array( 'rev_user' => $user->getID() )";
+           //$sqlWhere .= " AND rev_user IN array( 'rev_user' => $user->getID() )";
            $nextPrefix = "AND";
        }
 
@@ -203,14 +83,14 @@ foreach( $res as $row ) {
 
        $sortable = in_array( 'nosort', $opts ) ? '' : ' sortable';
 
-       $output = "";
-       // $output = "<table class=\"wikitable contributionscores plainlinks{$sortable}\" >\n" .
-       //     "<tr class='header'>\n" .
-       //     Html::element( 'th', array(), $this->msg( 'contributionscores-rank' )->text() ) .
-       //     Html::element( 'th', array(), $this->msg( 'contributionscores-score' )->text() ) .
-       //     Html::element( 'th', array(), $this->msg( 'contributionscores-pages' )->text() ) .
-       //     Html::element( 'th', array(), $this->msg( 'contributionscores-changes' )->text() ) .
-       //     Html::element( 'th', array(), $this->msg( 'contributionscores-username' )->text() );
+       $output = '';
+       //$output = "<table class=\"wikitable contributionscores plainlinks{$sortable}\" >\n" .
+       //    "<tr class='header'>\n" .
+       //    Html::element( 'th', array(), $this->msg( 'contributionscores-rank' )->text() ) .
+       //    Html::element( 'th', array(), $this->msg( 'contributionscores-score' )->text() ) .
+       //    Html::element( 'th', array(), $this->msg( 'contributionscores-pages' )->text() ) .
+       //    Html::element( 'th', array(), $this->msg( 'contributionscores-changes' )->text() ) .
+       //    Html::element( 'th', array(), $this->msg( 'contributionscores-username' )->text() );
 
        $altrow = '';
        $user_rank = 1;
@@ -235,14 +115,14 @@ foreach( $res as $row ) {
            $output .= "<tr class='{$altrow}'>\n" .
                "<td class='content' style='padding-right:10px;text-align:right;'>" .
                date('Y-m-d', strtotime($dateString)) .
-               // "\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
-               // $lang->formatNum( round( $user_rank, 0 ) ) .
+               //"\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
+               //$lang->formatNum( round( $user_rank, 0 ) ) .
                "\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
                $lang->formatNum( round( $row->wiki_rank, 0 ) ) .
-               // "\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
-               // $lang->formatNum( $row->page_count ) .
-               // "\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
-               // $lang->formatNum( $row->rev_count ) .
+               //"\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
+               //$lang->formatNum( $row->page_count ) .
+               //"\n</td><td class='content' style='padding-right:10px;text-align:right;'>" .
+               //$lang->formatNum( $row->rev_count ) .
                "\n</td><td class='content'>" .
                $userLink;
 
@@ -261,8 +141,8 @@ foreach( $res as $row ) {
 
            $user_rank++;
        }
-       // $output .= Html::closeElement( 'tr' );
-       // $output .= Html::closeElement( 'table' );
+       //$output .= Html::closeElement( 'tr' );
+       //$output .= Html::closeElement( 'table' );
 
        $dbr->freeResult( $res );
 
@@ -514,6 +394,7 @@ foreach( $res as $row ) {
            $wgContribScoreReports = array(
                array( 7, 50 ),
                array( 30, 50 ),
+               array( 365, 50 ),
                array( 0, 50 )
            );
        }
@@ -521,50 +402,28 @@ foreach( $res as $row ) {
        $out = $this->getOutput();
        $out->addWikiMsg( 'contributionscores-info' );
 
-       //TEST PLOT
-       $reportTitle = 'Plot';
-       $title = Xml::element( 'h2',
-               array( 'class' => 'contributionscores-title' ),
-               $reportTitle
-           ) . "\n";
-       $out->addHTML( $title );
-	
 
-	$plotData = array();
-       	for($i=1; $i<30; $i++){
-          //$out->addHTML( $this->genUserJourneyPlot( 'lwelsh', $i ) );
-          $plotData[$i]['date'] = $i;
-          $plotData[$i]['score'] = $this->genUserJourneyPlot( 'lwelsh', $i );
-       	}
-
-       //print_r(json_encode($plotData));
-	$plotHtml = '<canvas id="userjourneyChart" width="400" height="400"></canvas>';
-	$plotHtml .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $plotData ) . "</script>";
-       $out->addHTML( $plotHtml );
-
+$out->addHTML( "<p>TEST</p>" );
 
 
 		//Add new section calling new function to generate personal scores over time
-       // $reportTitle .= ' ' . $this->msg( 'contributionscores-top' )->numParams( $revs )->text();
        $reportTitle = 'Individual';
        $title = Xml::element( 'h2',
-               array( 'class' => 'contributionscores-title' ),
-               $reportTitle
-           ) . "\n";
+                array( 'class' => 'contributionscores-title' ),
+                $reportTitle
+            ) . "\n";
        $out->addHTML( $title );
-
        $out->addHTML( "<table class=\"wikitable contributionscores plainlinks sortable\" >\n" .
            "<tr class='header'>\n" .
            Html::element( 'th', array(), 'date' ) . //TO-DO add date message
-           // Html::element( 'th', array(), $this->msg( 'contributionscores-rank' )->text() ) .
+//           Html::element( 'th', array(), $this->msg( 'contributionscores-rank' )->text() ) .
            Html::element( 'th', array(), $this->msg( 'contributionscores-score' )->text() ) .
-           // Html::element( 'th', array(), $this->msg( 'contributionscores-pages' )->text() ) .
-           // Html::element( 'th', array(), $this->msg( 'contributionscores-changes' )->text() ) .
+//           Html::element( 'th', array(), $this->msg( 'contributionscores-pages' )->text() ) .
+//           Html::element( 'th', array(), $this->msg( 'contributionscores-changes' )->text() ) .
            Html::element( 'th', array(), $this->msg( 'contributionscores-username' )->text() ) );
-
-		for($i=1; $i<30; $i++){
-			$out->addHTML( $this->genUserJourneyTable( 'lwelsh', $i ) );
-		}
+      for($i=1; $i<30; $i++){
+              $out->addHTML( $this->genUserJourneyTable( 'lwelsh', $i ) );
+      }
        $out->addHTML( Html::closeElement( 'tr' ) . Html::closeElement( 'table' ) );
 
        foreach ( $wgContribScoreReports as $scoreReport ) {
@@ -1209,3 +1068,4 @@ class UserJourneyPager extends ReverseChronologicalPager {
 }
 
 */
+
