@@ -8,6 +8,9 @@ var rawData = JSON.parse( $('#userjourney-data').text() );
 var labels = [];
 var hits = [];
 var count = 0;
+
+console.log(rawData);
+
 for ( var date in rawData ) {
     if ( count % 7 === 0 ) {
         labels[ labels.length ] = date;
@@ -74,28 +77,28 @@ var data = {
             pointStrokeColor: "#fff",
             pointHighlightFill: "#fff",
             pointHighlightStroke: "rgba(220,220,220,1)",
-            data: hits //[65, 59, 80, 81, 56, 55, 40]
+            data: score //[65, 59, 80, 81, 56, 55, 40]
         }
-        ,{
-            label: "My Second dataset",
-            fillColor: "rgba(151,187,205,0.2)",
-            strokeColor: "rgba(151,187,205,1)",
-            pointColor: "rgba(151,187,205,1)",
-            pointStrokeColor: "#fff",
-            pointHighlightFill: "#fff",
-            pointHighlightStroke: "rgba(151,187,205,1)",
-            data: getMovingAverage( hits, 7 )
-        }
-        ,{
-            label: "My third dataset",
-            fillColor: "rgba(255,92,92,0.2)",
-            strokeColor: "rgba(255,92,92,1)",
-            pointColor: "rgba(255,92,92,1)",
-            pointStrokeColor: "#fff",
-            pointHighlightFill: "#fff",
-            pointHighlightStroke: "rgba(151,187,205,1)",
-            data: getMovingAverage( hits, 28 )
-        }
+//        ,{
+//            label: "My Second dataset",
+//            fillColor: "rgba(151,187,205,0.2)",
+//            strokeColor: "rgba(151,187,205,1)",
+//            pointColor: "rgba(151,187,205,1)",
+//            pointStrokeColor: "#fff",
+//            pointHighlightFill: "#fff",
+//            pointHighlightStroke: "rgba(151,187,205,1)",
+//            data: getMovingAverage( hits, 7 )
+//        }
+//        ,{
+//            label: "My third dataset",
+//            fillColor: "rgba(255,92,92,0.2)",
+//            strokeColor: "rgba(255,92,92,1)",
+//            pointColor: "rgba(255,92,92,1)",
+//            pointStrokeColor: "#fff",
+//            pointHighlightFill: "#fff",
+//            pointHighlightStroke: "rgba(151,187,205,1)",
+//            data: getMovingAverage( hits, 28 )
+//        }
     ]
 };
 
