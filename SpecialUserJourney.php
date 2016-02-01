@@ -16,7 +16,130 @@ class SpecialUserJourney extends IncludableSpecialPage {
     * @param $user int User to report information about
     * @return Html Table representing the requested Contribution Scores.
     */
-   function genUserJourneyPlot( $user, $days  ) {
+    function genUserJourneyPlot2( ){
+      global $wgOut;
+
+      $wgOut->setPageTitle( 'UserJourney: Plot' );
+      $wgOut->addModules( 'ext.wiretap.charts.nvd3' );
+
+      $html = '<div id="wiretap-chart"><svg height="400px"></svg></div>';
+
+      $dbr = wfGetDB( DB_SLAVE );
+
+      $res = $dbr->select(
+        array('w' => 'wiretap'),
+        array(
+          "w.hit_year AS year",
+          "w.hit_month AS month",
+          "w.hit_day AS day",
+          "count(*) AS num_hits",
+        ),
+        null, //'w.hit_timestamp > 20140801000000', //null, // CONDITIONS? 'wiretap.hit_timestamp>20131001000000',
+        __METHOD__,
+        array(
+          "DISTINCT",
+          "GROUP BY" => "w.hit_year, w.hit_month, w.hit_day",
+          "ORDER BY" => "w.hit_year ASC, w.hit_month ASC, w.hit_day ASC",
+          "LIMIT" => "100000",
+        ),
+        null // join conditions
+      );
+
+      $previous = null;
+
+      while( $row = $dbr->fetchRow( $res ) ) {
+
+        list($year, $month, $day, $hits) = array($row['year'], $row['month'], $row['day'], $row['num_hits']);
+
+        $currentDateString = "$year-$month-$day";
+        $current = new DateTime( $currentDateString );
+
+        while ( $previous && $previous->modify( '+1 day' )->format( 'Y-m-d') !== $currentDateString ) {
+          $data[] = array(
+            'x' => $previous->getTimestamp() * 1000, // x value timestamp in milliseconds
+            'y' => 0, // y value = zero hits for this day
+          );
+        }
+
+        $data[] = array(
+          'x' => strtotime( $currentDateString ) * 1000, // x value time in milliseconds
+          'y' => intval( $hits ),
+        );
+
+        $previous = new DateTime( $currentDateString );
+      }
+
+      $data = array(
+        array(
+          'key' => 'Daily Hits',
+          'values' => $data,
+        ),
+      );
+
+      $html .= "<script type='text/template-json' id='wiretap-data'>" . json_encode( $data ) . "</script>";
+
+      // REMOVE - output raw data
+      $html .= "<pre>" . print_r( $data, true ) . "</pre>";
+
+      $wgOut->addHTML( $html );
+    }
+
+
+    function genUserJourneyPlot( ){
+      global $wgOut;
+
+      $wgOut->setPageTitle( 'UserJourney: Plot' );
+      $wgOut->addModules( 'ext.wiretap.charts.nvd3' );
+
+      $html = '<div id="wiretap-chart"><svg height="400px"></svg></div>';
+
+      $dbr = wfGetDB( DB_SLAVE );
+
+      $sql = "SELECT
+                DATE(rev_timestamp) AS day,
+                COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
+              FROM `revision`
+              WHERE
+                rev_user_text IN ( 'Lwelsh' )
+              GROUP BY day
+              ORDER BY day DESC";
+
+      $res = $dbr->query( $sql );
+
+      $previous = null;
+
+      while( $row = $dbr->fetchRow( $res ) ) {
+
+        list($day, $score) = array($row['day'], $row['score']);
+
+        $day = strtotime( $day ) * 1000;
+
+        $data[] = array(
+          'x' => $day,
+          'y' => $score,
+        );
+      }
+
+      $data = array(
+        array(
+          'key' => 'Daily Score',
+          'values' => $data,
+        ),
+      );
+
+      $html .= "<script type='text/template-json' id='wiretap-data'>" . json_encode( $data ) . "</script>";
+
+      // REMOVE - output raw data
+      $html .= "<pre>" . print_r( $data, true ) . "</pre>";
+
+      $wgOut->addHTML( $html );
+    }
+
+
+
+
+
+   function genUserJourneyPlotOld( $user, $days  ) {
     global $wgContribScoreIgnoreBots, $wgContribScoreIgnoreBlockedUsers, $wgContribScoresUseRealName;
 
     $dbr = wfGetDB( DB_SLAVE );
@@ -86,7 +209,7 @@ class SpecialUserJourney extends IncludableSpecialPage {
        $res = $dbr->query( $sql );
 
 $output = 0;
-foreach( $res as $row ) { 
+foreach( $res as $row ) {
 	if( $row->user_name == "Swray" ) {
 		//print_r(floor($row->wiki_rank));
 		$output = $row->wiki_rank;
@@ -99,11 +222,24 @@ foreach( $res as $row ) {
 
 
 //$data = array();
-    
+
 //    for ($x = 0; $x < mysql_num_rows($res); $x++) {
 //        $data[] = mysql_fetch_assoc($res);
 //    }
-    
+
+// Need data to look something like this:
+// [
+//   {"key":
+//   "Daily Hits","values":
+//     [
+//       {"x":1384236000000,"y":298},
+//       {"x":1384322400000,"y":1067},
+//       {"x":1384408800000,"y":1605},
+//       {"x":1384495200000,"y":996},
+//     ]
+//   }
+// ]
+
     $data = json_encode($res);
 
        $sortable = in_array( 'nosort', $opts ) ? '' : ' sortable';
@@ -521,14 +657,15 @@ foreach( $res as $row ) {
        $out = $this->getOutput();
        $out->addWikiMsg( 'contributionscores-info' );
 
-       //TEST PLOT
+       // TEST PLOT
+       /*
        $reportTitle = 'Plot';
        $title = Xml::element( 'h2',
                array( 'class' => 'contributionscores-title' ),
                $reportTitle
            ) . "\n";
        $out->addHTML( $title );
-	
+
 
 	$plotData = array();
        	for($i=1; $i<30; $i++){
@@ -542,7 +679,10 @@ foreach( $res as $row ) {
 	$plotHtml .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $plotData ) . "</script>";
        $out->addHTML( $plotHtml );
 
+        */
 
+       $this->genUserJourneyPlot( );
+       // END TEST PLOT
 
 		//Add new section calling new function to generate personal scores over time
        // $reportTitle .= ' ' . $this->msg( 'contributionscores-top' )->numParams( $revs )->text();
