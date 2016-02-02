@@ -174,13 +174,15 @@ class SpecialUserJourney extends SpecialPage {
 
 		$wgOut->setPageTitle( "UserJourney: User Score Data for $userRealName" );
 
-		$html = '<table class="wikitable"><tr><th>Date</th><th>Score</th></tr>';
+		$html = '<table class="wikitable"><tr><th>Date</th><th>Score</th><th>Pages</th><th>Revisions</th></tr>';
 
 		$dbr = wfGetDB( DB_SLAVE );
 
     $sql = "SELECT
               DATE(rev_timestamp) AS day,
               COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
+              COUNT(DISTINCT rev_page) as pages,
+              COUNT(rev_id) as revisions
             FROM `revision`
             WHERE
               rev_user_text IN ( '$username' )
@@ -193,9 +195,9 @@ class SpecialUserJourney extends SpecialPage {
 
     while( $row = $dbr->fetchRow( $res ) ) {
 
-      list($day, $score) = array($row['day'], $row['score']);
+      list($day, $score) = array($row['day'], $row['score'], $row['pages'], $row['revisions']);
       $date = date('Y-m-d', strtotime( $day ));
-      $html .= "<tr><td>$date</td><td>$score</td></tr>";
+      $html .= "<tr><td>$date</td><td>$score</td><td>$pages</td><td>$revisions</td></tr>";
 
     }
 
