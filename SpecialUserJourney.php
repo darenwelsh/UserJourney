@@ -80,7 +80,7 @@ class SpecialUserJourney extends SpecialPage {
 
 		$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-hits', 'hits-list' ) . $unfilterLink . "</li>";
 
-		$navLine .= "<li>" . wfMessage( 'userjourney-dailytotals' )->text()
+		$navLine .= "<li>" . wfMessage( 'userjourney-userscore' )->text()
 			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'user-score-data' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-score-plot' )
 			. ")</li>";
