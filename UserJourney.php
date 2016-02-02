@@ -15,6 +15,7 @@ $wgExtensionCredits['specialpage'][] = array(
 	STUFF FROM CONTRIBUTION SCORES
 
 */
+  /*
 
 define( 'CONTRIBUTIONSCORES_MAXINCLUDELIMIT', 50 );
 $wgContribScoreReports = null;
@@ -93,7 +94,7 @@ function efContributionScores_Render( &$parser, $usertext, $metric = 'score' ) {
    return $parser->insertStripItem( $output, $parser->mStripState );
 }
 
-
+*/
 
 /*
 	ORIGINAL STUFF
@@ -108,11 +109,16 @@ $GLOBALS['wgMessagesDirs']['UserJourney'] = __DIR__ . '/i18n';
 // Necessary?
 $wgExtensionMessagesFiles['UserJourneyAlias'] = __DIR__ . '/UserJourney.alias.php';
 
-$wgAutoloadClasses['UserJourney'] = __DIR__ . '/UserJourney.body.php'; // autoload body class
+// Not currently used
+//$wgAutoloadClasses['UserJourney'] = __DIR__ . '/UserJourney.body.php'; // autoload body class
 
 // Special Page
 $wgAutoloadClasses['SpecialUserJourney'] = __DIR__ . '/SpecialUserJourney.php'; // autoload special page class
 $wgSpecialPages['UserJourney'] = 'SpecialUserJourney'; // register special page
+
+/*
+No Longer Used
+
 
 // 1 of the earliest hooks in page load
 // $wgHooks['ArticlePageDataBefore'][] = 'UserJourney::onArticlePageDataBefore';
@@ -134,7 +140,11 @@ $wgHooks['AfterFinalPageOutput'][] = 'UserJourney::recordInDatabase';
 $wgHooks['LoadExtensionSchemaUpdates'][] = 'UserJourney::updateDatabase';
 
 // 1 of the last hooks in page load
-$wgHooks['BeforePageDisplay'][] = 'UserJourney::onBeforePageDisplay';
+// $wgHooks['BeforePageDisplay'][] = 'UserJourney::onBeforePageDisplay';
+
+
+No Longer Used
+*/
 
  $wiretapResourceTemplate = array(
  	'localBasePath' => __DIR__ . '/modules',
