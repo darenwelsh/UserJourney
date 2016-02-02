@@ -195,7 +195,7 @@ class SpecialUserJourney extends SpecialPage {
 
     while( $row = $dbr->fetchRow( $res ) ) {
 
-      list($day, $score) = array($row['day'], $row['score'], $row['pages'], $row['revisions']);
+      list($day, $score, $pages, $revisions) = array($row['day'], $row['score'], $row['pages'], $row['revisions']);
       $date = date('Y-m-d', strtotime( $day ));
       $html .= "<tr><td>$date</td><td>$score</td><td>$pages</td><td>$revisions</td></tr>";
 
