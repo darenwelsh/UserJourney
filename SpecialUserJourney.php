@@ -502,7 +502,7 @@ class SpecialUserJourney extends SpecialPage {
 
       $data[] = array(
         'x' => strtotime( $day ) * 1000,
-        'y' => intval( $score ),
+        'y' => floatval( $score ),
       );
     }
 
