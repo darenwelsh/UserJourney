@@ -330,9 +330,6 @@ class SpecialUserJourney extends SpecialPage {
 
     $html .= "<script type='text/template-json' id='wiretap-data'>" . json_encode( $data ) . "</script>";
 
-    // REMOVE - output raw data
-    $html .= "<pre>" . print_r( $data, true ) . "</pre>";
-
     $wgOut->addHTML( $html );
   }
 
