@@ -180,7 +180,7 @@ class SpecialUserJourney extends SpecialPage {
 
     $sql = "SELECT
               DATE(rev_timestamp) AS day,
-              COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
+              COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score,
               COUNT(DISTINCT rev_page) as pages,
               COUNT(rev_id) as revisions
             FROM `revision`
