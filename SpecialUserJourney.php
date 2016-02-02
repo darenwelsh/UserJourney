@@ -498,11 +498,11 @@ class SpecialUserJourney extends SpecialPage {
 
       list($day, $score) = array($row['day'], $row['score']);
 
-      $day = strtotime( $day ) * 1000;
+      // $day = strtotime( $day ) * 1000;
 
       $data[] = array(
-        'x' => $day,
-        'y' => $score,
+        'x' => strtotime( $day ) * 1000,
+        'y' => intval( $score ),
       );
     }
 
