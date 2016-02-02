@@ -26,12 +26,11 @@ class SpecialUserJourney extends SpecialPage {
 		if ($this->mMode == 'hits-list') {
 			$this->hitsList();
 		}
-		else if ($this->mMode == 'total-hits-data') {
-			$this->totals();
+		else if ($this->mMode == 'user-score-data') {
+			$this->userScoreData();
 		}
-		else if ( $this->mMode == 'total-hits-chart' ) {
-			// $this->totalsChart2();
-      $this->genUserJourneyPlot();
+		else if ( $this->mMode == 'user-score-plot' ) {
+      $this->userScorePlot();
 		}
 
 		else if ( $this->mMode == 'unique-user-data' ) {
@@ -82,18 +81,18 @@ class SpecialUserJourney extends SpecialPage {
 		$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-hits', 'hits-list' ) . $unfilterLink . "</li>";
 
 		$navLine .= "<li>" . wfMessage( 'userjourney-dailytotals' )->text()
-			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'total-hits-data' )
-			. ") (" . $this->createHeaderLink( 'userjourney-chart', 'total-hits-chart' )
+			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'user-score-data' )
+			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-score-plot' )
 			. ")</li>";
 
 		$navLine .= "<li>" . wfMessage( 'userjourney-dailyunique-user-hits' )->text()
 			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'unique-user-data' )
-			. ") (" . $this->createHeaderLink( 'userjourney-chart', 'unique-user-chart' )
+			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'unique-user-chart' )
 			. ")</li>";
 
 		$navLine .= "<li>" . wfMessage( 'userjourney-dailyunique-user-page-hits' )->text()
 			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'unique-user-page-data' )
-			. ") (" . $this->createHeaderLink( 'userjourney-chart', 'unique-user-page-chart' )
+			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'unique-user-page-chart' )
 			. ")</li>";
 
 		$navLine .= "</ul>";
@@ -167,109 +166,45 @@ class SpecialUserJourney extends SpecialPage {
 		$wgOut->addHTML( $html );
 	}
 
-	public function totals () {
+	public function userScoreData() {
 		global $wgOut;
 
-		$wgOut->setPageTitle( 'UserJourney: Daily Totals' );
+    $username = $this->getUser()->mName;
+    $userRealName = $this->getUser()->mRealName;
 
-		$html = '<table class="wikitable"><tr><th>Date</th><th>Hits</th></tr>';
-		// $html = $form;
-		// if ( $body ) {
+		$wgOut->setPageTitle( 'UserJourney: User Score Data for $userRealName' );
 
-		// }
-		// else {
-			// $html .= '<p>' . wfMsgHTML('listusers-noresult') . '</p>';
-		// }
-		// SELECT userjourney.hit_year, userjourney.hit_month, userjourney.hit_day, count(*) AS num_hits
-		// FROM userjourney
-		// WHERE userjourney.hit_timestamp>20131001000000
-		// GROUP BY userjourney.hit_year, userjourney.hit_month, userjourney.hit_day
-		// ORDER BY userjourney.hit_year DESC, userjourney.hit_month DESC, userjourney.hit_day DESC
-		// LIMIT 100000;
+		$html = '<table class="wikitable"><tr><th>Date</th><th>Score</th></tr>';
+
 		$dbr = wfGetDB( DB_SLAVE );
 
-		$res = $dbr->select(
-			array('w' => 'userjourney'),
-			array(
-				"w.hit_year AS year",
-				"w.hit_month AS month",
-				"w.hit_day AS day",
-				"count(*) AS num_hits",
-			),
-			null, // CONDITIONS? 'userjourney.hit_timestamp>20131001000000',
-			__METHOD__,
-			array(
-				"DISTINCT",
-				"GROUP BY" => "w.hit_year, w.hit_month, w.hit_day",
-				"ORDER BY" => "w.hit_year DESC, w.hit_month DESC, w.hit_day DESC",
-				"LIMIT" => "100000",
-			),
-			null // join conditions
-		);
-		while( $row = $dbr->fetchRow( $res ) ) {
+    $sql = "SELECT
+              DATE(rev_timestamp) AS day,
+              COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
+            FROM `revision`
+            WHERE
+              rev_user_text IN ( '$username' )
+            GROUP BY day
+            ORDER BY day DESC";
 
-			list($year, $month, $day, $hits) = array($row['year'], $row['month'], $row['day'], $row['num_hits']);
-			$html .= "<tr><td>$year-$month-$day</td><td>$hits</td></tr>";
+    $res = $dbr->query( $sql );
 
-		}
+    $previous = null;
+
+    while( $row = $dbr->fetchRow( $res ) ) {
+
+      list($day, $score) = array($row['day'], $row['score']);
+      $date = date('m/d/Y', strtotime( $day ) * 1000);
+      $html .= "<tr><td>$date</td><td>$score</td></tr>";
+
+    }
+
 		$html .= "</table>";
 
 		$wgOut->addHTML( $html );
 
 	}
 
-	public function totalsChart () {
-		global $wgOut;
-
-		$wgOut->setPageTitle( 'UserJourney: Daily Totals Chart' );
-		$wgOut->addModules( 'ext.userjourney.charts' );
-
-		$html = '<canvas id="userjourneyChart" width="400" height="400"></canvas>';
-
-		$dbr = wfGetDB( DB_SLAVE );
-
-		$res = $dbr->select(
-			array('w' => 'userjourney'),
-			array(
-				"w.hit_year AS year",
-				"w.hit_month AS month",
-				"w.hit_day AS day",
-				"count(*) AS num_hits",
-			),
-			null, //'w.hit_timestamp > 20140801000000', //null, // CONDITIONS? 'userjourney.hit_timestamp>20131001000000',
-			__METHOD__,
-			array(
-				"DISTINCT",
-				"GROUP BY" => "w.hit_year, w.hit_month, w.hit_day",
-				"ORDER BY" => "w.hit_year ASC, w.hit_month ASC, w.hit_day ASC",
-				"LIMIT" => "100000",
-			),
-			null // join conditions
-		);
-		$previous = null;
-
-		while( $row = $dbr->fetchRow( $res ) ) {
-
-			list($year, $month, $day, $hits) = array($row['year'], $row['month'], $row['day'], $row['num_hits']);
-
-			$currentDateString = "$year-$month-$day";
-			$current = new DateTime( $currentDateString );
-
-			while ( $previous && $previous->modify( '+1 day' )->format( 'Y-m-d') !== $currentDateString ) {
-				$data[ $previous->format( 'Y-m-d' ) ] = 0;
-			}
-
-			$data[ $currentDateString ] = $hits;
-
-			$previous = new DateTime( $currentDateString );
-		}
-
-		//$html .= "<pre>" . print_r( $data, true ) . "</pre>";
-		$html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-
-		$wgOut->addHTML( $html );
-
-	}
 
 	protected function getUniqueRows ( $uniquePageHits = true, $order = "DESC" ) {
 
@@ -338,142 +273,22 @@ class SpecialUserJourney extends SpecialPage {
 
 	}
 
-	public function uniqueTotalsChart ( $showUniquePageHits = false ) {
 
-		global $wgOut;
 
-		if ( $showUniquePageHits ) {
-			$pageTitleText = "Daily Unique User-Page-Hits";
-		}
-		else {
-			$pageTitleText = "Daily Unique User-Hits";
-		}
 
-		$wgOut->setPageTitle( "UserJourney: $pageTitleText Chart" );
-		$wgOut->addModules( 'ext.userjourney.charts.nvd3' );
-
-		$html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
-
-		$rows = $this->getUniqueRows( $showUniquePageHits, "ASC" );
-
-		$previous = null;
-
-		foreach ( $rows as $row ) {
-
-			list($currentDateString, $hits) = array($row['date'], $row['hits']);
-
-			$current = new DateTime( $currentDateString );
-
-			while ( $previous && $previous->modify( '+1 day' )->format( 'Y-m-d') !== $currentDateString ) {
-				$data[] = array(
-					'x' => $previous->getTimestamp() * 1000, // x value timestamp in milliseconds
-					'y' => 0, // y value = zero hits for this day
-				);
-			}
-
-			$data[] = array(
-				'x' => strtotime( $currentDateString ) * 1000, // x value time in milliseconds
-				'y' => intval( $hits ),
-			);
-
-			$previous = new DateTime( $currentDateString );
-		}
-
-		$data = array(
-			array(
-				'key' => $pageTitleText,
-				'values' => $data,
-			),
-		);
-
-		//$html .= "<pre>" . print_r( $data, true ) . "</pre>";
-		$html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-
-		$wgOut->addHTML( $html );
-
-	}
-
-	public function totalsChart2 () {
-		global $wgOut;
-
-		$wgOut->setPageTitle( 'UserJourney: Daily Totals Chart' );
-		$wgOut->addModules( 'ext.userjourney.charts.nvd3' );
-
-		$html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
-
-		$dbr = wfGetDB( DB_SLAVE );
-
-		$res = $dbr->select(
-			array('w' => 'userjourney'),
-			array(
-				"w.hit_year AS year",
-				"w.hit_month AS month",
-				"w.hit_day AS day",
-				"count(*) AS num_hits",
-			),
-			null, //'w.hit_timestamp > 20140801000000', //null, // CONDITIONS? 'userjourney.hit_timestamp>20131001000000',
-			__METHOD__,
-			array(
-				"DISTINCT",
-				"GROUP BY" => "w.hit_year, w.hit_month, w.hit_day",
-				"ORDER BY" => "w.hit_year ASC, w.hit_month ASC, w.hit_day ASC",
-				"LIMIT" => "100000",
-			),
-			null // join conditions
-		);
-
-		$previous = null;
-
-		while( $row = $dbr->fetchRow( $res ) ) {
-
-			list($year, $month, $day, $hits) = array($row['year'], $row['month'], $row['day'], $row['num_hits']);
-
-			$currentDateString = "$year-$month-$day";
-			$current = new DateTime( $currentDateString );
-
-			while ( $previous && $previous->modify( '+1 day' )->format( 'Y-m-d') !== $currentDateString ) {
-				$data[] = array(
-					'x' => $previous->getTimestamp() * 1000, // x value timestamp in milliseconds
-					'y' => 0, // y value = zero hits for this day
-				);
-			}
-
-			$data[] = array(
-				'x' => strtotime( $currentDateString ) * 1000, // x value time in milliseconds
-				'y' => intval( $hits ),
-			);
-
-			$previous = new DateTime( $currentDateString );
-		}
-
-		$data = array(
-			array(
-				'key' => 'Daily Hits',
-				'values' => $data,
-			),
-		);
-
-		//$html .= "<pre>" . print_r( $data, true ) . "</pre>";
-		$html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-
-		$wgOut->addHTML( $html );
-	}
-
-  /// Generates a "User Journey" plot for a given user and date range
   /**
-  * Function generates Contribution Scores tables in HTML format (not wikiText)
+  * Function generates plot of contribution score for logged-in user over time
   *
-  * @param $days int Days in the past to run report for
-  * @param $user int User to report information about
-  * @return Html Table representing the requested Contribution Scores.
+  * @param $tbd - no parameters now
+  * @return nothing - generates special page
   */
-  function genUserJourneyPlot( ){
+  function userScorePlot( ){
     global $wgOut;
 
     $username = $this->getUser()->mName;
     $userRealName = $this->getUser()->mRealName;
 
-    $wgOut->setPageTitle( 'UserJourney: Plot' );
+    $wgOut->setPageTitle( 'UserJourney: User Score Plot for $userRealName' );
     $wgOut->addModules( 'ext.wiretap.charts.nvd3' );
 
     $html = '<div id="wiretap-chart"><svg height="400px"></svg></div>';
@@ -486,7 +301,7 @@ class SpecialUserJourney extends SpecialPage {
             FROM `revision`
             WHERE
               rev_user_text IN ( '$username' )
-              AND rev_timestamp > 20150101000000
+              /* AND rev_timestamp > 20150101000000 */
             GROUP BY day
             ORDER BY day DESC";
 
