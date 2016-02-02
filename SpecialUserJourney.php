@@ -470,6 +470,9 @@ class SpecialUserJourney extends SpecialPage {
   function genUserJourneyPlot( ){
     global $wgOut;
 
+    $username = $this->getUser()->mName;
+    $userRealName = $this->getUser()->mRealName;
+
     $wgOut->setPageTitle( 'UserJourney: Plot' );
     $wgOut->addModules( 'ext.wiretap.charts.nvd3' );
 
@@ -482,7 +485,7 @@ class SpecialUserJourney extends SpecialPage {
               COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
             FROM `revision`
             WHERE
-              rev_user_text IN ( 'Lwelsh' )
+              rev_user_text IN ( '$username' )
               AND rev_timestamp > 20150101000000
             GROUP BY day
             ORDER BY day DESC";
