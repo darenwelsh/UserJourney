@@ -171,8 +171,14 @@ class SpecialUserJourney extends SpecialPage {
 
     $username = $this->getUser()->mName;
     $userRealName = $this->getUser()->mRealName;
+    if( $userRealName ){
+    	$displayName = $userRealName;
+    }
+    else{
+    	$displayName = $username;
+    }
 
-		$wgOut->setPageTitle( "UserJourney: User Score Data for $userRealName" );
+		$wgOut->setPageTitle( "UserJourney: User Score Data for $displayName" );
 
 		$html = '<table class="wikitable"><tr><th>Date</th><th>Score</th><th>Pages</th><th>Revisions</th></tr>';
 
@@ -197,6 +203,7 @@ class SpecialUserJourney extends SpecialPage {
 
       list($day, $score, $pages, $revisions) = array($row['day'], $row['score'], $row['pages'], $row['revisions']);
       $date = date('Y-m-d', strtotime( $day ));
+      $score = round($score, 1);
       $html .= "<tr><td>$date</td><td>$score</td><td>$pages</td><td>$revisions</td></tr>";
 
     }
@@ -289,8 +296,14 @@ class SpecialUserJourney extends SpecialPage {
 
     $username = $this->getUser()->mName;
     $userRealName = $this->getUser()->mRealName;
+    if( $userRealName ){
+    	$displayName = $userRealName;
+    }
+    else{
+    	$displayName = $username;
+    }
 
-    $wgOut->setPageTitle( "UserJourney: User Score Plot for $userRealName" );
+    $wgOut->setPageTitle( "UserJourney: User Score Plot for $displayName" );
     $wgOut->addModules( 'ext.wiretap.charts.nvd3' );
 
     $html = '<div id="wiretap-chart"><svg height="400px"></svg></div>';
