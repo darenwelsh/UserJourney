@@ -22,10 +22,10 @@ class SpecialUserJourney extends SpecialPage {
 		$wgOut->addHTML( $this->getPageHeader() );
 
 		if ($this->mMode == 'user-score-data') {
-			$this->userScoreData();
+			$this->myScoreData();
 		}
 		else if ( $this->mMode == 'user-score-plot' ) {
-      $this->userScorePlot();
+      $this->myScorePlot();
 		}
 
 		else {
@@ -59,7 +59,7 @@ class SpecialUserJourney extends SpecialPage {
 
 		$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-overview' ) . $unfilterLink . "</li>";
 
-		$navLine .= "<li>" . wfMessage( 'userjourney-userscore' )->text()
+		$navLine .= "<li>" . wfMessage( 'userjourney-myscore' )->text()
 			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'user-score-data' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-score-plot' )
 			. ")</li>";
@@ -107,7 +107,7 @@ class SpecialUserJourney extends SpecialPage {
 
 
 
-	public function userScoreData() {
+	public function myScoreData() {
 		global $wgOut;
 
     $username = $this->getUser()->mName;
@@ -162,7 +162,7 @@ class SpecialUserJourney extends SpecialPage {
   * @param $tbd - no parameters now
   * @return nothing - generates special page
   */
-  function userScorePlot( ){
+  function myScorePlot( ){
     global $wgOut;
 
     $username = $this->getUser()->mName;
