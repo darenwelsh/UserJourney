@@ -17,34 +17,15 @@ class SpecialUserJourney extends SpecialPage {
 
 		list( $limit, $offset ) = wfCheckLimits();
 
-		// $userTarget = isset( $parser ) ? $parser : $wgRequest->getVal( 'username' );
 		$this->mMode = $wgRequest->getVal( 'show' );
-		//$fileactions = array('actions...?');
 
 		$wgOut->addHTML( $this->getPageHeader() );
 
-		if ($this->mMode == 'hits-list') {
-			$this->hitsList();
-		}
-		else if ($this->mMode == 'user-score-data') {
+		if ($this->mMode == 'user-score-data') {
 			$this->userScoreData();
 		}
 		else if ( $this->mMode == 'user-score-plot' ) {
       $this->userScorePlot();
-		}
-
-		else if ( $this->mMode == 'unique-user-data' ) {
-			$this->uniqueTotals( false );
-		}
-		else if ( $this->mMode == 'unique-user-chart' ) {
-			$this->uniqueTotalsChart( false );
-		}
-
-		else if ( $this->mMode == 'unique-user-page-data' ) {
-			$this->uniqueTotals( true );
-		}
-		else if ( $this->mMode == 'unique-user-page-chart' ) {
-			$this->uniqueTotalsChart( true );
 		}
 
 		else {
@@ -78,21 +59,9 @@ class SpecialUserJourney extends SpecialPage {
 
 		$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-overview' ) . $unfilterLink . "</li>";
 
-		$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-hits', 'hits-list' ) . $unfilterLink . "</li>";
-
 		$navLine .= "<li>" . wfMessage( 'userjourney-userscore' )->text()
 			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'user-score-data' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-score-plot' )
-			. ")</li>";
-
-		$navLine .= "<li>" . wfMessage( 'userjourney-dailyunique-user-hits' )->text()
-			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'unique-user-data' )
-			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'unique-user-chart' )
-			. ")</li>";
-
-		$navLine .= "<li>" . wfMessage( 'userjourney-dailyunique-user-page-hits' )->text()
-			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'unique-user-page-data' )
-			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'unique-user-page-chart' )
 			. ")</li>";
 
 		$navLine .= "</ul>";
@@ -129,42 +98,14 @@ class SpecialUserJourney extends SpecialPage {
 		$pager->filterUser = $wgRequest->getVal( 'filterUser' );
 		$pager->filterPage = $wgRequest->getVal( 'filterPage' );
 
-		// $form = $pager->getForm();
 		$body = $pager->getBody();
 		$html = '';
-		// $html = $form;
 
 		$html .= '<p>Test</p>';
 		$wgOut->addHTML( $html );
 	}
 
 
-	public function hitsList () {
-		global $wgOut, $wgRequest;
-
-		$wgOut->setPageTitle( 'UserJourney' );
-
-		$pager = new UserJourneyPager();
-		$pager->filterUser = $wgRequest->getVal( 'filterUser' );
-		$pager->filterPage = $wgRequest->getVal( 'filterPage' );
-
-		// $form = $pager->getForm();
-		$body = $pager->getBody();
-		$html = '';
-		// $html = $form;
-		if ( $body ) {
-			$html .= $pager->getNavigationBar();
-			$html .= '<table class="wikitable sortable" width="100%" cellspacing="0" cellpadding="0">';
-			$html .= '<tr><th>Username</th><th>Page</th><th>Time</th><th>Referal Page</th><th>Event</th><th>Points</th><th>Badge</th><th>Action</th></tr>';
-			$html .= $body;
-			$html .= '</table>';
-			$html .= $pager->getNavigationBar();
-		}
-		else {
-			$html .= '<p>' . wfMsgHTML('listusers-noresult') . '</p>';
-		}
-		$wgOut->addHTML( $html );
-	}
 
 	public function userScoreData() {
 		global $wgOut;
@@ -180,7 +121,7 @@ class SpecialUserJourney extends SpecialPage {
 
 		$wgOut->setPageTitle( "UserJourney: User Score Data for $displayName" );
 
-		$html = '<table class="wikitable"><tr><th>Date</th><th>Score</th><th>Pages</th><th>Revisions</th></tr>';
+		$html = '<table class="wikitable sortable"><tr><th>Date</th><th>Score</th><th>Pages</th><th>Revisions</th></tr>';
 
 		$dbr = wfGetDB( DB_SLAVE );
 
@@ -213,76 +154,6 @@ class SpecialUserJourney extends SpecialPage {
 		$wgOut->addHTML( $html );
 
 	}
-
-
-	protected function getUniqueRows ( $uniquePageHits = true, $order = "DESC" ) {
-
-		$dbr = wfGetDB( DB_SLAVE );
-
-		$fields = array(
-			"CONCAT(w.hit_year, '-', w.hit_month, '-', w.hit_day) AS date",
-		);
-
-		if ( $uniquePageHits ) {
-			$fields[] = "COUNT(DISTINCT(CONCAT(w.user_name,'UNIQUESEPARATOR',w.page_id))) as hits";
-		}
-		else {
-			$fields[] = "COUNT(DISTINCT(w.user_name)) as hits";
-		}
-
-		$res = $dbr->select(
-			array('w' => 'userjourney'),
-			$fields,
-			null, // CONDITIONS? 'userjourney.hit_timestamp>20131001000000',
-			__METHOD__,
-			array(
-				// "DISTINCT",
-				"GROUP BY" => "w.hit_year, w.hit_month, w.hit_day",
-				"ORDER BY" => "w.hit_timestamp $order",
-				"LIMIT" => "100000",
-			),
-			null // join conditions
-		);
-
-		$output = array();
-		while( $row = $dbr->fetchRow( $res ) ) {
-
-			// list($year, $month, $day, $hits) = array($row['year'], $row['month'], $row['day'], $row['hits']);
-
-			$output[] = array( 'date' => $row['date'], 'hits' => $row['hits'] );
-
-		}
-
-		return $output;
-	}
-
-	public function uniqueTotals ( $showUniquePageHits = false ) {
-		global $wgOut;
-
-		if ( $showUniquePageHits ) {
-			$pageTitleText = "Daily Unique User-Page-Hits";
-		}
-		else {
-			$pageTitleText = "Daily Unique User-Hits";
-		}
-
-		$wgOut->setPageTitle( 'UserJourney: ' . $pageTitleText );
-
-		$html = '<table class="wikitable"><tr><th>Date</th><th>Hits</th></tr>';
-
-		$rows = $this->getUniqueRows( $showUniquePageHits, "DESC" );
-
-		foreach($rows as $row) {
-			$html .= "<tr><td>{$row['date']}</td><td>{$row['hits']}</td></tr>";
-		}
-
-		$html .= "</table>";
-
-		$wgOut->addHTML( $html );
-
-	}
-
-
 
 
   /**

@@ -9,8 +9,6 @@ var labels = [];
 var hits = [];
 var count = 0;
 
-console.log(rawData);
-
 for ( var date in rawData ) {
     if ( count % 7 === 0 ) {
         labels[ labels.length ] = date;
