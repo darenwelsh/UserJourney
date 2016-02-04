@@ -398,11 +398,11 @@ class SpecialUserJourney extends SpecialPage {
 
     $data = array(
       array(
-        'key' => $username
+        'key' => $username,
         'values' => $data,
       ),
       array(
-        'key' => $username2
+        'key' => $username2,
         'values' => $data2,
       ),
     );
