@@ -175,9 +175,9 @@ class SpecialUserJourney extends SpecialPage {
     }
 
     $wgOut->setPageTitle( "UserJourney: User Score Plot for $displayName" );
-    $wgOut->addModules( 'ext.wiretap.charts.nvd3' );
+    $wgOut->addModules( 'ext.userjourney.charts.nvd3' );
 
-    $html = '<div id="wiretap-chart"><svg height="400px"></svg></div>';
+    $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
 
     $dbr = wfGetDB( DB_SLAVE );
 
@@ -214,7 +214,7 @@ class SpecialUserJourney extends SpecialPage {
       ),
     );
 
-    $html .= "<script type='text/template-json' id='wiretap-data'>" . json_encode( $data ) . "</script>";
+    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
     $wgOut->addHTML( $html );
   }

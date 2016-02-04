@@ -146,39 +146,39 @@ $wgHooks['LoadExtensionSchemaUpdates'][] = 'UserJourney::updateDatabase';
 No Longer Used
 */
 
- $wiretapResourceTemplate = array(
+ $userjourneyResourceTemplate = array(
  	'localBasePath' => __DIR__ . '/modules',
  	'remoteExtPath' => 'UserJourney/modules',
  );
 
  $wgResourceModules += array(
-	'ext.wiretap.charts' => $wiretapResourceTemplate + array(
-		'styles' => 'charts/ext.wiretap.charts.css',
+	'ext.userjourney.charts' => $userjourneyResourceTemplate + array(
+		'styles' => 'charts/ext.userjourney.charts.css',
 		'scripts' => array(
 			'charts/Chart.js',
-			'charts/ext.wiretap.charts.js',
+			'charts/ext.userjourney.charts.js',
 		),
 
 	),
 
-	'ext.wiretap.d3.js' => $wiretapResourceTemplate + array(
+	'ext.userjourney.d3.js' => $userjourneyResourceTemplate + array(
 		'scripts' => array(
-			'd3js/ext.wiretap.d3.js',
+			'd3js/ext.userjourney.d3.js',
 		),
 
 	),
 
-	'ext.wiretap.charts.nvd3' => $wiretapResourceTemplate + array(
+	'ext.userjourney.charts.nvd3' => $userjourneyResourceTemplate + array(
 		'styles' => array(
 			'nvd3js/nv.d3.css',
-			'nvd3js/ext.wiretap.nvd3.css',
+			'nvd3js/ext.userjourney.nvd3.css',
 		),
 		'scripts' => array(
 			'nvd3js/nv.d3.js',
-			'nvd3js/ext.wiretap.nvd3.js',
+			'nvd3js/ext.userjourney.nvd3.js',
 		),
 		'dependencies' => array(
-			'ext.wiretap.d3.js',
+			'ext.userjourney.d3.js',
 		),
 
 	),
