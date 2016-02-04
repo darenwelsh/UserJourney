@@ -168,19 +168,36 @@ No Longer Used
 
 	),
 
-	'ext.userjourney.charts.nvd3' => $userjourneyResourceTemplate + array(
+  // For "My Score"
+	'ext.userjourney.myScorePlot.nvd3' => $userjourneyResourceTemplate + array(
 		'styles' => array(
 			'nvd3js/nv.d3.css',
-			'nvd3js/ext.userjourney.nvd3.css',
+			'nvd3js/ext.userjourney.myscore.nvd3.css',
 		),
 		'scripts' => array(
 			'nvd3js/nv.d3.js',
-			'nvd3js/ext.userjourney.nvd3.js',
+			'nvd3js/ext.userjourney.myscore.nvd3.js',
 		),
 		'dependencies' => array(
 			'ext.userjourney.d3.js',
 		),
 
 	),
+
+  // For "Compare Scores"
+  'ext.userjourney.compareScorePlot.nvd3' => $userjourneyResourceTemplate + array(
+    'styles' => array(
+      'nvd3js/nv.d3.css',
+      'nvd3js/ext.userjourney.comparescores.nvd3.css',
+    ),
+    'scripts' => array(
+      'nvd3js/nv.d3.js',
+      'nvd3js/ext.userjourney.comparescores.nvd3.js',
+    ),
+    'dependencies' => array(
+      'ext.userjourney.d3.js',
+    ),
+
+  ),
 
 );

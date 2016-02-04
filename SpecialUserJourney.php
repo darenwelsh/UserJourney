@@ -187,7 +187,7 @@ class SpecialUserJourney extends SpecialPage {
     }
 
     $wgOut->setPageTitle( "UserJourney: User Score Plot for $displayName" );
-    $wgOut->addModules( 'ext.userjourney.charts.nvd3' );
+    $wgOut->addModules( 'ext.userjourney.myScorePlot.nvd3' );
 
     $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
 
@@ -244,6 +244,8 @@ class SpecialUserJourney extends SpecialPage {
     	$displayName = $username;
     }
 
+    $username2 = 'Ejmontal'; //Competitor
+
 		$wgOut->setPageTitle( "UserJourney: Compare scores: $displayName vs. TBD" );
 
 		$html = '<table class="wikitable sortable"><tr><th>Date</th><th>' . $displayName . '</th><th>' . 'TBD' . '</th></tr>';
@@ -263,7 +265,7 @@ class SpecialUserJourney extends SpecialPage {
 									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user_score
 								FROM `revision`
 								WHERE
-									rev_user_text IN ( 'Lwelsh' )
+									rev_user_text IN ( '$username' )
 								GROUP BY user_day
 								) user
 							LEFT JOIN
@@ -273,7 +275,7 @@ class SpecialUserJourney extends SpecialPage {
 									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user2_score
 								FROM `revision`
 								WHERE
-									rev_user_text IN ( 'Ejmontal' )
+									rev_user_text IN ( '$username2' )
 								GROUP BY user2_day
 							) user2
 							ON user.user_day=user2.user2_day
@@ -285,7 +287,7 @@ class SpecialUserJourney extends SpecialPage {
 									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user_score
 								FROM `revision`
 								WHERE
-									rev_user_text IN ( 'Lwelsh' )
+									rev_user_text IN ( '$username' )
 								GROUP BY user_day
 							) user
 							RIGHT JOIN
@@ -295,7 +297,7 @@ class SpecialUserJourney extends SpecialPage {
 									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user2_score
 								FROM `revision`
 								WHERE
-									rev_user_text IN ( 'Ejmontal' )
+									rev_user_text IN ( '$username2' )
 								GROUP BY user2_day
 							) user2
 							ON user.user_day=user2.user2_day
@@ -341,8 +343,10 @@ class SpecialUserJourney extends SpecialPage {
     	$displayName = $username;
     }
 
-    $wgOut->setPageTitle( "UserJourney: User Score Plot for $displayName" );
-    $wgOut->addModules( 'ext.userjourney.charts.nvd3' );
+    $username2 = 'Ejmontal'; //Competitor
+
+    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
+    $wgOut->addModules( 'ext.userjourney.compareScorePlot.nvd3' );
 
     $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
 
@@ -360,13 +364,9 @@ class SpecialUserJourney extends SpecialPage {
 
     $res = $dbr->query( $sql );
 
-    $previous = null;
-
     while( $row = $dbr->fetchRow( $res ) ) {
 
       list($day, $score) = array($row['day'], $row['score']);
-
-      // $day = strtotime( $day ) * 1000;
 
       $data[] = array(
         'x' => strtotime( $day ) * 1000,
@@ -374,10 +374,36 @@ class SpecialUserJourney extends SpecialPage {
       );
     }
 
+    $sql2 = "SELECT
+              DATE(rev_timestamp) AS day,
+              COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
+            FROM `revision`
+            WHERE
+              rev_user_text IN ( '$username2' )
+              /* AND rev_timestamp > 20150101000000 */
+            GROUP BY day
+            ORDER BY day DESC";
+
+    $res2 = $dbr->query( $sql2 );
+
+    while( $row2 = $dbr->fetchRow( $res2 ) ) {
+
+      list($day2, $score2) = array($row2['day'], $row2['score']);
+
+      $data2[] = array(
+        'x' => strtotime( $day2 ) * 1000,
+        'y' => floatval( $score2 ),
+      );
+    }
+
     $data = array(
       array(
-        'key' => 'Daily Score',
+        'key' => $username
         'values' => $data,
+      ),
+      array(
+        'key' => $username2
+        'values' => $data2,
       ),
     );
 
