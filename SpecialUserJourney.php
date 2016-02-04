@@ -28,6 +28,13 @@ class SpecialUserJourney extends SpecialPage {
       $this->myScorePlot();
 		}
 
+		if ($this->mMode == 'compare-score-data') {
+			$this->compareScoreData();
+		}
+		else if ( $this->mMode == 'compare-score-plot' ) {
+      $this->compareScorePlot();
+		}
+
 		else {
 			$this->overview();
 		}
@@ -62,6 +69,11 @@ class SpecialUserJourney extends SpecialPage {
 		$navLine .= "<li>" . wfMessage( 'userjourney-myscore' )->text()
 			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'user-score-data' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-score-plot' )
+			. ")</li>";
+
+		$navLine .= "<li>" . wfMessage( 'userjourney-comparescore' )->text()
+			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'compare-score-data' )
+			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-plot' )
 			. ")</li>";
 
 		$navLine .= "</ul>";
@@ -163,6 +175,161 @@ class SpecialUserJourney extends SpecialPage {
   * @return nothing - generates special page
   */
   function myScorePlot( ){
+    global $wgOut;
+
+    $username = $this->getUser()->mName;
+    $userRealName = $this->getUser()->mRealName;
+    if( $userRealName ){
+    	$displayName = $userRealName;
+    }
+    else{
+    	$displayName = $username;
+    }
+
+    $wgOut->setPageTitle( "UserJourney: User Score Plot for $displayName" );
+    $wgOut->addModules( 'ext.userjourney.charts.nvd3' );
+
+    $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
+
+    $dbr = wfGetDB( DB_SLAVE );
+
+    $sql = "SELECT
+              DATE(rev_timestamp) AS day,
+              COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
+            FROM `revision`
+            WHERE
+              rev_user_text IN ( '$username' )
+              /* AND rev_timestamp > 20150101000000 */
+            GROUP BY day
+            ORDER BY day DESC";
+
+    $res = $dbr->query( $sql );
+
+    $previous = null;
+
+    while( $row = $dbr->fetchRow( $res ) ) {
+
+      list($day, $score) = array($row['day'], $row['score']);
+
+      // $day = strtotime( $day ) * 1000;
+
+      $data[] = array(
+        'x' => strtotime( $day ) * 1000,
+        'y' => floatval( $score ),
+      );
+    }
+
+    $data = array(
+      array(
+        'key' => 'Daily Score',
+        'values' => $data,
+      ),
+    );
+
+    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+
+    $wgOut->addHTML( $html );
+  }
+
+
+	public function compareScoreData() {
+		global $wgOut;
+
+    $username = $this->getUser()->mName;
+    $userRealName = $this->getUser()->mRealName;
+    if( $userRealName ){
+    	$displayName = $userRealName;
+    }
+    else{
+    	$displayName = $username;
+    }
+
+		$wgOut->setPageTitle( "UserJourney: Compare scores: $displayName vs. TBD" );
+
+		$html = '<table class="wikitable sortable"><tr><th>Date</th><th>' . $displayName . '</th><th>' . 'TBD' . '</th></tr>';
+
+		$dbr = wfGetDB( DB_SLAVE );
+
+    $sql = "SELECT
+							COALESCE(user_day, user2_day) AS day,
+							user_score,
+							user2_score
+						FROM
+						(
+							SELECT * FROM
+								(
+								SELECT
+									DATE(rev_timestamp) AS user_day,
+									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user_score
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( 'Lwelsh' )
+								GROUP BY user_day
+								) user
+							LEFT JOIN
+							(
+								SELECT
+									DATE(rev_timestamp) AS user2_day,
+									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user2_score
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( 'Ejmontal' )
+								GROUP BY user2_day
+							) user2
+							ON user.user_day=user2.user2_day
+							UNION
+							SELECT * FROM
+							(
+								SELECT
+									DATE(rev_timestamp) AS user_day,
+									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user_score
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( 'Lwelsh' )
+								GROUP BY user_day
+							) user
+							RIGHT JOIN
+							(
+								SELECT
+									DATE(rev_timestamp) AS user2_day,
+									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user2_score
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( 'Ejmontal' )
+								GROUP BY user2_day
+							) user2
+							ON user.user_day=user2.user2_day
+						)results
+						ORDER BY day DESC";
+
+    $res = $dbr->query( $sql );
+
+    $previous = null;
+
+    while( $row = $dbr->fetchRow( $res ) ) {
+
+      list($day, $userScore, $user2Score) = array($row['day'], $row['user_score'], $row['user2_score']);
+      $date = date('Y-m-d', strtotime( $day ));
+      $userScore = round($userScore, 1);
+      $user2Score = round($user2Score, 1);
+      $html .= "<tr><td>$date</td><td>$userScore</td><td>$user2Score</td></tr>";
+
+    }
+
+		$html .= "</table>";
+
+		$wgOut->addHTML( $html );
+
+	}
+
+
+  /**
+  * Function generates plot of contribution score for logged-in user over time
+  *
+  * @param $tbd - no parameters now
+  * @return nothing - generates special page
+  */
+  function compareScorePlot( ){
     global $wgOut;
 
     $username = $this->getUser()->mName;
