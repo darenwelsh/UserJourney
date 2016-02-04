@@ -66,24 +66,47 @@ $(document).ready(function(){
 
 		var rawData = JSON.parse( $('#userjourney-data').text() );
 
-		rawData[0].color = "#4B70E7";
+		rawData[0].color = "#FC8383";
+		rawData[1].color = "#D194FF";
+
+		username = rawData[0].key;
 
 		rawData.push( {
-			key: "7-Day Moving Average",
+			key: username + " 7-Day Avg",
 			values: getMovingAverage( rawData[0].values, 7 ),
-			color: "#FFBB44"
-		} );
-
-		rawData.push( {
-			key: "28-Day Moving Average",
-			values: getMovingAverage( rawData[0].values, 28 ),
 			color: "#FF0000"
 		} );
 
+		// rawData.push( {
+		// 	key: "28-Day Moving Average",
+		// 	values: getMovingAverage( rawData[0].values, 28 ),
+		// 	color: "#FF0000"
+		// } );
+
 		rawData.push( {
-			key: "20-Weekday Moving Average (no weekends)",
+			key: username + " 20-Weekday Avg (no weekends)",
 			values: getMovingAverage( rawData[0].values, 20, true ),
-			color: "#00FF00"
+			color: "#FF8000"
+		} );
+
+		username = rawData[1].key;
+
+		rawData.push( {
+			key: username + " 7-Day Avg",
+			values: getMovingAverage( rawData[1].values, 7 ),
+			color: "#0000FF"
+		} );
+
+		// rawData.push( {
+		// 	key: "28-Day Moving Average",
+		// 	values: getMovingAverage( rawData[1].values, 28 ),
+		// 	color: "#FF0000"
+		// } );
+
+		rawData.push( {
+			key: username + " 20-Weekday Avg (no weekends)",
+			values: getMovingAverage( rawData[1].values, 20, true ),
+			color: "#00D5FF"
 		} );
 
 		return { dailyHits : rawData };
