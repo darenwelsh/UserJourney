@@ -109,6 +109,32 @@ $(document).ready(function(){
 			color: "#00D5FF"
 		} );
 
+		/*
+		var i;
+		var dataLength = rawData.length;
+		for (i = 0; i < dataLength; ++i) {
+			username = rawData[i].key;
+
+			// rawData.push( {
+			// 	key: username + " 7-Day Avg",
+			// 	values: getMovingAverage( rawData[i].values, 7 ),
+			// 	color: "#FF0000"
+			// } );
+
+			// rawData.push( {
+			// 	key: "28-Day Moving Average",
+			// 	values: getMovingAverage( rawData[i].values, 28 ),
+			// 	color: "#FF0000"
+			// } );
+
+			rawData.push( {
+				key: username + " 20-Weekday Avg (no weekends)",
+				values: getMovingAverage( rawData[i].values, 20, true ),
+				color: "#FF8000"
+			} );
+		*/
+		}
+
 		return { dailyHits : rawData };
 
 	}

@@ -32,7 +32,7 @@ class SpecialUserJourney extends SpecialPage {
 			$this->compareScoreData();
 		}
 		else if ( $this->mMode == 'compare-score-plot' ) {
-      $this->compareScorePlot();
+      $this->compareScorePlot2();
 		}
 
 		else {
@@ -344,6 +344,13 @@ class SpecialUserJourney extends SpecialPage {
     }
 
     $username2 = 'Ejmontal'; //Competitor
+    $username3 = 'Swray'; //Competitor
+
+    $competitors = array(
+    	$username,
+    	$username2,
+    	$username3
+    	);
 
     $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
     $wgOut->addModules( 'ext.userjourney.compareScorePlot.nvd3' );
@@ -373,6 +380,30 @@ class SpecialUserJourney extends SpecialPage {
         'y' => floatval( $score ),
       );
     }
+
+    foreach($competitors as $competitor){
+    	$sql = "SELECT
+	              DATE(rev_timestamp) AS day,
+	              COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
+	            FROM `revision`
+	            WHERE
+	              rev_user_text IN ( '$competitor' )
+	              /* AND rev_timestamp > 20150101000000 */
+	            GROUP BY day
+	            ORDER BY day DESC";
+
+	    $res = $dbr->query( $sql );
+
+	    while( $row = $dbr->fetchRow( $res ) ) {
+
+	      list($day, $score) = array($row['day'], $row['score']);
+
+	      $data[] = array(
+	        'x' => strtotime( $day ) * 1000,
+	        'y' => floatval( $score ),
+	      );
+    }
+
 
     $sql2 = "SELECT
               DATE(rev_timestamp) AS day,
@@ -411,6 +442,78 @@ class SpecialUserJourney extends SpecialPage {
 
     $wgOut->addHTML( $html );
   }
+
+
+  /**
+  * Function generates plot of contribution score for logged-in user over time
+  *
+  * @param $tbd - no parameters now
+  * @return nothing - generates special page
+  */
+  function compareScorePlot2( ){
+    global $wgOut;
+
+    $username = $this->getUser()->mName;
+    $userRealName = $this->getUser()->mRealName;
+    if( $userRealName ){
+    	$displayName = $userRealName;
+    }
+    else{
+    	$displayName = $username;
+    }
+
+    $competitors = array(
+    	$username,
+    	'Ejmontal',
+    	'Swray'
+    	);
+
+    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
+    $wgOut->addModules( 'ext.userjourney.compareScorePlot.nvd3' );
+
+    $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
+
+    $dbr = wfGetDB( DB_SLAVE );
+
+    $data = array();
+
+    foreach($competitors as $competitor){
+    	$sql = "SELECT
+	              DATE(rev_timestamp) AS day,
+	              COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
+	            FROM `revision`
+	            WHERE
+	              rev_user_text IN ( '$competitor' )
+	              /* AND rev_timestamp > 20150101000000 */
+	            GROUP BY day
+	            ORDER BY day DESC";
+
+	    $res = $dbr->query( $sql );
+
+	    while( $row = $dbr->fetchRow( $res ) ) {
+
+	      list($day, $score) = array($row['day'], $row['score']);
+
+	      $userdata[] = array(
+	        'x' => strtotime( $day ) * 1000,
+	        'y' => floatval( $score ),
+	      );
+
+	    }
+
+	    $data[] = array(
+      		'key' => $competitor,
+      		'values' => $userdata,
+      		);
+
+	    $userdata = NULL; // without this, 2nd person gets 1st person's data plus theirs
+	  }
+
+    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+
+    $wgOut->addHTML( $html );
+
+	}
 
 
 
