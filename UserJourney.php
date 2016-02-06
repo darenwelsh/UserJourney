@@ -179,7 +179,8 @@ No Longer Used
 			'nvd3js/ext.userjourney.myscore.nvd3.js',
 		),
 		'dependencies' => array(
-			'ext.userjourney.d3.js',
+      // 'ext.userjourney.d3.js',
+      'd3.js',
 		),
 
 	),
@@ -195,7 +196,8 @@ No Longer Used
       'nvd3js/ext.userjourney.comparescores.nvd3.js',
     ),
     'dependencies' => array(
-      'ext.userjourney.d3.js',
+      // 'ext.userjourney.d3.js',
+      'd3.js',
     ),
 
   ),
