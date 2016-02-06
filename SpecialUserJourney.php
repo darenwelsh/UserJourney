@@ -362,6 +362,8 @@ class SpecialUserJourney extends SpecialPage {
     $data = array();
 
 		// Determine start and end date based on competitors
+		$firstDay = null;
+		$lastDay = null;
     foreach( $competitors as $competitor ){
     	// Determine start date
     	$sql = "SELECT
@@ -376,9 +378,9 @@ class SpecialUserJourney extends SpecialPage {
 	    $res = $dbr->query( $sql );
 
 	    $row = $dbr->fetchRow( $res );
-	    $competitorFirstDay = strtotime( $row['day'] ) * 1000;
+	    $competitorFirstDay = strtotime( $row['firstDay'] ) * 1000;
 
-	    if( $firstDay ){
+	    if( isset( $firstDay ) ){
 
 	    	if( $competitorFirstDay < $firstDay ){
 		    	$firstDay = $competitorFirstDay;
@@ -401,9 +403,9 @@ class SpecialUserJourney extends SpecialPage {
 	    $res = $dbr->query( $sql );
 
 	    $row = $dbr->fetchRow( $res );
-	    $competitorLastDay = strtotime( $row['day'] ) * 1000;
+	    $competitorLastDay = strtotime( $row['lastDay'] ) * 1000;
 
-	    if( $LastDay ){
+	    if( isset( $LastDay ) ){
 
 	    	if( $competitorLastDay > $lastDay ){
 		    	$lastDay = $competitorLastDay;
@@ -414,6 +416,8 @@ class SpecialUserJourney extends SpecialPage {
 	    }
 
 	  }
+
+	  $res = null;
 
 	  print_r($firstDay . ' - ' . $lastDay);
 
