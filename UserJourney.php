@@ -185,7 +185,7 @@ No Longer Used
 
 	),
 
-  // For "Compare Scores"
+  // For "Compare Scores Line Plot"
   'ext.userjourney.compareScorePlot.nvd3' => $userjourneyResourceTemplate + array(
     'styles' => array(
       'nvd3js/nv.d3.css',
@@ -194,6 +194,21 @@ No Longer Used
     'scripts' => array(
       'nvd3js/nv.d3.js',
       'nvd3js/ext.userjourney.comparescores.nvd3.js',
+    ),
+    'dependencies' => array(
+      // 'ext.userjourney.d3.js',
+      'd3.js',
+    ),
+
+  // For "Compare Scores Stacked Plot"
+  'ext.userjourney.compareScoreStackedPlot.nvd3' => $userjourneyResourceTemplate + array(
+    // 'styles' => array(
+    //   'nvd3js/nv.d3.css',
+    //   'nvd3js/ext.userjourney.comparescoresstacked.nvd3.css',
+    // ),
+    'scripts' => array(
+      'nvd3js/nv.d3.js',
+      'nvd3js/ext.userjourney.comparescoresstacked.nvd3.js',
     ),
     'dependencies' => array(
       // 'ext.userjourney.d3.js',

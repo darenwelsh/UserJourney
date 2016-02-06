@@ -32,9 +32,11 @@ class SpecialUserJourney extends SpecialPage {
 			$this->compareScoreData();
 		}
 		else if ( $this->mMode == 'compare-score-plot' ) {
-      $this->compareScorePlot2();
+      $this->compareScoreLineWindowPlot();
 		}
-
+		else if ( $this->mMode == 'compare-score-stacked-plot' ) {
+      $this->compareScoreStackedPlot();
+		}
 		else {
 			$this->overview();
 		}
@@ -74,6 +76,7 @@ class SpecialUserJourney extends SpecialPage {
 		$navLine .= "<li>" . wfMessage( 'userjourney-comparescore' )->text()
 			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'compare-score-data' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-plot' )
+			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-stacked-plot' )
 			. ")</li>";
 
 		$navLine .= "</ul>";
@@ -331,7 +334,7 @@ class SpecialUserJourney extends SpecialPage {
   * @param $tbd - no parameters now
   * @return nothing - generates special page
   */
-  function compareScorePlot( ){
+  function compareScoreStackedPlot( ){
     global $wgOut;
 
     $username = $this->getUser()->mName;
@@ -343,43 +346,76 @@ class SpecialUserJourney extends SpecialPage {
     	$displayName = $username;
     }
 
-    $username2 = 'Ejmontal'; //Competitor
-    $username3 = 'Swray'; //Competitor
-
-    $competitors = array(
+    $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
     	$username,
-    	$username2,
-    	$username3
+    	'Ejmontal',
+    	'Swray'
     	);
 
     $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
-    $wgOut->addModules( 'ext.userjourney.compareScorePlot.nvd3' );
+    $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
 
     $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
 
     $dbr = wfGetDB( DB_SLAVE );
 
-    $sql = "SELECT
-              DATE(rev_timestamp) AS day,
-              COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
-            FROM `revision`
-            WHERE
-              rev_user_text IN ( '$username' )
-              /* AND rev_timestamp > 20150101000000 */
-            GROUP BY day
-            ORDER BY day DESC";
+    $data = array();
 
-    $res = $dbr->query( $sql );
+		// Determine start and end date based on competitors
+    foreach( $competitors as $competitor ){
+    	// Determine start date
+    	$sql = "SELECT
+	              DATE(rev_timestamp) AS firstDay
+	            FROM `revision`
+	            WHERE
+	              rev_user_text IN ( '$competitor' )
+	              /* AND rev_timestamp > 20150101000000 */
+              ORDER BY firstDay ASC
+	            LIMIT 1";
 
-    while( $row = $dbr->fetchRow( $res ) ) {
+	    $res = $dbr->query( $sql );
 
-      list($day, $score) = array($row['day'], $row['score']);
+	    $row = $dbr->fetchRow( $res );
+	    $competitorFirstDay = strtotime( $row['day'] ) * 1000;
 
-      $data[] = array(
-        'x' => strtotime( $day ) * 1000,
-        'y' => floatval( $score ),
-      );
-    }
+	    if( $firstDay ){
+
+	    	if( $competitorFirstDay < $firstDay ){
+		    	$firstDay = $competitorFirstDay;
+	    	}
+
+	    } else {
+	    	$firstDay = $competitorFirstDay;
+	    }
+
+    	// Determine end date
+    	$sql = "SELECT
+	              DATE(rev_timestamp) AS lastDay
+	            FROM `revision`
+	            WHERE
+	              rev_user_text IN ( '$competitor' )
+	              /* AND rev_timestamp > 20150101000000 */
+              ORDER BY lastDay DESC
+	            LIMIT 1";
+
+	    $res = $dbr->query( $sql );
+
+	    $row = $dbr->fetchRow( $res );
+	    $competitorLastDay = strtotime( $row['day'] ) * 1000;
+
+	    if( $LastDay ){
+
+	    	if( $competitorLastDay > $lastDay ){
+		    	$lastDay = $competitorLastDay;
+	    	}
+
+	    } else {
+	    	$lastDay = $competitorLastDay;
+	    }
+
+	  }
+
+	  print_r($firstDay . ' - ' . $lastDay);
 
     foreach($competitors as $competitor){
     	$sql = "SELECT
@@ -398,46 +434,20 @@ class SpecialUserJourney extends SpecialPage {
 
 	      list($day, $score) = array($row['day'], $row['score']);
 
-	      $data[] = array(
+	      $userdata[] = array(
 	        'x' => strtotime( $day ) * 1000,
 	        'y' => floatval( $score ),
 	      );
+
 	    }
+
+	    $data[] = array(
+      		'key' => $competitor,
+      		'values' => $userdata,
+      		);
+
+	    $userdata = NULL; // without this, 2nd person gets 1st person's data plus theirs
 	  }
-
-
-    $sql2 = "SELECT
-              DATE(rev_timestamp) AS day,
-              COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
-            FROM `revision`
-            WHERE
-              rev_user_text IN ( '$username2' )
-              /* AND rev_timestamp > 20150101000000 */
-            GROUP BY day
-            ORDER BY day DESC";
-
-    $res2 = $dbr->query( $sql2 );
-
-    while( $row2 = $dbr->fetchRow( $res2 ) ) {
-
-      list($day2, $score2) = array($row2['day'], $row2['score']);
-
-      $data2[] = array(
-        'x' => strtotime( $day2 ) * 1000,
-        'y' => floatval( $score2 ),
-      );
-    }
-
-    $data = array(
-      array(
-        'key' => $username,
-        'values' => $data,
-      ),
-      array(
-        'key' => $username2,
-        'values' => $data2,
-      ),
-    );
 
     $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
@@ -451,7 +461,7 @@ class SpecialUserJourney extends SpecialPage {
   * @param $tbd - no parameters now
   * @return nothing - generates special page
   */
-  function compareScorePlot2( ){
+  function compareScoreLineWindowPlot( ){ // TO-DO: rename to something meaningful
     global $wgOut;
 
     $username = $this->getUser()->mName;
@@ -463,7 +473,7 @@ class SpecialUserJourney extends SpecialPage {
     	$displayName = $username;
     }
 
-    $competitors = array(
+    $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
     	$username,
     	'Ejmontal',
     	'Swray'
@@ -478,7 +488,7 @@ class SpecialUserJourney extends SpecialPage {
 
     $data = array();
 
-    foreach($competitors as $competitor){
+    foreach( $competitors as $competitor ){
     	$sql = "SELECT
 	              DATE(rev_timestamp) AS day,
 	              COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
