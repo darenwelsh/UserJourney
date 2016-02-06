@@ -142,7 +142,7 @@ $(document).ready(function(){
 		/* */
 		}
 
-		rawData.splice(0, dataLength); // remove daily score arrays, only show generated averages
+		rawData.splice(0, initialDataLength); // remove daily score arrays, only show generated averages
 
 		return { dailyHits : rawData };
 

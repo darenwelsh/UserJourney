@@ -402,7 +402,8 @@ class SpecialUserJourney extends SpecialPage {
 	        'x' => strtotime( $day ) * 1000,
 	        'y' => floatval( $score ),
 	      );
-    }
+	    }
+	  }
 
 
     $sql2 = "SELECT
