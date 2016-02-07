@@ -248,6 +248,131 @@ class SpecialUserJourney extends SpecialPage {
     }
 
     $username2 = 'Ejmontal'; //Competitor
+    $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
+    	$username,
+    	'Ejmontal',
+    	'Swray'
+    	);
+
+		// set each person's score query as a variable to further simplify
+		// allow for 3 people http://stackoverflow.com/questions/2384298/why-does-mysql-report-a-syntax-error-on-full-outer-join
+		// with two tables t1, t2:
+
+		// SELECT * FROM t1
+		// LEFT JOIN t2 ON t1.id = t2.id
+		// UNION
+		// SELECT * FROM t1
+		// RIGHT JOIN t2 ON t1.id = t2.id
+
+		// with three tables t1, t2, t3:
+
+		// SELECT * FROM t1
+		// LEFT JOIN t2 ON t1.id = t2.id
+		// LEFT JOIN t3 ON t2.id = t3.id
+		// UNION
+		// SELECT * FROM t1
+		// RIGHT JOIN t2 ON t1.id = t2.id
+		// LEFT JOIN t3 ON t2.id = t3.id
+		// UNION
+		// SELECT * FROM t1
+		// RIGHT JOIN t2 ON t1.id = t2.id
+		// RIGHT JOIN t3 ON t2.id = t3.id
+
+		$wgOut->setPageTitle( "UserJourney: Compare scores: $displayName vs. TBD" );
+
+		$html = '<table class="wikitable sortable"><tr><th>Date</th><th>' . $displayName . '</th><th>' . 'TBD' . '</th></tr>';
+
+		$dbr = wfGetDB( DB_SLAVE );
+
+		$queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
+
+    $sql = "SELECT
+							COALESCE(user_day, user2_day) AS day,
+							user_score,
+							user2_score
+						FROM
+						(
+							SELECT * FROM
+								(
+								SELECT
+									DATE(rev_timestamp) AS user_day,
+									{$queryScore} AS user_score
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( '$username' )
+								GROUP BY user_day
+								) user
+							LEFT JOIN
+							(
+								SELECT
+									DATE(rev_timestamp) AS user2_day,
+									{$queryScore} AS user2_score
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( '$username2' )
+								GROUP BY user2_day
+							) user2
+							ON user.user_day=user2.user2_day
+							UNION
+							SELECT * FROM
+							(
+								SELECT
+									DATE(rev_timestamp) AS user_day,
+									{$queryScore} AS user_score
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( '$username' )
+								GROUP BY user_day
+							) user
+							RIGHT JOIN
+							(
+								SELECT
+									DATE(rev_timestamp) AS user2_day,
+									{$queryScore} AS user2_score
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( '$username2' )
+								GROUP BY user2_day
+							) user2
+							ON user.user_day=user2.user2_day
+						)results
+						ORDER BY day DESC";
+
+    $res = $dbr->query( $sql );
+
+    $previous = null;
+
+    while( $row = $dbr->fetchRow( $res ) ) {
+
+      list($day, $userScore, $user2Score) = array($row['day'], $row['user_score'], $row['user2_score']);
+      $date = date('Y-m-d', strtotime( $day ));
+      $userScore = round($userScore, 1);
+      $user2Score = round($user2Score, 1);
+      $html .= "<tr><td>$date</td><td>$userScore</td><td>$user2Score</td></tr>";
+
+    }
+
+		$html .= "</table>";
+
+		$wgOut->addHTML( $html );
+
+	}
+
+
+
+	public function compareScoreData2() { // backup of what works during testing
+		global $wgOut;
+
+    $username = $this->getUser()->mName;
+    $userRealName = $this->getUser()->mRealName;
+    if( $userRealName ){
+    	$displayName = $userRealName;
+    }
+    else{
+    	$displayName = $username;
+    }
+
+    $username2 = 'Ejmontal'; //Competitor
 
 		$wgOut->setPageTitle( "UserJourney: Compare scores: $displayName vs. TBD" );
 
@@ -328,6 +453,8 @@ class SpecialUserJourney extends SpecialPage {
 	}
 
 
+
+
   /**
   * Function generates plot of contribution score for logged-in user over time
   *
@@ -378,7 +505,7 @@ class SpecialUserJourney extends SpecialPage {
 	    $res = $dbr->query( $sql );
 
 	    $row = $dbr->fetchRow( $res );
-	    $competitorFirstDay = strtotime( $row['firstDay'] ) * 1000;
+	    $competitorFirstDay = strtotime( $row['firstDay'] ) * 1000; // * 1000;
 
 	    if( isset( $firstDay ) ){
 
@@ -403,9 +530,9 @@ class SpecialUserJourney extends SpecialPage {
 	    $res = $dbr->query( $sql );
 
 	    $row = $dbr->fetchRow( $res );
-	    $competitorLastDay = strtotime( $row['lastDay'] ) * 1000;
+	    $competitorLastDay = strtotime( $row['lastDay'] ) * 1000; // * 1000;
 
-	    if( isset( $LastDay ) ){
+	    if( isset( $lastDay ) ){
 
 	    	if( $competitorLastDay > $lastDay ){
 		    	$lastDay = $competitorLastDay;
@@ -419,9 +546,54 @@ class SpecialUserJourney extends SpecialPage {
 
 	  $res = null;
 
-	  print_r($firstDay . ' - ' . $lastDay);
+		// DEBUG
+		print_r('---------------------------------');
+		print_r($firstDay . ' - ' . $lastDay);
+		echo '<br />';
+		print_r('---------------------------------');
+		print_r(date('Y-m-d H:m:s', ($firstDay / 1000) ) . ' - ' . date('Y-m-d', ($lastDay / 1000) ) );
+		echo '<br />';
+		print_r('---------------------------------');
+		//print_r(date('Y-m-d H:m:s', $firstDay "+1 day"));
+		print_r(date('Y-m-d H:m:s', strtotime( date('Y-m-d H:m:s', ($firstDay / 1000) ) .  "+ 1 day" ) )  );
+		// END DEBUG
+
+
+	  // Generate array of keys from firstDay to lastDay
+	  // $tempDay = $firstDay;
+	  // while( $tempDay < $lastDay ){
+			// $fullData[] = array(
+			// 	'x' => $tempDay,
+			// 	'y' => 0,
+			// );
+
+			// $tempDay = strtotime( date('Y-m-d H:m:s', ($tempDay / 1000 ) ) .  "+ 1 day" );
+
+	  // }
+
+
+
 
     foreach($competitors as $competitor){
+    	// Generate array of keys from firstDay to lastDay
+		  $tempDay = $firstDay;
+		  // while( $tempDay < $lastDay ){
+				// $fullData[] = array(
+				// 	'x' => $tempDay,
+				// 	'y' => 0,
+				// );
+
+				// $tempDay = strtotime( date('Y-m-d H:m:s', ($tempDay / 1000 ) ) .  "+ 1 day" );
+
+		  // }
+
+		  while( $tempDay < $lastDay ){
+				$fullData[$tempDay] = 0;
+
+				$tempDay = strtotime( date('Y-m-d H:m:s', ($tempDay / 1000 ) ) .  "+ 1 day" );
+
+		  }
+
     	$sql = "SELECT
 	              DATE(rev_timestamp) AS day,
 	              COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
@@ -430,29 +602,109 @@ class SpecialUserJourney extends SpecialPage {
 	              rev_user_text IN ( '$competitor' )
 	              /* AND rev_timestamp > 20150101000000 */
 	            GROUP BY day
-	            ORDER BY day DESC";
+	            ORDER BY day ASC";
 
 	    $res = $dbr->query( $sql );
 
+	    // while( $row = $dbr->fetchRow( $res ) ) {
+
+	    //   list($day, $score) = array($row['day'], $row['score']);
+
+	    //   $userdata[] = array(
+	    //     'x' => strtotime( $day ) * 1000,
+	    //     'y' => floatval( $score ),
+	    //   );
+
+	    // }
+
+	    // replace previous while loop with this
+	    $userdata = array();
 	    while( $row = $dbr->fetchRow( $res ) ) {
 
 	      list($day, $score) = array($row['day'], $row['score']);
+	      $dayTimestamp = strtotime( $day ) * 1000;
 
-	      $userdata[] = array(
-	        'x' => strtotime( $day ) * 1000,
-	        'y' => floatval( $score ),
-	      );
+	      $userdata[$dayTimestamp] = floatval( $score );
 
 	    }
 
+	    // Parse $fullData keys from firstDay to lastDay; fill if value exists in $userdata
+		  $tempDay = $firstDay;
+		  while( $tempDay < $lastDay ){
+				if( isset($userdata[$tempDay] ) ){
+	    		$fullData[$tempDay] = $userdata[$tempDay];
+	    	}
+
+				$tempDay = strtotime( date('Y-m-d H:m:s', ($tempDay / 1000 ) ) .  "+ 1 day" );
+
+		  }
+
+		  // Convert $fullData into format used in other plots
+		  $competitorData = array();
+		  while( $dataRow = current($fullData) ){
+		  	$competitorData[] = array(
+        'x' => strtotime( key($fullData) ) * 1000,
+        'y' => floatval( $dataRow ),
+        );
+		  };
+
+	    // $tempDay = $firstDay;
+	    // $competitorData = array();
+	    // while( $tempDay < $lastDay ){
+	    // 	if( isset($userdata[$tempDay] ) ){
+	    // 		$competitorData[] = array(
+	    // 			'x' => $tempDay,
+	    // 			'y' => ,
+	    // 		);
+	    // 	} else {
+	    // 		$competitorData[] = array(
+	    // 			'x' => $tempDay,
+	    // 			'y' => 0,
+	    // 		);
+	    // 	}
+
+	    // }
+	    // end replacement stuff
+
+	    // Determine if zero values should be added before this person's first day with a score
+	    // if( $userdata[0].x < $firstDay ){
+	    // 	$tempDay = $firstDay;
+	    // 	while( $tempDay < $userdata[0].x ){
+	    // 		$prependedDates[] = array(
+	    // 			'x' => $tempDay,
+	    // 			'y' => 0,
+	    // 			);
+	    // 		$tempDay->modify('+1 day');
+	    // 	}
+
+	    // 	// Add zero values for days from $firstDay to person's first day with a score
+	    // 	array_unshift($userdata, $prependedDates);
+	    // }
+
+	    // Parse through the days and add zero value to missing dates
+			// $tempDay = $firstDay;
+			// while( $tempDay < $lastDay ){
+			// 	if( true ){ // if null value on this day
+
+			// 	}
+			// 	$tempDay->modify('+1 day');
+			// }
+
+			// End of new stuff
+
 	    $data[] = array(
       		'key' => $competitor,
-      		'values' => $userdata,
+      		// 'values' => $userdata,
+      		'values' => $competitorData,
       		);
 
+	    $competitorData = NULL;
 	    $userdata = NULL; // without this, 2nd person gets 1st person's data plus theirs
 	  }
 
+
+
+    // $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
     $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
     $wgOut->addHTML( $html );
