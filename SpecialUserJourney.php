@@ -37,6 +37,9 @@ class SpecialUserJourney extends SpecialPage {
 		else if ( $this->mMode == 'compare-score-stacked-plot' ) {
       $this->compareScoreStackedPlot();
 		}
+		else if ( $this->mMode == 'compare-score-stacked-plot2' ) {
+      $this->compareScoreStackedPlot2();
+		}
 		else {
 			$this->overview();
 		}
@@ -77,6 +80,7 @@ class SpecialUserJourney extends SpecialPage {
 			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'compare-score-data' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-plot' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-stacked-plot' )
+			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-stacked-plot2' )
 			. ")</li>";
 
 		$navLine .= "</ul>";
@@ -456,12 +460,253 @@ class SpecialUserJourney extends SpecialPage {
 
 
   /**
-  * Function generates plot of contribution score for logged-in user over time
+  * Function generates stacked area plot of contribution scores
   *
   * @param $tbd - no parameters now
   * @return nothing - generates special page
   */
   function compareScoreStackedPlot( ){
+    global $wgOut;
+
+    $username = $this->getUser()->mName;
+    $userRealName = $this->getUser()->mRealName;
+    if( $userRealName ){
+    	$displayName = $userRealName;
+    }
+    else{
+    	$displayName = $username;
+    }
+
+    $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
+    	$username,
+    	'Ejmontal',
+    	// 'Swray'
+    	);
+    $username1 = $username;
+    $username2 = 'Ejmontal';
+
+    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
+    $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
+
+    $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
+
+    $dbr = wfGetDB( DB_SLAVE );
+
+    $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
+    $queryDT1 = "(
+								SELECT
+									DATE(rev_timestamp) AS user_day1,
+									{$queryScore} AS user_score1
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( '$username1' )
+								GROUP BY user_day1
+								) user1";
+
+		$queryDT2 = "(
+								SELECT
+									DATE(rev_timestamp) AS user_day2,
+									{$queryScore} AS user_score2
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( '$username2' )
+								GROUP BY user_day2
+								) user2";
+
+    $sql = "SELECT
+							COALESCE(user_day1, user_day2) AS day,
+							user_score1,
+							user_score2
+						FROM
+						(
+							SELECT * FROM $queryDT1
+							LEFT JOIN $queryDT2
+							ON user1.user_day1=user2.user_day2
+							UNION
+							SELECT * FROM $queryDT1
+							RIGHT JOIN $queryDT2
+							ON user1.user_day1=user2.user_day2
+						)results
+						ORDER BY day ASC";
+
+    $res = $dbr->query( $sql );
+
+		while( $row = $dbr->fetchRow( $res ) ) {
+
+      list($day, $userScore1, $userScore2) = array($row['day'], $row['user_score1'], $row['user_score2']);
+
+      $userdata["$username1"][] = array(
+				'x' => strtotime( $day ) * 1000,
+				'y' => floatval( $userScore1 ),
+			);
+
+			$userdata["$username2"][] = array(
+				'x' => strtotime( $day ) * 1000,
+				'y' => floatval( $userScore2 ),
+			);
+
+    }
+
+    foreach( $competitors as $competitor ){
+
+	    $data[] = array(
+    		'key' => $competitor,
+    		'values' => $userdata["$competitor"],
+  		);
+
+    }
+
+
+    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+
+    $wgOut->addHTML( $html );
+  }
+
+
+
+
+  /**
+  * Function generates stacked area plot of contribution scores
+  *
+  * @param $tbd - no parameters now
+  * @return nothing - generates special page
+  */
+  function compareScoreStackedPlot2( ){
+    global $wgOut;
+
+    $username = $this->getUser()->mName;
+    $userRealName = $this->getUser()->mRealName;
+    if( $userRealName ){
+    	$displayName = $userRealName;
+    }
+    else{
+    	$displayName = $username;
+    }
+
+    $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
+    	$username,
+    	'Ejmontal',
+    	'Swray'
+    	);
+    $username1 = $competitors[0];
+    $username2 = $competitors[1];
+    $username3 = $competitors[2];
+
+    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
+    $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
+
+    $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
+    $html = '<div id="userjourney-chart-stream"><svg height="400px"></svg></div>';
+
+    $dbr = wfGetDB( DB_SLAVE );
+
+    $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
+    $queryDT1 = "(
+								SELECT
+									DATE(rev_timestamp) AS user_day1,
+									{$queryScore} AS user_score1
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( '$username1' )
+								GROUP BY user_day1
+								) user1";
+
+		$queryDT2 = "(
+								SELECT
+									DATE(rev_timestamp) AS user_day2,
+									{$queryScore} AS user_score2
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( '$username2' )
+								GROUP BY user_day2
+								) user2";
+
+		$queryDT3 = "(
+								SELECT
+									DATE(rev_timestamp) AS user_day3,
+									{$queryScore} AS user_score3
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( '$username3' )
+								GROUP BY user_day3
+								) user3";
+
+		// SELECT * FROM t1
+		// LEFT JOIN t2 ON t1.id = t2.id
+		// LEFT JOIN t3 ON t2.id = t3.id
+		// UNION
+		// SELECT * FROM t1
+		// RIGHT JOIN t2 ON t1.id = t2.id
+		// LEFT JOIN t3 ON t2.id = t3.id
+		// UNION
+		// SELECT * FROM t1
+		// RIGHT JOIN t2 ON t1.id = t2.id
+		// RIGHT JOIN t3 ON t2.id = t3.id
+
+    $sql = "SELECT
+							COALESCE(user_day1, user_day2, user_day3) AS day,
+							user_score1,
+							user_score2,
+							user_score3
+						FROM
+						(
+							SELECT * FROM $queryDT1
+							LEFT JOIN $queryDT2 ON user1.user_day1=user2.user_day2
+							LEFT JOIN $queryDT3 ON user2.user_day2=user3.user_day3
+							UNION
+							SELECT * FROM $queryDT1
+							RIGHT JOIN $queryDT2 ON user1.user_day1=user2.user_day2
+							LEFT JOIN $queryDT3 ON user2.user_day2=user3.user_day3
+							UNION
+							SELECT * FROM $queryDT1
+							RIGHT JOIN $queryDT2 ON user1.user_day1=user2.user_day2
+							RIGHT JOIN $queryDT3 ON user2.user_day2=user3.user_day3
+						)results
+						ORDER BY day ASC";
+
+    $res = $dbr->query( $sql );
+
+		while( $row = $dbr->fetchRow( $res ) ) {
+
+      list($day, $userScore1, $userScore2, $userScore3) = array($row['day'], $row['user_score1'], $row['user_score2'], $row['user_score3']);
+
+      $userdata["$username1"][] = array(
+				'x' => strtotime( $day ) * 1000,
+				'y' => floatval( $userScore1 ),
+			);
+
+			$userdata["$username2"][] = array(
+				'x' => strtotime( $day ) * 1000,
+				'y' => floatval( $userScore2 ),
+			);
+
+			$userdata["$username3"][] = array(
+				'x' => strtotime( $day ) * 1000,
+				'y' => floatval( $userScore3 ),
+			);
+
+    }
+
+    foreach( $competitors as $competitor ){
+
+	    $data[] = array(
+    		'key' => $competitor,
+    		'values' => $userdata["$competitor"],
+  		);
+
+    }
+
+
+    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+
+    $wgOut->addHTML( $html );
+  }
+
+
+
+
+
+  function BACKUPcompareScoreStackedPlot( ){
     global $wgOut;
 
     $username = $this->getUser()->mName;
@@ -487,6 +732,8 @@ class SpecialUserJourney extends SpecialPage {
 
     $dbr = wfGetDB( DB_SLAVE );
 
+    $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
+
     $sql = "SELECT
 							COALESCE(user_day, user2_day) AS day,
 							user_score,
@@ -497,7 +744,7 @@ class SpecialUserJourney extends SpecialPage {
 								(
 								SELECT
 									DATE(rev_timestamp) AS user_day,
-									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user_score
+									{$queryScore} AS user_score
 								FROM `revision`
 								WHERE
 									rev_user_text IN ( '$username' )
@@ -507,7 +754,7 @@ class SpecialUserJourney extends SpecialPage {
 							(
 								SELECT
 									DATE(rev_timestamp) AS user2_day,
-									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user2_score
+									{$queryScore} AS user2_score
 								FROM `revision`
 								WHERE
 									rev_user_text IN ( '$username2' )
@@ -519,7 +766,7 @@ class SpecialUserJourney extends SpecialPage {
 							(
 								SELECT
 									DATE(rev_timestamp) AS user_day,
-									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user_score
+									{$queryScore} AS user_score
 								FROM `revision`
 								WHERE
 									rev_user_text IN ( '$username' )
@@ -529,7 +776,7 @@ class SpecialUserJourney extends SpecialPage {
 							(
 								SELECT
 									DATE(rev_timestamp) AS user2_day,
-									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user2_score
+									{$queryScore} AS user2_score
 								FROM `revision`
 								WHERE
 									rev_user_text IN ( '$username2' )
