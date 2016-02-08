@@ -211,6 +211,7 @@ No Longer Used
     'scripts' => array(
       'nvd3js/nv.d3.js',
       'nvd3js/ext.userjourney.comparescoresstacked.nvd3.js',
+      'nvd3js/ext.userjourney.comparescoresstackedstream.nvd3.js',
     ),
     'dependencies' => array(
       // 'ext.userjourney.d3.js',

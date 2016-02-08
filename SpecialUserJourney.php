@@ -596,7 +596,7 @@ class SpecialUserJourney extends SpecialPage {
     $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
 
     $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
-    $html = '<div id="userjourney-chart-stream"><svg height="400px"></svg></div>';
+    $html .= '<div id="userjourney-chart-stream"><svg height="400px"></svg></div>';
 
     $dbr = wfGetDB( DB_SLAVE );
 
