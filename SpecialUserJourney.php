@@ -476,7 +476,138 @@ class SpecialUserJourney extends SpecialPage {
     $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
     	$username,
     	'Ejmontal',
-    	'Swray'
+    	// 'Swray'
+    	);
+    $username2 = 'Ejmontal';
+
+    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
+    $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
+
+    $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
+
+    $dbr = wfGetDB( DB_SLAVE );
+
+    $sql = "SELECT
+							COALESCE(user_day, user2_day) AS day,
+							user_score,
+							user2_score
+						FROM
+						(
+							SELECT * FROM
+								(
+								SELECT
+									DATE(rev_timestamp) AS user_day,
+									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user_score
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( '$username' )
+								GROUP BY user_day
+								) user
+							LEFT JOIN
+							(
+								SELECT
+									DATE(rev_timestamp) AS user2_day,
+									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user2_score
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( '$username2' )
+								GROUP BY user2_day
+							) user2
+							ON user.user_day=user2.user2_day
+							UNION
+							SELECT * FROM
+							(
+								SELECT
+									DATE(rev_timestamp) AS user_day,
+									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user_score
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( '$username' )
+								GROUP BY user_day
+							) user
+							RIGHT JOIN
+							(
+								SELECT
+									DATE(rev_timestamp) AS user2_day,
+									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user2_score
+								FROM `revision`
+								WHERE
+									rev_user_text IN ( '$username2' )
+								GROUP BY user2_day
+							) user2
+							ON user.user_day=user2.user2_day
+						)results
+						ORDER BY day DESC";
+
+    $res = $dbr->query( $sql );
+
+		while( $row = $dbr->fetchRow( $res ) ) {
+
+      list($day, $userScore, $user2Score) = array($row['day'], $row['user_score'], $row['user2_score']);
+
+      $userdata["$username"][] = array(
+				'x' => strtotime( $day ) * 1000,
+				'y' => floatval( $userScore ),
+			);
+
+			$userdata["$username2"][] = array(
+				'x' => strtotime( $day ) * 1000,
+				'y' => floatval( $user2Score ),
+			);
+
+    }
+
+    foreach( $competitors as $competitor ){
+
+	    $data[] = array(
+    		'key' => $competitor,
+    		'values' => $userdata["$competitor"],
+  		);
+
+    }
+
+
+		// DEBUG
+		print_r('--------------------------------------------------');
+		print_r('test');
+		echo '<br />';
+		print_r('--------------------------------------------------');
+		// END DEBUG
+
+
+
+
+
+
+
+    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+
+    $wgOut->addHTML( $html );
+  }
+
+
+
+  /*
+	* This is MAJOR BROKE for now. I think part of it is handling the start and end dates as just the date.
+	*	Since timestamps also include a time of day, I think it's preventing the association of the query results
+	* into the fullData array.
+  */
+  function BROKENcompareScoreStackedPlot( ){
+    global $wgOut;
+
+    $username = $this->getUser()->mName;
+    $userRealName = $this->getUser()->mRealName;
+    if( $userRealName ){
+    	$displayName = $userRealName;
+    }
+    else{
+    	$displayName = $username;
+    }
+
+    $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
+    	$username,
+    	'Ejmontal',
+    	// 'Swray'
     	);
 
     $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
@@ -505,7 +636,7 @@ class SpecialUserJourney extends SpecialPage {
 	    $res = $dbr->query( $sql );
 
 	    $row = $dbr->fetchRow( $res );
-	    $competitorFirstDay = strtotime( $row['firstDay'] ) * 1000; // * 1000;
+	    $competitorFirstDay = strtotime( $row['firstDay'] ) * 1000;
 
 	    if( isset( $firstDay ) ){
 
@@ -530,7 +661,7 @@ class SpecialUserJourney extends SpecialPage {
 	    $res = $dbr->query( $sql );
 
 	    $row = $dbr->fetchRow( $res );
-	    $competitorLastDay = strtotime( $row['lastDay'] ) * 1000; // * 1000;
+	    $competitorLastDay = strtotime( $row['lastDay'] ) * 1000;
 
 	    if( isset( $lastDay ) ){
 
@@ -547,13 +678,16 @@ class SpecialUserJourney extends SpecialPage {
 	  $res = null;
 
 		// DEBUG
-		print_r('---------------------------------');
+		print_r('--------------------------------------------------');
 		print_r($firstDay . ' - ' . $lastDay);
 		echo '<br />';
-		print_r('---------------------------------');
+		print_r('--------------------------------------------------');
 		print_r(date('Y-m-d H:m:s', ($firstDay / 1000) ) . ' - ' . date('Y-m-d', ($lastDay / 1000) ) );
 		echo '<br />';
-		print_r('---------------------------------');
+		print_r('--------------------------------------------------');
+		print_r(strtotime( date('Y-m-d H:m:s', ($firstDay / 1000) ) .  "+ 1 day" ) * 1000 );
+		echo '<br />';
+		print_r('--------------------------------------------------');
 		//print_r(date('Y-m-d H:m:s', $firstDay "+1 day"));
 		print_r(date('Y-m-d H:m:s', strtotime( date('Y-m-d H:m:s', ($firstDay / 1000) ) .  "+ 1 day" ) )  );
 		// END DEBUG
@@ -590,7 +724,7 @@ class SpecialUserJourney extends SpecialPage {
 		  while( $tempDay < $lastDay ){
 				$fullData[$tempDay] = 0;
 
-				$tempDay = strtotime( date('Y-m-d H:m:s', ($tempDay / 1000 ) ) .  "+ 1 day" );
+				$tempDay = strtotime( date('Y-m-d H:m:s', ($tempDay / 1000 ) ) .  "+ 1 day" ) * 1000;
 
 		  }
 
@@ -628,6 +762,8 @@ class SpecialUserJourney extends SpecialPage {
 
 	    }
 
+/*
+
 	    // Parse $fullData keys from firstDay to lastDay; fill if value exists in $userdata
 		  $tempDay = $firstDay;
 		  while( $tempDay < $lastDay ){
@@ -647,6 +783,8 @@ class SpecialUserJourney extends SpecialPage {
         'y' => floatval( $dataRow ),
         );
 		  };
+
+*/
 
 	    // $tempDay = $firstDay;
 	    // $competitorData = array();
@@ -698,7 +836,8 @@ class SpecialUserJourney extends SpecialPage {
       		'values' => $competitorData,
       		);
 
-	    $competitorData = NULL;
+	    unset($competitorData);
+	    unset($data);
 	    $userdata = NULL; // without this, 2nd person gets 1st person's data plus theirs
 	  }
 
@@ -709,6 +848,7 @@ class SpecialUserJourney extends SpecialPage {
 
     $wgOut->addHTML( $html );
   }
+
 
 
   /**
