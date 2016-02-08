@@ -537,7 +537,7 @@ class SpecialUserJourney extends SpecialPage {
 							) user2
 							ON user.user_day=user2.user2_day
 						)results
-						ORDER BY day DESC";
+						ORDER BY day ASC";
 
     $res = $dbr->query( $sql );
 
@@ -565,19 +565,6 @@ class SpecialUserJourney extends SpecialPage {
   		);
 
     }
-
-
-		// DEBUG
-		print_r('--------------------------------------------------');
-		print_r('test');
-		echo '<br />';
-		print_r('--------------------------------------------------');
-		// END DEBUG
-
-
-
-
-
 
 
     $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
