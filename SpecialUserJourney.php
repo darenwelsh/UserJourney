@@ -40,6 +40,9 @@ class SpecialUserJourney extends SpecialPage {
 		else if ( $this->mMode == 'compare-score-stacked-plot2' ) {
       $this->compareScoreStackedPlot2();
 		}
+		else if ( $this->mMode == 'compare-score-stacked-plot3' ) {
+      $this->compareScoreStackedPlot3();
+		}
 		else {
 			$this->overview();
 		}
@@ -81,6 +84,7 @@ class SpecialUserJourney extends SpecialPage {
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-plot' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-stacked-plot' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-stacked-plot2' )
+			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-stacked-plot3' )
 			. ")</li>";
 
 		$navLine .= "</ul>";
@@ -520,12 +524,10 @@ class SpecialUserJourney extends SpecialPage {
 						FROM
 						(
 							SELECT * FROM $queryDT1
-							LEFT JOIN $queryDT2
-							ON user1.user_day1=user2.user_day2
+							LEFT JOIN $queryDT2	ON user1.user_day1=user2.user_day2
 							UNION
 							SELECT * FROM $queryDT1
-							RIGHT JOIN $queryDT2
-							ON user1.user_day1=user2.user_day2
+							RIGHT JOIN $queryDT2 ON user1.user_day1=user2.user_day2
 						)results
 						ORDER BY day ASC";
 
@@ -701,6 +703,115 @@ class SpecialUserJourney extends SpecialPage {
 
     $wgOut->addHTML( $html );
   }
+
+
+
+
+function compareScoreStackedPlot3( ){
+    global $wgOut;
+
+    $username = $this->getUser()->mName;
+    $userRealName = $this->getUser()->mRealName;
+    if( $userRealName ){
+    	$displayName = $userRealName;
+    }
+    else{
+    	$displayName = $username;
+    }
+
+    $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
+    	$username,
+    	'Ejmontal',
+    	'Swray',
+    	'Balpert',
+    	'Cmavridi',
+    	'Ssjohns5',
+    	);
+
+    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
+    $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
+
+    $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
+    $html .= '<div id="userjourney-chart-stream"><svg height="400px"></svg></div>';
+
+    $dbr = wfGetDB( DB_SLAVE );
+
+    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
+
+    $queryDT = function( $competitor ){
+    	$output = "INSERT INTO temp_union (day, {$competitor})
+			SELECT
+				DATE(rev_timestamp) AS day,
+				COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS {$competitor}
+			FROM `revision`
+			WHERE
+				rev_user_text IN ( '{$competitor}' )
+			GROUP BY day";
+
+			return $output;
+    };
+
+		// Create temp table
+		$sql = "CREATE TEMPORARY TABLE temp_union(
+			day date NULL";
+		foreach( $competitors as $competitor ){
+			$sql .= ", {$competitor} float NULL";
+		}
+		$sql .= " )ENGINE = MEMORY";
+
+    $res = $dbr->query( $sql );
+
+		// Add each competitor's score to temp table
+		foreach( $competitors as $competitor ){
+			$sql = $queryDT($competitor);
+
+			$res = $dbr->query( $sql );
+		}
+
+		// Consolidate rows so each day only has one row
+    $sql = "SELECT
+			day";
+		foreach( $competitors as $competitor ){
+			$sql .= ", max({$competitor}) {$competitor}";
+		}
+		$sql .= " FROM temp_union GROUP BY day";
+
+    $res = $dbr->query( $sql );
+
+		while( $row = $dbr->fetchRow( $res ) ) {
+
+			foreach( $competitors as $competitor ){
+
+				list($day, $score) = array($row['day'], $row["$competitor"]);
+
+				$userdata["$competitor"][] = array(
+					'x' => strtotime( $day ) * 1000,
+					'y' => floatval( $score ),
+				);
+			}
+
+    }
+
+		// Remove temp table
+    $sql = "DROP TABLE temp_union";
+    $res = $dbr->query ( $sql );
+
+    foreach( $competitors as $competitor ){
+
+	    $data[] = array(
+    		'key' => $competitor,
+    		'values' => $userdata["$competitor"],
+  		);
+
+    }
+
+
+    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+
+    $wgOut->addHTML( $html );
+  }
+
+
 
 
 
