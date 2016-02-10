@@ -286,7 +286,10 @@ class SpecialUserJourney extends SpecialPage {
 		// RIGHT JOIN t2 ON t1.id = t2.id
 		// RIGHT JOIN t3 ON t2.id = t3.id
 
-		$wgOut->setPageTitle( "UserJourney: Compare scores: $displayName vs. TBD" );
+		$james = User::newFromName("Ejmontal");
+		$name2 = $james->getRealName();
+
+		$wgOut->setPageTitle( "UserJourney: Compare scores: $displayName vs. $name2" );
 
 		$html = '<table class="wikitable sortable"><tr><th>Date</th><th>' . $displayName . '</th><th>' . 'TBD' . '</th></tr>';
 
@@ -495,6 +498,10 @@ class SpecialUserJourney extends SpecialPage {
     $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
 
     $dbr = wfGetDB( DB_SLAVE );
+
+    // COUNT(rev_id) = Revisions
+    // COUNT(DISTINCT rev_page) = Pages
+    // COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 = Score
 
     $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
     $queryDT1 = "(
@@ -720,12 +727,53 @@ function compareScoreStackedPlot3( ){
     }
 
     $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
-    	$username,
-    	'Ejmontal',
-    	'Swray',
-    	'Balpert',
-    	'Cmavridi',
-    	'Ssjohns5',
+    	// $username,
+			'Abattocl',
+			'Abolinge',
+			'Ajarvis',
+			'Akanelak',
+			'Apdecker',
+			'Athomaso',
+			'Balpert',
+			'Bmader',
+			'Bscheib',
+			'Cmavridi',
+			'Cmundy',
+			'Dcoan',
+			'Dmbarret',
+			'Dsimon',
+			'Ecandrew',
+			'Egslusse',
+			'Ejmontal',
+			'Fsabur',
+			'Gsbrown',
+			'Jgaustad',
+			'Jkagey',
+			'Jmularsk',
+			'Jstoffel',
+			'Keversle',
+			'Kgjohns',
+			'Lbolch',
+			'Lshore',
+			'Lwelsh',
+			'Lwilt',
+			'Mbbollin',
+			'Mdino',
+			'Mdumanta',
+			'Mrmurphe',
+			'Mwillsey',
+			'Pdum',
+			'Rcheney',
+			'Sfletch',
+			'Sgeffert',
+			'Skorona',
+			'Smulhern',
+			'Ssjohns',
+			'Svilano',
+			'Swray',
+			'Tahall',
+			'Tbcampbe',
+			'Tjlindse',
     	);
 
     $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
@@ -746,6 +794,7 @@ function compareScoreStackedPlot3( ){
 			FROM `revision`
 			WHERE
 				rev_user_text IN ( '{$competitor}' )
+        /* AND rev_timestamp > 20150101000000 */
 			GROUP BY day";
 
 			return $output;
@@ -798,8 +847,16 @@ function compareScoreStackedPlot3( ){
 
     foreach( $competitors as $competitor ){
 
+	    $person = User::newFromName("$competitor");
+			$realName = $person->getRealName();
+			if( empty($realName) ){
+				$nameToUse = $competitor;
+			} else {
+				$nameToUse = $realName;
+			}
+
 	    $data[] = array(
-    		'key' => $competitor,
+    		'key' => $nameToUse,
     		'values' => $userdata["$competitor"],
   		);
 
@@ -930,269 +987,6 @@ function compareScoreStackedPlot3( ){
     $wgOut->addHTML( $html );
   }
 
-
-
-  /*
-	* This is MAJOR BROKE for now. I think part of it is handling the start and end dates as just the date.
-	*	Since timestamps also include a time of day, I think it's preventing the association of the query results
-	* into the fullData array.
-  */
-  function BROKENcompareScoreStackedPlot( ){
-    global $wgOut;
-
-    $username = $this->getUser()->mName;
-    $userRealName = $this->getUser()->mRealName;
-    if( $userRealName ){
-    	$displayName = $userRealName;
-    }
-    else{
-    	$displayName = $username;
-    }
-
-    $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
-    	$username,
-    	'Ejmontal',
-    	// 'Swray'
-    	);
-
-    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
-    $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
-
-    $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
-
-    $dbr = wfGetDB( DB_SLAVE );
-
-    $data = array();
-
-		// Determine start and end date based on competitors
-		$firstDay = null;
-		$lastDay = null;
-    foreach( $competitors as $competitor ){
-    	// Determine start date
-    	$sql = "SELECT
-	              DATE(rev_timestamp) AS firstDay
-	            FROM `revision`
-	            WHERE
-	              rev_user_text IN ( '$competitor' )
-	              /* AND rev_timestamp > 20150101000000 */
-              ORDER BY firstDay ASC
-	            LIMIT 1";
-
-	    $res = $dbr->query( $sql );
-
-	    $row = $dbr->fetchRow( $res );
-	    $competitorFirstDay = strtotime( $row['firstDay'] ) * 1000;
-
-	    if( isset( $firstDay ) ){
-
-	    	if( $competitorFirstDay < $firstDay ){
-		    	$firstDay = $competitorFirstDay;
-	    	}
-
-	    } else {
-	    	$firstDay = $competitorFirstDay;
-	    }
-
-    	// Determine end date
-    	$sql = "SELECT
-	              DATE(rev_timestamp) AS lastDay
-	            FROM `revision`
-	            WHERE
-	              rev_user_text IN ( '$competitor' )
-	              /* AND rev_timestamp > 20150101000000 */
-              ORDER BY lastDay DESC
-	            LIMIT 1";
-
-	    $res = $dbr->query( $sql );
-
-	    $row = $dbr->fetchRow( $res );
-	    $competitorLastDay = strtotime( $row['lastDay'] ) * 1000;
-
-	    if( isset( $lastDay ) ){
-
-	    	if( $competitorLastDay > $lastDay ){
-		    	$lastDay = $competitorLastDay;
-	    	}
-
-	    } else {
-	    	$lastDay = $competitorLastDay;
-	    }
-
-	  }
-
-	  $res = null;
-
-		// DEBUG
-		print_r('--------------------------------------------------');
-		print_r($firstDay . ' - ' . $lastDay);
-		echo '<br />';
-		print_r('--------------------------------------------------');
-		print_r(date('Y-m-d H:m:s', ($firstDay / 1000) ) . ' - ' . date('Y-m-d', ($lastDay / 1000) ) );
-		echo '<br />';
-		print_r('--------------------------------------------------');
-		print_r(strtotime( date('Y-m-d H:m:s', ($firstDay / 1000) ) .  "+ 1 day" ) * 1000 );
-		echo '<br />';
-		print_r('--------------------------------------------------');
-		//print_r(date('Y-m-d H:m:s', $firstDay "+1 day"));
-		print_r(date('Y-m-d H:m:s', strtotime( date('Y-m-d H:m:s', ($firstDay / 1000) ) .  "+ 1 day" ) )  );
-		// END DEBUG
-
-
-	  // Generate array of keys from firstDay to lastDay
-	  // $tempDay = $firstDay;
-	  // while( $tempDay < $lastDay ){
-			// $fullData[] = array(
-			// 	'x' => $tempDay,
-			// 	'y' => 0,
-			// );
-
-			// $tempDay = strtotime( date('Y-m-d H:m:s', ($tempDay / 1000 ) ) .  "+ 1 day" );
-
-	  // }
-
-
-
-
-    foreach($competitors as $competitor){
-    	// Generate array of keys from firstDay to lastDay
-		  $tempDay = $firstDay;
-		  // while( $tempDay < $lastDay ){
-				// $fullData[] = array(
-				// 	'x' => $tempDay,
-				// 	'y' => 0,
-				// );
-
-				// $tempDay = strtotime( date('Y-m-d H:m:s', ($tempDay / 1000 ) ) .  "+ 1 day" );
-
-		  // }
-
-		  while( $tempDay < $lastDay ){
-				$fullData[$tempDay] = 0;
-
-				$tempDay = strtotime( date('Y-m-d H:m:s', ($tempDay / 1000 ) ) .  "+ 1 day" ) * 1000;
-
-		  }
-
-    	$sql = "SELECT
-	              DATE(rev_timestamp) AS day,
-	              COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
-	            FROM `revision`
-	            WHERE
-	              rev_user_text IN ( '$competitor' )
-	              /* AND rev_timestamp > 20150101000000 */
-	            GROUP BY day
-	            ORDER BY day ASC";
-
-	    $res = $dbr->query( $sql );
-
-	    // while( $row = $dbr->fetchRow( $res ) ) {
-
-	    //   list($day, $score) = array($row['day'], $row['score']);
-
-	    //   $userdata[] = array(
-	    //     'x' => strtotime( $day ) * 1000,
-	    //     'y' => floatval( $score ),
-	    //   );
-
-	    // }
-
-	    // replace previous while loop with this
-	    $userdata = array();
-	    while( $row = $dbr->fetchRow( $res ) ) {
-
-	      list($day, $score) = array($row['day'], $row['score']);
-	      $dayTimestamp = strtotime( $day ) * 1000;
-
-	      $userdata[$dayTimestamp] = floatval( $score );
-
-	    }
-
-/*
-
-	    // Parse $fullData keys from firstDay to lastDay; fill if value exists in $userdata
-		  $tempDay = $firstDay;
-		  while( $tempDay < $lastDay ){
-				if( isset($userdata[$tempDay] ) ){
-	    		$fullData[$tempDay] = $userdata[$tempDay];
-	    	}
-
-				$tempDay = strtotime( date('Y-m-d H:m:s', ($tempDay / 1000 ) ) .  "+ 1 day" );
-
-		  }
-
-		  // Convert $fullData into format used in other plots
-		  $competitorData = array();
-		  while( $dataRow = current($fullData) ){
-		  	$competitorData[] = array(
-        'x' => strtotime( key($fullData) ) * 1000,
-        'y' => floatval( $dataRow ),
-        );
-		  };
-
-*/
-
-	    // $tempDay = $firstDay;
-	    // $competitorData = array();
-	    // while( $tempDay < $lastDay ){
-	    // 	if( isset($userdata[$tempDay] ) ){
-	    // 		$competitorData[] = array(
-	    // 			'x' => $tempDay,
-	    // 			'y' => ,
-	    // 		);
-	    // 	} else {
-	    // 		$competitorData[] = array(
-	    // 			'x' => $tempDay,
-	    // 			'y' => 0,
-	    // 		);
-	    // 	}
-
-	    // }
-	    // end replacement stuff
-
-	    // Determine if zero values should be added before this person's first day with a score
-	    // if( $userdata[0].x < $firstDay ){
-	    // 	$tempDay = $firstDay;
-	    // 	while( $tempDay < $userdata[0].x ){
-	    // 		$prependedDates[] = array(
-	    // 			'x' => $tempDay,
-	    // 			'y' => 0,
-	    // 			);
-	    // 		$tempDay->modify('+1 day');
-	    // 	}
-
-	    // 	// Add zero values for days from $firstDay to person's first day with a score
-	    // 	array_unshift($userdata, $prependedDates);
-	    // }
-
-	    // Parse through the days and add zero value to missing dates
-			// $tempDay = $firstDay;
-			// while( $tempDay < $lastDay ){
-			// 	if( true ){ // if null value on this day
-
-			// 	}
-			// 	$tempDay->modify('+1 day');
-			// }
-
-			// End of new stuff
-
-	    $data[] = array(
-      		'key' => $competitor,
-      		// 'values' => $userdata,
-      		'values' => $competitorData,
-      		);
-
-	    unset($competitorData);
-	    unset($data);
-	    $userdata = NULL; // without this, 2nd person gets 1st person's data plus theirs
-	  }
-
-
-
-    // $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-
-    $wgOut->addHTML( $html );
-  }
 
 
 

@@ -154,7 +154,7 @@ $(document).ready(function(){
 		window.hitsData = getData();
 		console.log(hitsData);
 		window.chart = nv.models.stackedAreaChart()
-			// .margin({right: 100})
+			.margin({right: 50})
 			// .x(function(d) { return d[0] })   //We can modify the data accessor functions...
 			// .y(function(d) { return d[1] })   //...in case your data is formatted differently.
 			.useInteractiveGuideline(true)    //Tooltips which show all data points. Very nice!
