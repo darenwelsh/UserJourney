@@ -35,13 +35,14 @@ class SpecialUserJourney extends SpecialPage {
       $this->compareScoreLineWindowPlot();
 		}
 		else if ( $this->mMode == 'compare-score-stacked-plot' ) {
-      $this->compareScoreStackedPlot();
+      // $this->compareScoreStackedPlot();
+      $this->compareSimilarScoresPlots();
 		}
-		else if ( $this->mMode == 'compare-score-stacked-plot2' ) {
-      $this->compareScoreStackedPlot2();
-		}
-		else if ( $this->mMode == 'compare-score-stacked-plot3' ) {
-      $this->compareScoreStackedPlot3();
+		// else if ( $this->mMode == 'compare-score-stacked-plot2' ) {
+  //     $this->compareScoreStackedPlot2();
+		// }
+		else if ( $this->mMode == 'compare-score-by-user-group' ) {
+      $this->compareScoreByUserGroup();
 		}
 		else {
 			$this->overview();
@@ -83,8 +84,8 @@ class SpecialUserJourney extends SpecialPage {
 			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'compare-score-data' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-plot' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-stacked-plot' )
-			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-stacked-plot2' )
-			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-stacked-plot3' )
+			// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-stacked-plot2' )
+			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-by-user-group' )
 			. ")</li>";
 
 		$navLine .= "</ul>";
@@ -124,7 +125,6 @@ class SpecialUserJourney extends SpecialPage {
 		$body = $pager->getBody();
 		$html = '';
 
-		$html .= '<p>Test</p>';
 		$wgOut->addHTML( $html );
 	}
 
@@ -371,97 +371,97 @@ class SpecialUserJourney extends SpecialPage {
 
 
 
-	public function compareScoreData2() { // backup of what works during testing
-		global $wgOut;
+	// public function compareScoreData2() { // backup of what works during testing
+	// 	global $wgOut;
 
-    $username = $this->getUser()->mName;
-    $userRealName = $this->getUser()->mRealName;
-    if( $userRealName ){
-    	$displayName = $userRealName;
-    }
-    else{
-    	$displayName = $username;
-    }
+ //    $username = $this->getUser()->mName;
+ //    $userRealName = $this->getUser()->mRealName;
+ //    if( $userRealName ){
+ //    	$displayName = $userRealName;
+ //    }
+ //    else{
+ //    	$displayName = $username;
+ //    }
 
-    $username2 = 'Ejmontal'; //Competitor
+ //    $username2 = 'Ejmontal'; //Competitor
 
-		$wgOut->setPageTitle( "UserJourney: Compare scores: $displayName vs. TBD" );
+	// 	$wgOut->setPageTitle( "UserJourney: Compare scores: $displayName vs. TBD" );
 
-		$html = '<table class="wikitable sortable"><tr><th>Date</th><th>' . $displayName . '</th><th>' . 'TBD' . '</th></tr>';
+	// 	$html = '<table class="wikitable sortable"><tr><th>Date</th><th>' . $displayName . '</th><th>' . 'TBD' . '</th></tr>';
 
-		$dbr = wfGetDB( DB_SLAVE );
+	// 	$dbr = wfGetDB( DB_SLAVE );
 
-    $sql = "SELECT
-							COALESCE(user_day, user2_day) AS day,
-							user_score,
-							user2_score
-						FROM
-						(
-							SELECT * FROM
-								(
-								SELECT
-									DATE(rev_timestamp) AS user_day,
-									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user_score
-								FROM `revision`
-								WHERE
-									rev_user_text IN ( '$username' )
-								GROUP BY user_day
-								) user
-							LEFT JOIN
-							(
-								SELECT
-									DATE(rev_timestamp) AS user2_day,
-									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user2_score
-								FROM `revision`
-								WHERE
-									rev_user_text IN ( '$username2' )
-								GROUP BY user2_day
-							) user2
-							ON user.user_day=user2.user2_day
-							UNION
-							SELECT * FROM
-							(
-								SELECT
-									DATE(rev_timestamp) AS user_day,
-									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user_score
-								FROM `revision`
-								WHERE
-									rev_user_text IN ( '$username' )
-								GROUP BY user_day
-							) user
-							RIGHT JOIN
-							(
-								SELECT
-									DATE(rev_timestamp) AS user2_day,
-									COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user2_score
-								FROM `revision`
-								WHERE
-									rev_user_text IN ( '$username2' )
-								GROUP BY user2_day
-							) user2
-							ON user.user_day=user2.user2_day
-						)results
-						ORDER BY day DESC";
+ //    $sql = "SELECT
+	// 						COALESCE(user_day, user2_day) AS day,
+	// 						user_score,
+	// 						user2_score
+	// 					FROM
+	// 					(
+	// 						SELECT * FROM
+	// 							(
+	// 							SELECT
+	// 								DATE(rev_timestamp) AS user_day,
+	// 								COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user_score
+	// 							FROM `revision`
+	// 							WHERE
+	// 								rev_user_text IN ( '$username' )
+	// 							GROUP BY user_day
+	// 							) user
+	// 						LEFT JOIN
+	// 						(
+	// 							SELECT
+	// 								DATE(rev_timestamp) AS user2_day,
+	// 								COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user2_score
+	// 							FROM `revision`
+	// 							WHERE
+	// 								rev_user_text IN ( '$username2' )
+	// 							GROUP BY user2_day
+	// 						) user2
+	// 						ON user.user_day=user2.user2_day
+	// 						UNION
+	// 						SELECT * FROM
+	// 						(
+	// 							SELECT
+	// 								DATE(rev_timestamp) AS user_day,
+	// 								COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user_score
+	// 							FROM `revision`
+	// 							WHERE
+	// 								rev_user_text IN ( '$username' )
+	// 							GROUP BY user_day
+	// 						) user
+	// 						RIGHT JOIN
+	// 						(
+	// 							SELECT
+	// 								DATE(rev_timestamp) AS user2_day,
+	// 								COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS user2_score
+	// 							FROM `revision`
+	// 							WHERE
+	// 								rev_user_text IN ( '$username2' )
+	// 							GROUP BY user2_day
+	// 						) user2
+	// 						ON user.user_day=user2.user2_day
+	// 					)results
+	// 					ORDER BY day DESC";
 
-    $res = $dbr->query( $sql );
+ //    $res = $dbr->query( $sql );
 
-    $previous = null;
+ //    $previous = null;
 
-    while( $row = $dbr->fetchRow( $res ) ) {
+ //    while( $row = $dbr->fetchRow( $res ) ) {
 
-      list($day, $userScore, $user2Score) = array($row['day'], $row['user_score'], $row['user2_score']);
-      $date = date('Y-m-d', strtotime( $day ));
-      $userScore = round($userScore, 1);
-      $user2Score = round($user2Score, 1);
-      $html .= "<tr><td>$date</td><td>$userScore</td><td>$user2Score</td></tr>";
+ //      list($day, $userScore, $user2Score) = array($row['day'], $row['user_score'], $row['user2_score']);
+ //      $date = date('Y-m-d', strtotime( $day ));
+ //      $userScore = round($userScore, 1);
+ //      $user2Score = round($user2Score, 1);
+ //      $html .= "<tr><td>$date</td><td>$userScore</td><td>$user2Score</td></tr>";
 
-    }
+ //    }
 
-		$html .= "</table>";
+	// 	$html .= "</table>";
 
-		$wgOut->addHTML( $html );
+	// 	$wgOut->addHTML( $html );
 
-	}
+	// }
 
 
 
@@ -574,14 +574,150 @@ class SpecialUserJourney extends SpecialPage {
 
 
 
-  /**
-  * Function generates stacked area plot of contribution scores
-  *
-  * @param $tbd - no parameters now
-  * @return nothing - generates special page
-  */
-  function compareScoreStackedPlot2( ){
+  // /**
+  // * Function generates stacked area plot of contribution scores
+  // *
+  // * @param $tbd - no parameters now
+  // * @return nothing - generates special page
+  // */
+  // function compareScoreStackedPlot2( ){
+  //   global $wgOut;
+
+  //   $username = $this->getUser()->mName;
+  //   $userRealName = $this->getUser()->mRealName;
+  //   if( $userRealName ){
+  //   	$displayName = $userRealName;
+  //   }
+  //   else{
+  //   	$displayName = $username;
+  //   }
+
+  //   $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
+  //   	$username,
+  //   	'Ejmontal',
+  //   	'Swray'
+  //   	);
+  //   $username1 = $competitors[0];
+  //   $username2 = $competitors[1];
+  //   $username3 = $competitors[2];
+
+  //   $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
+  //   $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
+
+  //   $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
+  //   $html .= '<div id="userjourney-chart-stream"><svg height="400px"></svg></div>';
+
+  //   $dbr = wfGetDB( DB_SLAVE );
+
+  //   $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
+  //   $queryDT1 = "(
+		// 						SELECT
+		// 							DATE(rev_timestamp) AS user_day1,
+		// 							{$queryScore} AS user_score1
+		// 						FROM `revision`
+		// 						WHERE
+		// 							rev_user_text IN ( '$username1' )
+		// 						GROUP BY user_day1
+		// 						) user1";
+
+		// $queryDT2 = "(
+		// 						SELECT
+		// 							DATE(rev_timestamp) AS user_day2,
+		// 							{$queryScore} AS user_score2
+		// 						FROM `revision`
+		// 						WHERE
+		// 							rev_user_text IN ( '$username2' )
+		// 						GROUP BY user_day2
+		// 						) user2";
+
+		// $queryDT3 = "(
+		// 						SELECT
+		// 							DATE(rev_timestamp) AS user_day3,
+		// 							{$queryScore} AS user_score3
+		// 						FROM `revision`
+		// 						WHERE
+		// 							rev_user_text IN ( '$username3' )
+		// 						GROUP BY user_day3
+		// 						) user3";
+
+		// // SELECT * FROM t1
+		// // LEFT JOIN t2 ON t1.id = t2.id
+		// // LEFT JOIN t3 ON t2.id = t3.id
+		// // UNION
+		// // SELECT * FROM t1
+		// // RIGHT JOIN t2 ON t1.id = t2.id
+		// // LEFT JOIN t3 ON t2.id = t3.id
+		// // UNION
+		// // SELECT * FROM t1
+		// // RIGHT JOIN t2 ON t1.id = t2.id
+		// // RIGHT JOIN t3 ON t2.id = t3.id
+
+  //   $sql = "SELECT
+		// 					COALESCE(user_day1, user_day2, user_day3) AS day,
+		// 					user_score1,
+		// 					user_score2,
+		// 					user_score3
+		// 				FROM
+		// 				(
+		// 					SELECT * FROM $queryDT1
+		// 					LEFT JOIN $queryDT2 ON user1.user_day1=user2.user_day2
+		// 					LEFT JOIN $queryDT3 ON user2.user_day2=user3.user_day3
+		// 					UNION
+		// 					SELECT * FROM $queryDT1
+		// 					RIGHT JOIN $queryDT2 ON user1.user_day1=user2.user_day2
+		// 					LEFT JOIN $queryDT3 ON user2.user_day2=user3.user_day3
+		// 					UNION
+		// 					SELECT * FROM $queryDT1
+		// 					RIGHT JOIN $queryDT2 ON user1.user_day1=user2.user_day2
+		// 					RIGHT JOIN $queryDT3 ON user2.user_day2=user3.user_day3
+		// 				)results
+		// 				ORDER BY day ASC";
+
+  //   $res = $dbr->query( $sql );
+
+		// while( $row = $dbr->fetchRow( $res ) ) {
+
+  //     list($day, $userScore1, $userScore2, $userScore3) = array($row['day'], $row['user_score1'], $row['user_score2'], $row['user_score3']);
+
+  //     $userdata["$username1"][] = array(
+		// 		'x' => strtotime( $day ) * 1000,
+		// 		'y' => floatval( $userScore1 ),
+		// 	);
+
+		// 	$userdata["$username2"][] = array(
+		// 		'x' => strtotime( $day ) * 1000,
+		// 		'y' => floatval( $userScore2 ),
+		// 	);
+
+		// 	$userdata["$username3"][] = array(
+		// 		'x' => strtotime( $day ) * 1000,
+		// 		'y' => floatval( $userScore3 ),
+		// 	);
+
+  //   }
+
+  //   foreach( $competitors as $competitor ){
+
+	 //    $data[] = array(
+  //   		'key' => $competitor,
+  //   		'values' => $userdata["$competitor"],
+  // 		);
+
+  //   }
+
+
+  //   $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+
+  //   $wgOut->addHTML( $html );
+  // }
+
+
+
+
+function compareScoreByUserGroup( ){
     global $wgOut;
+
+    $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
 
     $username = $this->getUser()->mName;
     $userRealName = $this->getUser()->mRealName;
@@ -592,14 +728,7 @@ class SpecialUserJourney extends SpecialPage {
     	$displayName = $username;
     }
 
-    $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
-    	$username,
-    	'Ejmontal',
-    	'Swray'
-    	);
-    $username1 = $competitors[0];
-    $username2 = $competitors[1];
-    $username3 = $competitors[2];
+    $competitors = array();
 
     $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
     $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
@@ -609,180 +738,34 @@ class SpecialUserJourney extends SpecialPage {
 
     $dbr = wfGetDB( DB_SLAVE );
 
-    $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
-    $queryDT1 = "(
-								SELECT
-									DATE(rev_timestamp) AS user_day1,
-									{$queryScore} AS user_score1
-								FROM `revision`
-								WHERE
-									rev_user_text IN ( '$username1' )
-								GROUP BY user_day1
-								) user1";
-
-		$queryDT2 = "(
-								SELECT
-									DATE(rev_timestamp) AS user_day2,
-									{$queryScore} AS user_score2
-								FROM `revision`
-								WHERE
-									rev_user_text IN ( '$username2' )
-								GROUP BY user_day2
-								) user2";
-
-		$queryDT3 = "(
-								SELECT
-									DATE(rev_timestamp) AS user_day3,
-									{$queryScore} AS user_score3
-								FROM `revision`
-								WHERE
-									rev_user_text IN ( '$username3' )
-								GROUP BY user_day3
-								) user3";
-
-		// SELECT * FROM t1
-		// LEFT JOIN t2 ON t1.id = t2.id
-		// LEFT JOIN t3 ON t2.id = t3.id
-		// UNION
-		// SELECT * FROM t1
-		// RIGHT JOIN t2 ON t1.id = t2.id
-		// LEFT JOIN t3 ON t2.id = t3.id
-		// UNION
-		// SELECT * FROM t1
-		// RIGHT JOIN t2 ON t1.id = t2.id
-		// RIGHT JOIN t3 ON t2.id = t3.id
-
-    $sql = "SELECT
-							COALESCE(user_day1, user_day2, user_day3) AS day,
-							user_score1,
-							user_score2,
-							user_score3
-						FROM
-						(
-							SELECT * FROM $queryDT1
-							LEFT JOIN $queryDT2 ON user1.user_day1=user2.user_day2
-							LEFT JOIN $queryDT3 ON user2.user_day2=user3.user_day3
-							UNION
-							SELECT * FROM $queryDT1
-							RIGHT JOIN $queryDT2 ON user1.user_day1=user2.user_day2
-							LEFT JOIN $queryDT3 ON user2.user_day2=user3.user_day3
-							UNION
-							SELECT * FROM $queryDT1
-							RIGHT JOIN $queryDT2 ON user1.user_day1=user2.user_day2
-							RIGHT JOIN $queryDT3 ON user2.user_day2=user3.user_day3
-						)results
-						ORDER BY day ASC";
+		// Determine list of competitors based on $userGroup
+    $sql = "
+			SELECT
+				user_name
+			FROM (
+			SELECT
+				ug_user,
+				ug_group
+			FROM user_groups
+			WHERE ug_group = '{$userGroup}'
+			) a
+			 JOIN
+			(
+			SELECT
+				user_id,
+				user_name
+			FROM user
+			) b
+			ON ug_user=user_id
+    ";
 
     $res = $dbr->query( $sql );
 
 		while( $row = $dbr->fetchRow( $res ) ) {
 
-      list($day, $userScore1, $userScore2, $userScore3) = array($row['day'], $row['user_score1'], $row['user_score2'], $row['user_score3']);
-
-      $userdata["$username1"][] = array(
-				'x' => strtotime( $day ) * 1000,
-				'y' => floatval( $userScore1 ),
-			);
-
-			$userdata["$username2"][] = array(
-				'x' => strtotime( $day ) * 1000,
-				'y' => floatval( $userScore2 ),
-			);
-
-			$userdata["$username3"][] = array(
-				'x' => strtotime( $day ) * 1000,
-				'y' => floatval( $userScore3 ),
-			);
+				$competitors[] = $row['user_name'];
 
     }
-
-    foreach( $competitors as $competitor ){
-
-	    $data[] = array(
-    		'key' => $competitor,
-    		'values' => $userdata["$competitor"],
-  		);
-
-    }
-
-
-    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-
-    $wgOut->addHTML( $html );
-  }
-
-
-
-
-function compareScoreStackedPlot3( ){
-    global $wgOut;
-
-    $username = $this->getUser()->mName;
-    $userRealName = $this->getUser()->mRealName;
-    if( $userRealName ){
-    	$displayName = $userRealName;
-    }
-    else{
-    	$displayName = $username;
-    }
-
-    $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
-    	// $username,
-			'Abattocl',
-			'Abolinge',
-			'Ajarvis',
-			'Akanelak',
-			'Apdecker',
-			'Athomaso',
-			'Balpert',
-			'Bmader',
-			'Bscheib',
-			'Cmavridi',
-			'Cmundy',
-			'Dcoan',
-			'Dmbarret',
-			'Dsimon',
-			'Ecandrew',
-			'Egslusse',
-			'Ejmontal',
-			'Fsabur',
-			'Gsbrown',
-			'Jgaustad',
-			'Jkagey',
-			'Jmularsk',
-			'Jstoffel',
-			'Keversle',
-			'Kgjohns',
-			'Lbolch',
-			'Lshore',
-			'Lwelsh',
-			'Lwilt',
-			'Mbbollin',
-			'Mdino',
-			'Mdumanta',
-			'Mrmurphe',
-			'Mwillsey',
-			'Pdum',
-			'Rcheney',
-			'Sfletch',
-			'Sgeffert',
-			'Skorona',
-			'Smulhern',
-			'Ssjohns',
-			'Svilano',
-			'Swray',
-			'Tahall',
-			'Tbcampbe',
-			'Tjlindse',
-    	);
-
-    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
-    $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
-
-    $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
-    $html .= '<div id="userjourney-chart-stream"><svg height="400px"></svg></div>';
-
-    $dbr = wfGetDB( DB_SLAVE );
 
     // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
 
@@ -867,6 +850,193 @@ function compareScoreStackedPlot3( ){
 
     $wgOut->addHTML( $html );
   }
+
+
+
+
+
+
+function compareSimilarScoresPlots( ){
+    global $wgOut;
+
+    $daysToDetermineCompetitors = 14; // Number of days in which to compare scores of logged-in user against others (used to find suitable competitors)
+    $daysToPlot = 365;
+    $daysToDetermineCompetitors += 100; //TO-DO remove - number increased for testing on old wiki
+    $daysToPlot += 100; //TO-DO remove - number increased for testing on old wiki
+
+    $username = $this->getUser()->mName;
+    $userRealName = $this->getUser()->mRealName;
+    if( $userRealName ){
+    	$displayName = $userRealName;
+    }
+    else{
+    	$displayName = $username;
+    }
+
+    $competitors = array( // For this function, start with only the logged-in user. More are added later.
+    	$username,
+    	);
+
+    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
+
+		if( $this->getUser()->getID() ){ // Only do stuff if user has an ID
+
+	    $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
+
+	    $dbr = wfGetDB( DB_SLAVE );
+
+	    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
+
+	    // Determine score of logged in user
+			$date = time() - ( 60 * 60 * 24 * $daysToDetermineCompetitors );
+			$dateString = $dbr->timestamp( $date );
+
+	    $sql = "
+	    	SELECT COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 as score
+	      FROM revision
+	      WHERE rev_timestamp > '$dateString'
+	      AND rev_user_text = '{$username}'
+	    ";
+
+	    $res = $dbr->query( $sql );
+	    $row = $dbr->fetchRow( $res );
+	    $userRecentScore = round($row['score'], 5);
+
+	    // Determine users with relatively similar scores for the past $daysToDetermineCompetitors
+	    $commonQuery = "
+				(SELECT
+					user_name,
+					score
+				FROM
+					(SELECT user_id,
+						user_name,
+						page_count,
+						rev_count,
+						page_count+SQRT(rev_count-page_count)*2 AS score
+					FROM user u
+					JOIN
+					(SELECT rev_user,
+						COUNT(DISTINCT rev_page) AS page_count,
+						COUNT(rev_id) AS rev_count
+						FROM revision
+						WHERE rev_timestamp > '$dateString'
+						AND rev_user_text != '{$username}'
+						GROUP BY rev_user
+						ORDER BY page_count DESC
+					) s ON user_id=rev_user
+	    ";
+
+	    $sql = "
+	    	{$commonQuery}
+	    	ORDER BY score ASC ) t1
+				WHERE score > {$userRecentScore}
+				LIMIT 3 )
+				UNION
+				{$commonQuery}
+				ORDER BY score DESC ) t2
+				WHERE score < {$userRecentScore}
+				LIMIT 2 )
+				ORDER BY score DESC
+	    ";
+
+	    $res = $dbr->query( $sql );
+
+			while( $row = $dbr->fetchRow( $res ) ) {
+
+					list($competitor, $score) = array($row['user_name'], $row['score']);
+
+					$competitors[] = "$competitor";
+
+	    }
+
+	    $queryDT = function( $competitor, $dateString ){
+	    	$output = "INSERT INTO temp_union (day, {$competitor})
+				SELECT
+					DATE(rev_timestamp) AS day,
+					COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS {$competitor}
+				FROM `revision`
+				WHERE
+					rev_user_text IN ( '{$competitor}' )
+					AND rev_timestamp > '$dateString'
+				GROUP BY day";
+
+				return $output;
+	    };
+
+			// Create temp table
+			$sql = "CREATE TEMPORARY TABLE temp_union(
+				day date NULL";
+			foreach( $competitors as $competitor ){
+				$sql .= ", {$competitor} float NULL";
+			}
+			$sql .= " )ENGINE = MEMORY";
+
+	    $res = $dbr->query( $sql );
+
+			// Add each competitor's score to temp table
+			foreach( $competitors as $competitor ){
+				$date = time() - ( 60 * 60 * 24 * $daysToPlot );
+				$dateString = $dbr->timestamp( $date );
+
+				$sql = $queryDT($competitor, $dateString);
+
+				$res = $dbr->query( $sql );
+			}
+
+			// Consolidate rows so each day only has one row
+	    $sql = "SELECT
+				day";
+			foreach( $competitors as $competitor ){
+				$sql .= ", max({$competitor}) {$competitor}";
+			}
+			$sql .= " FROM temp_union GROUP BY day";
+
+	    $res = $dbr->query( $sql );
+
+			while( $row = $dbr->fetchRow( $res ) ) {
+
+				foreach( $competitors as $competitor ){
+
+					list($day, $score) = array($row['day'], $row["$competitor"]);
+
+					$userdata["$competitor"][] = array(
+						'x' => strtotime( $day ) * 1000,
+						'y' => floatval( $score ),
+					);
+				}
+
+	    }
+
+			// Remove temp table
+	    $sql = "DROP TABLE temp_union";
+	    $res = $dbr->query ( $sql );
+
+	    foreach( $competitors as $competitor ){
+
+		    $person = User::newFromName("$competitor");
+				$realName = $person->getRealName();
+				if( empty($realName) ){
+					$nameToUse = $competitor;
+				} else {
+					$nameToUse = $realName;
+				}
+
+		    $data[] = array(
+	    		'key' => $nameToUse,
+	    		'values' => $userdata["$competitor"],
+	  		);
+
+	    }
+
+	    $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
+	    $html .= '<div id="userjourney-chart-stream"><svg height="400px"></svg></div>';
+	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+		} else {
+			$html = 'Sorry, but this feature is not available for anonymous users.';
+		}
+    $wgOut->addHTML( $html );
+  }
+
 
 
 
