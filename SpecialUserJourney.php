@@ -75,6 +75,9 @@ class SpecialUserJourney extends SpecialPage {
 
 		$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-overview' ) . $unfilterLink . "</li>";
 
+		//TO-DO add if statement to show extra data plots if logged-in user is in groups sysop or Manager
+		//TO-DO add pull-down menus so these views can show any user's data for sysop or Manager
+
 		$navLine .= "<li>" . wfMessage( 'userjourney-myscore' )->text()
 			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'user-score-data' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-score-plot' )
@@ -85,7 +88,7 @@ class SpecialUserJourney extends SpecialPage {
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-plot' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-stacked-plot' )
 			// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-stacked-plot2' )
-			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-by-user-group' )
+			. ") (" . $this->createHeaderLink( 'userjourney-plot-by-group', 'compare-score-by-user-group' )
 			. ")</li>";
 
 		$navLine .= "</ul>";
@@ -186,6 +189,8 @@ class SpecialUserJourney extends SpecialPage {
   * @return nothing - generates special page
   */
   function myScorePlot( ){
+  	//TO-DO provide SIMPLE feedback of user's contributions compared to group average (allow CX3 or Contributors via LocalSettings)
+  	//TO-DO provide this feedback in chunks over time
     global $wgOut;
 
     $username = $this->getUser()->mName;
@@ -715,6 +720,7 @@ class SpecialUserJourney extends SpecialPage {
 
 
 function compareScoreByUserGroup( ){
+		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
     global $wgOut;
 
     $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
@@ -857,6 +863,8 @@ function compareScoreByUserGroup( ){
 
 
 function compareSimilarScoresPlots( ){
+		// TO-DO add line with window plot to this based on compareScoreLineWindowPlot()
+		// TO-DO Modify plots to have some granular/moving-average and some just showing 1-month or 3-month average values
     global $wgOut;
 
     $daysToDetermineCompetitors = 14; // Number of days in which to compare scores of logged-in user against others (used to find suitable competitors)
