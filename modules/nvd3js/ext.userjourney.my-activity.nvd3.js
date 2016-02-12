@@ -11,8 +11,6 @@ window.getMovingAverage = function ( dataArray, maLength, weekdaysOnly ) {
 	var curDays = [];
 	var curAvg = 0;
 
-	var scoreCeiling = 100; // Limit max score to some value to prevent spikes from adversely affecting the average
-
     for ( var i = 0; i < dataArray.length; i++ ) {
 		dayOfWeek = new Date( dataArray[ i ].x ).getDay();
 
@@ -23,7 +21,7 @@ window.getMovingAverage = function ( dataArray, maLength, weekdaysOnly ) {
 			};
 		}
 		else {
-			curDays.push( Math.min( scoreCeiling, dataArray[ i ].y ) );
+			curDays.push( dataArray[ i ].y );
 			if ( curDays.length > maLength ) {
 				curDays.shift(); // shift first element off
 			}
@@ -42,12 +40,6 @@ window.getMovingAverage = function ( dataArray, maLength, weekdaysOnly ) {
     return avgArray;
 
 };
-
-
-
-
-
-
 
 $(document).ready(function(){
 
@@ -74,75 +66,25 @@ $(document).ready(function(){
 
 		var rawData = JSON.parse( $('#userjourney-data').text() );
 
-		// rawData[0].color = "#FC8383";
-		// rawData[1].color = "#D194FF";
+		rawData[0].color = "#4B70E7";
 
-		// username = rawData[0].key;
+		rawData.push( {
+			key: "7-Day Moving Average",
+			values: getMovingAverage( rawData[0].values, 7 ),
+			color: "#FFBB44"
+		} );
 
-		// rawData.push( {
-		// 	key: username + " 7-Day Avg",
-		// 	values: getMovingAverage( rawData[0].values, 7 ),
-		// 	color: "#FF0000"
-		// } );
+		rawData.push( {
+			key: "28-Day Moving Average",
+			values: getMovingAverage( rawData[0].values, 28 ),
+			color: "#FF0000"
+		} );
 
-		// rawData.push( {
-		// 	key: "28-Day Moving Average",
-		// 	values: getMovingAverage( rawData[0].values, 28 ),
-		// 	color: "#FF0000"
-		// } );
-
-		// rawData.push( {
-		// 	key: username + " 20-Weekday Avg (no weekends)",
-		// 	values: getMovingAverage( rawData[0].values, 20, true ),
-		// 	color: "#FF8000"
-		// } );
-
-		// username = rawData[1].key;
-
-		// rawData.push( {
-		// 	key: username + " 7-Day Avg",
-		// 	values: getMovingAverage( rawData[1].values, 7 ),
-		// 	color: "#0000FF"
-		// } );
-
-		// rawData.push( {
-		// 	key: "28-Day Moving Average",
-		// 	values: getMovingAverage( rawData[1].values, 28 ),
-		// 	color: "#FF0000"
-		// } );
-
-		// rawData.push( {
-		// 	key: username + " 20-Weekday Avg (no weekends)",
-		// 	values: getMovingAverage( rawData[1].values, 20, true ),
-		// 	color: "#00D5FF"
-		// } );
-
-		/* */
-		var initialDataLength = rawData.length;
-		for (var i = 0; i < initialDataLength; ++i) {
-			username = rawData[ i ].key;
-
-			// rawData.push( {
-			// 	key: username + " 7-Day Avg",
-			// 	values: getMovingAverage( rawData[i].values, 7 ),
-			// 	color: "#FF0000"
-			// } );
-
-			// rawData.push( {
-			// 	key: username + " 28-Day Moving Average",
-			// 	values: getMovingAverage( rawData[i].values, 28 ),
-			// 	color: "#FF0000"
-			// } );
-
-			rawData.push( {
-				key: username + " 20-Weekday Avg (no weekends)",
-				values: getMovingAverage( rawData[ i ].values, 20, true ),
-				// color: "#FF8000"
-			} );
-		/* */
-		}
-
-		rawData.splice(0, initialDataLength); // remove daily score arrays, only show generated averages
+		rawData.push( {
+			key: "20-Weekday Moving Average (no weekends)",
+			values: getMovingAverage( rawData[0].values, 20, true ),
+			color: "#00FF00"
+		} );
 
 		return { dailyHits : rawData };
 
@@ -171,7 +113,7 @@ $(document).ready(function(){
 		chart.y2Axis
 			.tickFormat(d3.format(',.0f'));
 
-		d3.select('#userjourney-chart svg')
+		d3.select('#userjourney-my-activity-plot svg')
 			.datum( hitsData.dailyHits )
 			.attr( "height" , $(window).height() - 100 )
 			.transition().duration(500)

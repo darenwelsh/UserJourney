@@ -164,7 +164,8 @@ $(document).ready(function(){
 			.clipEdge(true)
 		;
 
-		chart._options.controlOptions = ['Stacked', 'Expanded']; // hide 'Stream' view
+		chart.style('stream-center')
+			.showControls(false);
 
 		chart.xAxis
 			.tickFormat(function(d) {
@@ -174,7 +175,7 @@ $(document).ready(function(){
 		chart.yAxis
 			.tickFormat(d3.format(',.0f'));
 
-		d3.select('#userjourney-chart svg')
+		d3.select('#userjourney-compare-chart-stream-centered svg')
 			.datum( hitsData.dailyHits )
 			.attr( "height" , $(window).height() - 100 )
 			.transition().duration(500)

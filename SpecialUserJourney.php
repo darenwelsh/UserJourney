@@ -21,27 +21,27 @@ class SpecialUserJourney extends SpecialPage {
 
 		$wgOut->addHTML( $this->getPageHeader() );
 
-		if ($this->mMode == 'user-score-data') {
+		if ($this->mMode == 'user-activity-data') {
 			$this->myScoreData();
 		}
-		else if ( $this->mMode == 'user-score-plot' ) {
+		else if ( $this->mMode == 'user-activity-plot' ) {
       $this->myScorePlot();
 		}
 
-		if ($this->mMode == 'compare-score-data') {
+		if ($this->mMode == 'compare-activity-data') {
 			$this->compareScoreData();
 		}
-		else if ( $this->mMode == 'compare-score-plot' ) {
-      $this->compareScoreLineWindowPlot();
+		else if ( $this->mMode == 'compare-activity-by-similar-activity' ) {
+      $this->compareActivityByPeers();
 		}
-		else if ( $this->mMode == 'compare-score-stacked-plot' ) {
+		// else if ( $this->mMode == 'compare-activity-stacked-plot' ) {
       // $this->compareScoreStackedPlot();
-      $this->compareSimilarScoresPlots();
-		}
-		// else if ( $this->mMode == 'compare-score-stacked-plot2' ) {
+      // $this->compareSimilarScoresPlots();
+		// }
+		// else if ( $this->mMode == 'compare-activity-stacked-plot2' ) {
   //     $this->compareScoreStackedPlot2();
 		// }
-		else if ( $this->mMode == 'compare-score-by-user-group' ) {
+		else if ( $this->mMode == 'compare-activity-by-user-group' ) {
       $this->compareScoreByUserGroup();
 		}
 		else {
@@ -78,17 +78,17 @@ class SpecialUserJourney extends SpecialPage {
 		//TO-DO add if statement to show extra data plots if logged-in user is in groups sysop or Manager
 		//TO-DO add pull-down menus so these views can show any user's data for sysop or Manager
 
-		$navLine .= "<li>" . wfMessage( 'userjourney-myscore' )->text()
-			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'user-score-data' )
-			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-score-plot' )
+		$navLine .= "<li>" . wfMessage( 'userjourney-my-activity' )->text()
+			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'user-activity-data' )
+			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-activity-plot' )
 			. ")</li>";
 
-		$navLine .= "<li>" . wfMessage( 'userjourney-comparescore' )->text()
-			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'compare-score-data' )
-			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-plot' )
-			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-stacked-plot' )
-			// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-score-stacked-plot2' )
-			. ") (" . $this->createHeaderLink( 'userjourney-plot-by-group', 'compare-score-by-user-group' )
+		$navLine .= "<li>" . wfMessage( 'userjourney-compare-activity' )->text()
+			// . ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'compare-activity-data' ) // not currently displayed, maybe later for admins/Managers
+			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-by-similar-activity' )
+			// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot' )
+			// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot2' )
+			. ") (" . $this->createHeaderLink( 'userjourney-plot-by-group', 'compare-activity-by-user-group' )
 			. ")</li>";
 
 		$navLine .= "</ul>";
@@ -145,7 +145,7 @@ class SpecialUserJourney extends SpecialPage {
     	$displayName = $username;
     }
 
-		$wgOut->setPageTitle( "UserJourney: User Score Data for $displayName" );
+		$wgOut->setPageTitle( "UserJourney: Activity Data for $displayName" );
 
 		$html = '<table class="wikitable sortable"><tr><th>Date</th><th>Score</th><th>Pages</th><th>Revisions</th></tr>';
 
@@ -189,6 +189,7 @@ class SpecialUserJourney extends SpecialPage {
   * @return nothing - generates special page
   */
   function myScorePlot( ){
+  	//TO-DO add days with zero values to get accurate averages
   	//TO-DO provide SIMPLE feedback of user's contributions compared to group average (allow CX3 or Contributors via LocalSettings)
   	//TO-DO provide this feedback in chunks over time
     global $wgOut;
@@ -202,10 +203,10 @@ class SpecialUserJourney extends SpecialPage {
     	$displayName = $username;
     }
 
-    $wgOut->setPageTitle( "UserJourney: User Score Plot for $displayName" );
-    $wgOut->addModules( 'ext.userjourney.myScorePlot.nvd3' );
+    $wgOut->setPageTitle( "UserJourney: Activity Plot for $displayName" );
+    $wgOut->addModules( 'ext.userjourney.myActivity.nvd3' );
 
-    $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
+    $html = '<div id="userjourney-my-activity-plot"><svg height="400px"></svg></div>';
 
     $dbr = wfGetDB( DB_SLAVE );
 
@@ -862,7 +863,7 @@ function compareScoreByUserGroup( ){
 
 
 
-function compareSimilarScoresPlots( ){
+function compareActivityByPeers( ){
 		// TO-DO add line with window plot to this based on compareScoreLineWindowPlot()
 		// TO-DO Modify plots to have some granular/moving-average and some just showing 1-month or 3-month average values
     global $wgOut;
@@ -889,7 +890,8 @@ function compareSimilarScoresPlots( ){
 
 		if( $this->getUser()->getID() ){ // Only do stuff if user has an ID
 
-	    $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
+	    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
+	    // $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
 
 	    $dbr = wfGetDB( DB_SLAVE );
 
@@ -1036,11 +1038,13 @@ function compareSimilarScoresPlots( ){
 
 	    }
 
-	    $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
-	    $html .= '<div id="userjourney-chart-stream"><svg height="400px"></svg></div>';
+	    $html = '<div id="userjourney-compare-chart-line-with-window"><svg height="400px"></svg></div>';
+	    $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
+	    $html .= '<div id="userjourney-compare-chart-stream-centered"><svg height="400px"></svg></div>';
+
 	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 		} else {
-			$html = 'Sorry, but this feature is not available for anonymous users.';
+			$html = '<br />Sorry, but this feature is not available for anonymous users.<br />';
 		}
     $wgOut->addHTML( $html );
   }

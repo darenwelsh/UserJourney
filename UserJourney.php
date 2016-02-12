@@ -152,31 +152,31 @@ No Longer Used
  );
 
  $wgResourceModules += array(
-	'ext.userjourney.charts' => $userjourneyResourceTemplate + array(
-		'styles' => 'charts/ext.userjourney.charts.css',
-		'scripts' => array(
-			'charts/Chart.js',
-			'charts/ext.userjourney.charts.js',
-		),
+	// 'ext.userjourney.charts' => $userjourneyResourceTemplate + array(
+	// 	'styles' => 'charts/ext.userjourney.charts.css',
+	// 	'scripts' => array(
+	// 		'charts/Chart.js',
+	// 		'charts/ext.userjourney.charts.js',
+	// 	),
 
-	),
+	// ),
 
-	'ext.userjourney.d3.js' => $userjourneyResourceTemplate + array(
-		'scripts' => array(
-			'd3js/ext.userjourney.d3.js',
-		),
+	// 'ext.userjourney.d3.js' => $userjourneyResourceTemplate + array(
+	// 	'scripts' => array(
+	// 		'd3js/ext.userjourney.d3.js',
+	// 	),
 
-	),
+	// ),
 
-  // For "My Score"
-	'ext.userjourney.myScorePlot.nvd3' => $userjourneyResourceTemplate + array(
+  // For "My Activity"
+	'ext.userjourney.myActivity.nvd3' => $userjourneyResourceTemplate + array(
 		'styles' => array(
 			'nvd3js/nv.d3.css',
-			'nvd3js/ext.userjourney.myscore.nvd3.css',
+			'nvd3js/ext.userjourney.my-activity.nvd3.css',
 		),
 		'scripts' => array(
 			'nvd3js/nv.d3.js',
-			'nvd3js/ext.userjourney.myscore.nvd3.js',
+			'nvd3js/ext.userjourney.my-activity.nvd3.js',
 		),
 		'dependencies' => array(
       // 'ext.userjourney.d3.js',
@@ -185,15 +185,17 @@ No Longer Used
 
 	),
 
-  // For "Compare Scores Line Plot"
-  'ext.userjourney.compareScorePlot.nvd3' => $userjourneyResourceTemplate + array(
+  // For "Compare Activity"
+  'ext.userjourney.compare.nvd3' => $userjourneyResourceTemplate + array(
     'styles' => array(
       'nvd3js/nv.d3.css',
-      'nvd3js/ext.userjourney.comparescores.nvd3.css',
+      'nvd3js/ext.userjourney.compare.nvd3.css',
     ),
     'scripts' => array(
       'nvd3js/nv.d3.js',
-      'nvd3js/ext.userjourney.comparescores.nvd3.js',
+      'nvd3js/ext.userjourney.compare-line-with-window.nvd3.js',
+      'nvd3js/ext.userjourney.compare-stacked.nvd3.js',
+      'nvd3js/ext.userjourney.compare-stacked-stream-centered.nvd3.js',
     ),
     'dependencies' => array(
       // 'ext.userjourney.d3.js',
@@ -203,21 +205,21 @@ No Longer Used
   ),
 
   // For "Compare Scores Stacked Plot"
-  'ext.userjourney.compareScoreStackedPlot.nvd3' => $userjourneyResourceTemplate + array(
-    'styles' => array(
-      'nvd3js/nv.d3.css',
-      // 'nvd3js/ext.userjourney.comparescoresstacked.nvd3.css',
-    ),
-    'scripts' => array(
-      'nvd3js/nv.d3.js',
-      'nvd3js/ext.userjourney.comparescoresstacked.nvd3.js',
-      'nvd3js/ext.userjourney.comparescoresstackedstream.nvd3.js',
-    ),
-    'dependencies' => array(
-      // 'ext.userjourney.d3.js',
-      'd3.js',
-    ),
+  // 'ext.userjourney.compareScoreStackedPlot.nvd3' => $userjourneyResourceTemplate + array(
+  //   'styles' => array(
+  //     'nvd3js/nv.d3.css',
+  //     // 'nvd3js/ext.userjourney.comparescoresstacked.nvd3.css',
+  //   ),
+  //   'scripts' => array(
+  //     'nvd3js/nv.d3.js',
+  //     'nvd3js/ext.userjourney.comparescoresstacked.nvd3.js',
+  //     'nvd3js/ext.userjourney.comparescoresstackedstream.nvd3.js',
+  //   ),
+  //   'dependencies' => array(
+  //     // 'ext.userjourney.d3.js',
+  //     'd3.js',
+  //   ),
 
-  ),
+  // ),
 
 );
