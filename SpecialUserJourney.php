@@ -85,7 +85,7 @@ class SpecialUserJourney extends SpecialPage {
 
 		$navLine .= "<li>" . wfMessage( 'userjourney-compare-activity' )->text()
 			// . ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'compare-activity-data' ) // not currently displayed, maybe later for admins/Managers
-			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-by-similar-activity' )
+			. "(" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-by-similar-activity' )
 			// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot' )
 			// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot2' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot-by-group', 'compare-activity-by-user-group' )
@@ -738,10 +738,7 @@ function compareScoreByUserGroup( ){
     $competitors = array();
 
     $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
-    $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
-
-    $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
-    $html .= '<div id="userjourney-chart-stream"><svg height="400px"></svg></div>';
+    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
 
     $dbr = wfGetDB( DB_SLAVE );
 
@@ -853,6 +850,11 @@ function compareScoreByUserGroup( ){
     }
 
 
+		$html = '';
+		$html .= '<h2>Stacked Area</h2>';
+	  $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
+		$html .= '<h2>Stacked Area Stream Centered</h2>';
+	  $html .= '<div id="userjourney-compare-chart-stream-centered"><svg height="400px"></svg></div>';
     $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
     $wgOut->addHTML( $html );
@@ -864,8 +866,9 @@ function compareScoreByUserGroup( ){
 
 
 function compareActivityByPeers( ){
-		// TO-DO add line with window plot to this based on compareScoreLineWindowPlot()
+		// TO-DO remove compareScoreLineWindowPlot() ??
 		// TO-DO Modify plots to have some granular/moving-average and some just showing 1-month or 3-month average values
+		// TO-DO Maybe have one page with all data and another page with last 30-60 days
     global $wgOut;
 
     $daysToDetermineCompetitors = 14; // Number of days in which to compare scores of logged-in user against others (used to find suitable competitors)
@@ -1038,8 +1041,12 @@ function compareActivityByPeers( ){
 
 	    }
 
-	    $html = '<div id="userjourney-compare-chart-line-with-window"><svg height="400px"></svg></div>';
+			$html = '';
+			$html .= '<h2>Line with Window</h2>';
+	    $html .= '<div id="userjourney-compare-chart-line-with-window"><svg height="400px"></svg></div>';
+			$html .= '<h2>Stacked Area</h2>';
 	    $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
+			$html .= '<h2>Stacked Area Stream Centered</h2>';
 	    $html .= '<div id="userjourney-compare-chart-stream-centered"><svg height="400px"></svg></div>';
 
 	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
