@@ -85,7 +85,7 @@ class SpecialUserJourney extends SpecialPage {
 
 		$navLine .= "<li>" . wfMessage( 'userjourney-compare-activity' )->text()
 			// . ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'compare-activity-data' ) // not currently displayed, maybe later for admins/Managers
-			. "(" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-by-similar-activity' )
+			. ": (" . $this->createHeaderLink( 'userjourney-plot-by-peers', 'compare-activity-by-similar-activity' )
 			// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot' )
 			// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot2' )
 			. ") (" . $this->createHeaderLink( 'userjourney-plot-by-group', 'compare-activity-by-user-group' )
@@ -854,7 +854,7 @@ function compareScoreByUserGroup( ){
 		$html .= '<h2>Stacked Area</h2>';
 	  $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
 		$html .= '<h2>Stacked Area Stream Centered</h2>';
-	  $html .= '<div id="userjourney-compare-chart-stream-centered"><svg height="400px"></svg></div>';
+	  $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
     $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
     $wgOut->addHTML( $html );
@@ -1047,7 +1047,7 @@ function compareActivityByPeers( ){
 			$html .= '<h2>Stacked Area</h2>';
 	    $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
 			$html .= '<h2>Stacked Area Stream Centered</h2>';
-	    $html .= '<div id="userjourney-compare-chart-stream-centered"><svg height="400px"></svg></div>';
+	    $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
 
 	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 		} else {

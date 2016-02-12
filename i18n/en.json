@@ -10,5 +10,6 @@
 	"userjourney-unfilter": "Unfilter",
 	"userjourney-rawdata": "Data",
 	"userjourney-plot": "Plot",
+	"userjourney-plot-by-peers": "Plot by peers",
 	"userjourney-plot-by-group": "Plot by group"
 }

@@ -164,7 +164,8 @@ $(document).ready(function(){
 			.clipEdge(true)
 		;
 
-		chart.style('stream-center')
+		chart.style('stream')
+		// chart.style('stream-center') // Centering helps if too many 0 values pull the stream
 			.showControls(false);
 
 		chart.xAxis
@@ -175,7 +176,7 @@ $(document).ready(function(){
 		chart.yAxis
 			.tickFormat(d3.format(',.0f'));
 
-		d3.select('#userjourney-compare-chart-stream-centered svg')
+		d3.select('#userjourney-compare-chart-stream svg')
 			.datum( hitsData.dailyHits )
 			.attr( "height" , $(window).height() - 100 )
 			.transition().duration(500)

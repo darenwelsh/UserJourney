@@ -195,7 +195,7 @@ No Longer Used
       'nvd3js/nv.d3.js',
       'nvd3js/ext.userjourney.compare-line-with-window.nvd3.js',
       'nvd3js/ext.userjourney.compare-stacked.nvd3.js',
-      'nvd3js/ext.userjourney.compare-stacked-stream-centered.nvd3.js',
+      'nvd3js/ext.userjourney.compare-stream.nvd3.js',
     ),
     'dependencies' => array(
       // 'ext.userjourney.d3.js',
