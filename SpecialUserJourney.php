@@ -52,46 +52,52 @@ class SpecialUserJourney extends SpecialPage {
 	public function getPageHeader() {
 		global $wgRequest;
 
-		// show the names of the different views
-		$navLine = '<strong>' . wfMsg( 'userjourney-viewmode' ) . ':</strong> ';
+		if( $this->getUser()->getID() ){ // Only do stuff if user has an ID
 
-		$filterUser = $wgRequest->getVal( 'filterUser' );
-		$filterPage = $wgRequest->getVal( 'filterPage' );
+			// show the names of the different views
+			$navLine = '<strong>' . wfMsg( 'userjourney-viewmode' ) . ':</strong> ';
 
-		if ( $filterUser || $filterPage ) {
+			$filterUser = $wgRequest->getVal( 'filterUser' );
+			$filterPage = $wgRequest->getVal( 'filterPage' );
 
-			$UserJourneyTitle = SpecialPage::getTitleFor( 'UserJourney' );
-			$unfilterLink = ': (' . Xml::element( 'a',
-				array( 'href' => $UserJourneyTitle->getLocalURL() ),
-				wfMsg( 'userjourney-unfilter' )
-			) . ')';
+			if ( $filterUser || $filterPage ) {
 
+				$UserJourneyTitle = SpecialPage::getTitleFor( 'UserJourney' );
+				$unfilterLink = ': (' . Xml::element( 'a',
+					array( 'href' => $UserJourneyTitle->getLocalURL() ),
+					wfMsg( 'userjourney-unfilter' )
+				) . ')';
+
+			}
+			else {
+				$unfilterLink = '';
+			}
+
+			$navLine .= "<ul>";
+
+			$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-overview' ) . $unfilterLink . "</li>";
+
+			//TO-DO add if statement to show extra data plots if logged-in user is in groups sysop or Manager
+			//TO-DO add pull-down menus so these views can show any user's data for sysop or Manager
+
+			$navLine .= "<li>" . wfMessage( 'userjourney-my-activity' )->text()
+				. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'user-activity-data' )
+				. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-activity-plot' )
+				. ")</li>";
+
+			$navLine .= "<li>" . wfMessage( 'userjourney-compare-activity' )->text()
+				// . ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'compare-activity-data' ) // not currently displayed, maybe later for admins/Managers
+				. ": (" . $this->createHeaderLink( 'userjourney-plot-by-peers', 'compare-activity-by-similar-activity' )
+				// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot' )
+				// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot2' )
+				. ") (" . $this->createHeaderLink( 'userjourney-plot-by-group', 'compare-activity-by-user-group' )
+				. ")</li>";
+
+			$navLine .= "</ul>";
+
+		} else {
+			$navLine = "Sorry";
 		}
-		else {
-			$unfilterLink = '';
-		}
-
-		$navLine .= "<ul>";
-
-		$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-overview' ) . $unfilterLink . "</li>";
-
-		//TO-DO add if statement to show extra data plots if logged-in user is in groups sysop or Manager
-		//TO-DO add pull-down menus so these views can show any user's data for sysop or Manager
-
-		$navLine .= "<li>" . wfMessage( 'userjourney-my-activity' )->text()
-			. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'user-activity-data' )
-			. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-activity-plot' )
-			. ")</li>";
-
-		$navLine .= "<li>" . wfMessage( 'userjourney-compare-activity' )->text()
-			// . ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'compare-activity-data' ) // not currently displayed, maybe later for admins/Managers
-			. ": (" . $this->createHeaderLink( 'userjourney-plot-by-peers', 'compare-activity-by-similar-activity' )
-			// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot' )
-			// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot2' )
-			. ") (" . $this->createHeaderLink( 'userjourney-plot-by-group', 'compare-activity-by-user-group' )
-			. ")</li>";
-
-		$navLine .= "</ul>";
 
 		$out = Xml::tags( 'p', null, $navLine ) . "\n";
 
