@@ -149,8 +149,62 @@ class SpecialUserJourney extends SpecialPage {
 			$body = $pager->getBody();
 			$html = '';
 
+			$username = $this->getUser()->mName;
 			$displayName = self::getDisplayName();
-			$html .= "<big>This is a tale of the wiki journey of {$displayName}.</big>";
+
+		    $dbr = wfGetDB( DB_SLAVE );
+
+		    // Query for user's first revision timestamp
+		    $sql = "SELECT
+						DATE(rev_timestamp) AS day
+					FROM revision
+					WHERE rev_user_text = '{$username}'
+					ORDER BY rev_timestamp ASC
+					LIMIT 1";
+
+			$res = $dbr->query( $sql );
+		    $row = $dbr->fetchRow( $res );
+
+		    $userFirstRevisionTimestamp = strtotime( $row['day'] ); // Unix timestamp like 1320732000
+		    $userFirstRevisionDate =      date('jS', $userFirstRevisionTimestamp); // 3rd or 4th
+		    $userFirstRevisionDay =       date('l', $userFirstRevisionTimestamp); // Monday or Tuesday
+		    $userFirstRevisionMonth =     date('F', $userFirstRevisionTimestamp); // November
+		    $userFirstRevisionYear =      date('Y', $userFirstRevisionTimestamp); // 2011
+
+		    $userDaysSinceFirstRevision = round( ( ( strtotime( date('Ymd H:m:s') ) - $userFirstRevisionTimestamp ) / (60 * 60 * 24) ), 0);
+		    $userDaysSinceFirstRevisionFormatted = number_format($userDaysSinceFirstRevision);
+
+		    // Query for user's total number of revisions and total number of distinct pages revised
+		    $sql = "SELECT
+						COUNT(rev_timestamp) AS revisions,
+						COUNT(DISTINCT rev_page) AS pages
+					FROM revision
+					WHERE rev_user_text = '{$username}'";
+
+			$res = $dbr->query( $sql );
+		    $row = $dbr->fetchRow( $res );
+
+		    $userTotalRevisions = $row['revisions'];
+		    $userTotalRevisionsFormatted = number_format( $row['revisions'] );
+		    $userTotalDistinctPagesRevised = $row['pages'];
+		    $userTotalDistinctPagesRevisedFormatted = number_format( $userTotalDistinctPagesRevised );
+		    $userHoursSavedEstimate = round( $userTotalDistinctPagesRevised * (5 / 60), 1); // Hours saved
+
+			// The story
+			$html .= "<p>";
+			$html .= "This is a tale of the wiki journey of {$displayName}.";
+			$html .= " Our hero began a quest to share knowledge on the ";
+			$html .= "{$userFirstRevisionDate} day of {$userFirstRevisionMonth} in the year {$userFirstRevisionYear}.";
+			$html .= " But this was no ordinary {$userFirstRevisionDay}.";
+			$html .= " On this fateful day, {$displayName} joined the brave legion of sharing information, citing references, and saving others' time.";
+			$html .= "</p>";
+
+			$html .= "<p>";
+			$html .= "Over the past {$userDaysSinceFirstRevisionFormatted} days, ";
+			$html .= "{$displayName} has made {$userTotalRevisionsFormatted} revisions to {$userTotalDistinctPagesRevisedFormatted} pages.";
+			$html .= " What if we make a low-ball estimation that for each page ${displayName} has made a contribution, it saved just one person 5 minutes?";
+			$html .= " That would be a time savings of {$userHoursSavedEstimate} hours!";
+			$html .= "</p>";
 
 		} else {
 			$url = Title::newFromText('Special:UserLogin')->getLinkUrl('returnto=Special:UserJourney');
