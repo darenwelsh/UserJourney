@@ -330,7 +330,6 @@ class SpecialUserJourney extends SpecialPage {
 	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 	  } else {
 			$html = '<br />Sorry, but this feature is not available for anonymous users.<br />';
-		}
 	  }
 
     $wgOut->addHTML( $html );
