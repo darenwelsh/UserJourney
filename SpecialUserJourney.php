@@ -96,7 +96,7 @@ class SpecialUserJourney extends SpecialPage {
 			$navLine .= "</ul>";
 
 		} else {
-			$navLine = "Sorry";
+			$navLine = "";
 		}
 
 		$out = Xml::tags( 'p', null, $navLine ) . "\n";
@@ -122,17 +122,41 @@ class SpecialUserJourney extends SpecialPage {
 
 	}
 
+	public function getDisplayName () {
+		$username = $this->getUser()->mName;
+	    $userRealName = $this->getUser()->mRealName;
+	    if( $userRealName ){
+	    	$displayName = $userRealName;
+	    }
+	    else{
+	    	$displayName = $username;
+	    }
+
+	    return $displayName;
+	}
+
 	public function overview () {
 		global $wgOut, $wgRequest;
 
 		$wgOut->setPageTitle( 'UserJourney' );
 
-		$pager = new UserJourneyPager();
-		$pager->filterUser = $wgRequest->getVal( 'filterUser' );
-		$pager->filterPage = $wgRequest->getVal( 'filterPage' );
+		if( $this->getUser()->getID() ){ // Only do stuff if user has an ID
 
-		$body = $pager->getBody();
-		$html = '';
+			$pager = new UserJourneyPager();
+			$pager->filterUser = $wgRequest->getVal( 'filterUser' );
+			$pager->filterPage = $wgRequest->getVal( 'filterPage' );
+
+			$body = $pager->getBody();
+			$html = '';
+
+			$displayName = self::getDisplayName();
+			$html .= "<big>This is a tale of the wiki journey of {$displayName}.</big>";
+
+		} else {
+			$url = Title::newFromText('Special:UserLogin')->getLinkUrl('returnto=Special:UserJourney');
+
+			$html = "Sorry, but this page is for logged in users. Please <a href='{$url}'>sign in</a> so you can begin your journey!";
+		}
 
 		$wgOut->addHTML( $html );
 	}
@@ -142,14 +166,8 @@ class SpecialUserJourney extends SpecialPage {
 	public function myScoreData() {
 		global $wgOut;
 
-    $username = $this->getUser()->mName;
-    $userRealName = $this->getUser()->mRealName;
-    if( $userRealName ){
-    	$displayName = $userRealName;
-    }
-    else{
-    	$displayName = $username;
-    }
+	    $username = $this->getUser()->mName;
+	    $displayName = self::getDisplayName();
 
 		$wgOut->setPageTitle( "UserJourney: Activity Data for $displayName" );
 
@@ -203,13 +221,7 @@ class SpecialUserJourney extends SpecialPage {
     global $wgOut;
 
     $username = $this->getUser()->mName;
-    $userRealName = $this->getUser()->mRealName;
-    if( $userRealName ){
-    	$displayName = $userRealName;
-    }
-    else{
-    	$displayName = $username;
-    }
+	$displayName = self::getDisplayName();
 
     $wgOut->setPageTitle( "UserJourney: Activity Plot for $displayName" );
 
@@ -353,13 +365,7 @@ class SpecialUserJourney extends SpecialPage {
 		global $wgOut;
 
     $username = $this->getUser()->mName;
-    $userRealName = $this->getUser()->mRealName;
-    if( $userRealName ){
-    	$displayName = $userRealName;
-    }
-    else{
-    	$displayName = $username;
-    }
+	$displayName = self::getDisplayName();
 
     $username2 = 'Ejmontal'; //Competitor
     $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
@@ -487,13 +493,7 @@ function compareScoreByUserGroup( ){
     $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
 
     $username = $this->getUser()->mName;
-    $userRealName = $this->getUser()->mRealName;
-    if( $userRealName ){
-    	$displayName = $userRealName;
-    }
-    else{
-    	$displayName = $username;
-    }
+	$displayName = self::getDisplayName();
 
     $competitors = array();
 
@@ -667,13 +667,7 @@ function compareActivityByPeers( ){
     $daysToPlot += 100; //TO-DO remove - number increased for testing on old wiki
 
     $username = $this->getUser()->mName;
-    $userRealName = $this->getUser()->mRealName;
-    if( $userRealName ){
-    	$displayName = $userRealName;
-    }
-    else{
-    	$displayName = $username;
-    }
+	$displayName = self::getDisplayName();
 
     $competitors = array( // For this function, start with only the logged-in user. More are added later.
     	$username,
