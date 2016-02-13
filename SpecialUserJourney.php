@@ -188,71 +188,12 @@ class SpecialUserJourney extends SpecialPage {
   * @param $tbd - no parameters now
   * @return nothing - generates special page
   */
-  function myScorePlotOld( ){
-  	//TO-DO add days with zero values to get accurate averages
-  	//TO-DO provide SIMPLE feedback of user's contributions compared to group average (allow CX3 or Contributors via LocalSettings)
-  	//TO-DO provide this feedback in chunks over time
-    global $wgOut;
-
-    $username = $this->getUser()->mName;
-    $userRealName = $this->getUser()->mRealName;
-    if( $userRealName ){
-    	$displayName = $userRealName;
-    }
-    else{
-    	$displayName = $username;
-    }
-
-    $wgOut->setPageTitle( "UserJourney: Activity Plot for $displayName" );
-    $wgOut->addModules( 'ext.userjourney.myActivity.nvd3' );
-
-    $html = '<div id="userjourney-my-activity-plot"><svg height="400px"></svg></div>';
-
-    $dbr = wfGetDB( DB_SLAVE );
-
-    $sql = "SELECT
-              DATE(rev_timestamp) AS day,
-              COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
-            FROM `revision`
-            WHERE
-              rev_user_text IN ( '$username' )
-              /* AND rev_timestamp > 20150101000000 */
-            GROUP BY day
-            ORDER BY day DESC";
-
-    $res = $dbr->query( $sql );
-
-    $previous = null;
-
-    while( $row = $dbr->fetchRow( $res ) ) {
-
-      list($day, $score) = array($row['day'], $row['score']);
-
-      // $day = strtotime( $day ) * 1000;
-
-      $data[] = array(
-        'x' => strtotime( $day ) * 1000,
-        'y' => floatval( $score ),
-      );
-    }
-
-    $data = array(
-      array(
-        'key' => 'Daily Score',
-        'values' => $data,
-      ),
-    );
-
-    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-
-    $wgOut->addHTML( $html );
-  }
-
-
-function myScorePlot( ){
-		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
+	function myScorePlot( ){
+		//TO-DO Make one plotting function to handle all 3 options, using parameters
+		//			Probably: $competitors (from this list, determine solo vs group comparison), time to compare, time to plot
 		//TO-DO add if statement to not show unless logged-in user
-		//Adjust $queryDT - some have one parameter, others two
+		//DO-DO Adjust $queryDT - some have one parameter, others two
+		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
     global $wgOut;
 
     $username = $this->getUser()->mName;
@@ -524,112 +465,6 @@ function myScorePlot( ){
 
 
 
-  // /**
-  // * Function generates stacked area plot of contribution scores
-  // *
-  // * @param $tbd - no parameters now
-  // * @return nothing - generates special page
-  // */
-  // function compareScoreStackedPlot( ){
-  //   global $wgOut;
-
-  //   $username = $this->getUser()->mName;
-  //   $userRealName = $this->getUser()->mRealName;
-  //   if( $userRealName ){
-  //   	$displayName = $userRealName;
-  //   }
-  //   else{
-  //   	$displayName = $username;
-  //   }
-
-  //   $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
-  //   	$username,
-  //   	'Ejmontal',
-  //   	// 'Swray'
-  //   	);
-  //   $username1 = $username;
-  //   $username2 = 'Ejmontal';
-
-  //   $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
-  //   $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
-
-  //   $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
-
-  //   $dbr = wfGetDB( DB_SLAVE );
-
-  //   // COUNT(rev_id) = Revisions
-  //   // COUNT(DISTINCT rev_page) = Pages
-  //   // COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 = Score
-
-  //   $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
-  //   $queryDT1 = "(
-		// 						SELECT
-		// 							DATE(rev_timestamp) AS user_day1,
-		// 							{$queryScore} AS user_score1
-		// 						FROM `revision`
-		// 						WHERE
-		// 							rev_user_text IN ( '$username1' )
-		// 						GROUP BY user_day1
-		// 						) user1";
-
-		// $queryDT2 = "(
-		// 						SELECT
-		// 							DATE(rev_timestamp) AS user_day2,
-		// 							{$queryScore} AS user_score2
-		// 						FROM `revision`
-		// 						WHERE
-		// 							rev_user_text IN ( '$username2' )
-		// 						GROUP BY user_day2
-		// 						) user2";
-
-  //   $sql = "SELECT
-		// 					COALESCE(user_day1, user_day2) AS day,
-		// 					user_score1,
-		// 					user_score2
-		// 				FROM
-		// 				(
-		// 					SELECT * FROM $queryDT1
-		// 					LEFT JOIN $queryDT2	ON user1.user_day1=user2.user_day2
-		// 					UNION
-		// 					SELECT * FROM $queryDT1
-		// 					RIGHT JOIN $queryDT2 ON user1.user_day1=user2.user_day2
-		// 				)results
-		// 				ORDER BY day ASC";
-
-  //   $res = $dbr->query( $sql );
-
-		// while( $row = $dbr->fetchRow( $res ) ) {
-
-  //     list($day, $userScore1, $userScore2) = array($row['day'], $row['user_score1'], $row['user_score2']);
-
-  //     $userdata["$username1"][] = array(
-		// 		'x' => strtotime( $day ) * 1000,
-		// 		'y' => floatval( $userScore1 ),
-		// 	);
-
-		// 	$userdata["$username2"][] = array(
-		// 		'x' => strtotime( $day ) * 1000,
-		// 		'y' => floatval( $userScore2 ),
-		// 	);
-
-  //   }
-
-  //   foreach( $competitors as $competitor ){
-
-	 //    $data[] = array(
-  //   		'key' => $competitor,
-  //   		'values' => $userdata["$competitor"],
-  // 		);
-
-  //   }
-
-
-  //   $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-
-  //   $wgOut->addHTML( $html );
-  // }
-
-
 
 
 
@@ -810,7 +645,6 @@ function compareScoreByUserGroup( ){
 
 
 function compareActivityByPeers( ){
-		// TO-DO remove compareScoreLineWindowPlot() ??
 		// TO-DO Modify plots to have some granular/moving-average and some just showing 1-month or 3-month average values
 		// TO-DO Maybe have one page with all data and another page with last 30-60 days
     global $wgOut;
@@ -1021,82 +855,6 @@ function compareActivityByPeers( ){
 
 
 
-
-
-
-
-
-
- //  /**
- //  * Function generates plot of contribution score for logged-in user over time
- //  *
- //  * @param $tbd - no parameters now
- //  * @return nothing - generates special page
- //  */
- //  function compareScoreLineWindowPlot( ){ // TO-DO: rename to something meaningful
- //    global $wgOut;
-
- //    $username = $this->getUser()->mName;
- //    $userRealName = $this->getUser()->mRealName;
- //    if( $userRealName ){
- //    	$displayName = $userRealName;
- //    }
- //    else{
- //    	$displayName = $username;
- //    }
-
- //    $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
- //    	$username,
- //    	'Ejmontal',
- //    	'Swray'
- //    	);
-
- //    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
- //    $wgOut->addModules( 'ext.userjourney.compareScorePlot.nvd3' );
-
- //    $html = '<div id="userjourney-chart"><svg height="400px"></svg></div>';
-
- //    $dbr = wfGetDB( DB_SLAVE );
-
- //    $data = array();
-
- //    foreach( $competitors as $competitor ){
- //    	$sql = "SELECT
-	//               DATE(rev_timestamp) AS day,
-	//               COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score
-	//             FROM `revision`
-	//             WHERE
-	//               rev_user_text IN ( '$competitor' )
-	//               /* AND rev_timestamp > 20150101000000 */
-	//             GROUP BY day
-	//             ORDER BY day DESC";
-
-	//     $res = $dbr->query( $sql );
-
-	//     while( $row = $dbr->fetchRow( $res ) ) {
-
-	//       list($day, $score) = array($row['day'], $row['score']);
-
-	//       $userdata[] = array(
-	//         'x' => strtotime( $day ) * 1000,
-	//         'y' => floatval( $score ),
-	//       );
-
-	//     }
-
-	//     $data[] = array(
- //      		'key' => $competitor,
- //      		'values' => $userdata,
- //      		);
-
-	//     $userdata = NULL; // without this, 2nd person gets 1st person's data plus theirs
-	//   }
-
- //    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-
- //    $wgOut->addHTML( $html );
-
-	// }
 
 
 
