@@ -1,60 +1,27 @@
 <?php
 
+
 class UserJourney {
 
 	static $referers = null;
-	
-	/*
-	* Short issues
-	*
-	* when 1 viewer goes to changed page to edit, they get 16 pts, then 1 pts (double view)
-	* 
-	* Need to address multiple hits displayed on page view
-	* 
-	* Add hook in core for modification of notifications
-	*
-	* Add to roadmap: Create widget to share contribution stats with friends
-	* 
-	* Clean up so 1st hook establishes globals, all hooks are minimal and ref activity and logic functions
-	* 
-	* Special map views
-	* - green/red/blue teams fighting for best watching and contribution ratings
-	*
-	*
-	 * Future Hooks to implement
-		
-		for badge Necromancer
-		public static function onArticleUndelete( Title $title, $create, $comment, $oldPageID){}
-		$wgHooks['Article'Undelete'][] = 'MyExtensionHooks::onArticleUndelete';
 
-		for watching an article (need to prevent watch/unwatch endless cycle for points)
-		public static function onWatchArticleComplete( $user, $article){}
-		$wgHooks['WatchArticleComplete'][] = 'MyExtensionHook::onWatchArticleComplete';
 
-		for completing file upload
-		public static function onUploadComplete ( &$image){}
-		$wgHooks['UploadComplete'][] = 'MyExtensionHooks::onUploadComplete';
 
-		Add starter badge system (small values to test at first):
-		* New Editor for first edit
-		* Editor for 10 edits
-		* Contributor for 20 edits
 
-	 *
-	 *
-	 */
 
-	/*
-		To get hooks on a page load:
+		// To get hooks on a page load:
 
-		global $hookLogFile;
-		if ( ! isset( $hookLogFile ) ) {
-			$hookLogFile = __DIR__ . "/../hooklog/" . date( "Ymd_His", time() ) . "_" . rand() . ".txt";
-			file_put_contents( $hookLogFile, $_SERVER["REQUEST_URI"] . "\n", FILE_APPEND );
-		}
-		file_put_contents( $hookLogFile, "$event\n", FILE_APPEND );
+		// global $hookLogFile;
+		// if ( ! isset( $hookLogFile ) ) {
+		// 	$hookLogFile = __DIR__ . "/../hooklog/" . date( "Ymd_His", time() ) . "_" . rand() . ".txt";
+		// 	file_put_contents( $hookLogFile, $_SERVER["REQUEST_URI"] . "\n", FILE_APPEND );
+		// }
+		// file_put_contents( $hookLogFile, "$event\n", FILE_APPEND );
 
-	*/
+
+
+
+
 
 
 	// 1 of the earliest hooks in page load
@@ -67,20 +34,22 @@ class UserJourney {
 	// }
 
 
+
+
+
 	public static function onBeforeInitialize( &$title, &$article, &$output, &$user, $request, $mediaWiki ) {
-// file_put_contents("/var/www/html/MWHooks.txt", "onBeforeInitializeBegin\n", FILE_APPEND);
 
 		$output->enableClientCache( false );
 		$output->addMeta( 'http:Pragma', 'no-cache' );
 
-		global $wgRequestTime, 
+		global $wgRequestTime,
 			$egCurrentHit, //data about this page load
 			$egUserUnreviewedPages, //number of unreviewed pages upon begin page load
 			$egUserid,
 			$egPageSave,
 			$egRecordedInDB;
 			//consider comparing before-after table for edge case of new page added to wl in page load
-			
+
 		//maybe use this method to preclude 2x view logging
 		//escape if this function is called following the PageContentSaveComplete hook
 		// if ( $egPageSave == true ) {
@@ -114,7 +83,7 @@ class UserJourney {
 			),
 			__METHOD__,
 			null,
-			null 
+			null
 		);
 
 		$userViewsOfThisPageToday = $dbr->selectRow(
@@ -157,7 +126,7 @@ class UserJourney {
 			'page_name' => $title->getFullText(),
 			'user_name' => $user->getName(),
 			'hit_timestamp' => wfTimestampNow(),
-			
+
 			'hit_year' => date('Y',$now),
 			'hit_month' => date('m',$now),
 			'hit_day' => date('d',$now),
@@ -184,24 +153,24 @@ class UserJourney {
 
 		// self::recordInDatabase(); //remove this after linking flow of hooks
 
-// file_put_contents("/var/www/html/MWHooks.txt", "onBeforeInitializeEnd\n", FILE_APPEND);
+		// file_put_contents("/var/www/html/MWHooks.txt", "onBeforeInitializeEnd\n", FILE_APPEND);
 		return true;
 
 	}
 
-// public static function onArticleUpdateBeforeRedirect( $article, &$sectionanchor, &$extraq ) {
-// 	global $egCurrentHit;
+	// public static function onArticleUpdateBeforeRedirect( $article, &$sectionanchor, &$extraq ) {
+	// 	global $egCurrentHit;
 
-// 	$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . "Test";
+	// 	$egCurrentHit['user_actions'] = $egCurrentHit['user_actions'] . "Test";
 
-// 	return true;
-// }
+	// 	return true;
+	// }
 
 
 	// After save page request has been completed
-	public static function onPageContentSaveComplete( $article, $user, $content, $summary, 
+	public static function onPageContentSaveComplete( $article, $user, $content, $summary,
 		$isMinor, $isWatch, $section, $flags, $revision, $status, $baseRevId ) {
-// file_put_contents("/var/www/html/MWHooks.txt", "onPageContentSaveComplete\n", FILE_APPEND);
+		// file_put_contents("/var/www/html/MWHooks.txt", "onPageContentSaveComplete\n", FILE_APPEND);
 
 		global $wgRequestTime, $egCurrentHit, $egPageSave;
 
@@ -265,15 +234,15 @@ class UserJourney {
 		$numberOfUserRevisions = $dbr->numRows( $listOfUserRevisions );
 
 		if( $dbr->numRows( $userHasSavedThisPageToday ) == 0 ) {
-			$egCurrentHit['user_points'] += 3; 
+			$egCurrentHit['user_points'] += 3;
 		} else if ( $numberOfUserRevisions == 10 ) {
 			$egCurrentHit['user_points'] += 10;
 			$user_badge = $user_badge . "10th Edit";
 			$egCurrentHit['user_badges'] = $egCurrentHit['user_badges'] . "10th Edit";
 		}
 
-	echo "<script type='text/javascript'>alert('test')</script>";
-	$egCurrentHit['user_badges'] = "Test";
+		// echo "<script type='text/javascript'>alert('test')</script>";
+		$egCurrentHit['user_badges'] = "Test";
 		//Unsure why I need to call this here when it seems AfterFinalPageOutput is called after this hook
 		self::recordInDatabase();
 
@@ -283,7 +252,7 @@ class UserJourney {
 
 	public static function onBeforePageDisplay( OutputPage &$out, Skin &$skin ){
 
-// file_put_contents("/var/www/html/MWHooks.txt", "onBeforePageDisplay\n", FILE_APPEND);
+		// file_put_contents("/var/www/html/MWHooks.txt", "onBeforePageDisplay\n", FILE_APPEND);
 
 		global $egCurrentHit, $egUserUnreviewedPages, $egUserid;
 
@@ -297,7 +266,7 @@ class UserJourney {
 
 		$deltaUserUnreviewedPages = $dbr->selectRow(
 			array('wl' => 'watchlist'),
-			array( 
+			array(
 				"COUNT(*) AS number",
 			),
 			array(
@@ -324,15 +293,15 @@ class UserJourney {
 		return true;
 
 	}
-		
+
 	public static function recordInDatabase (  ) { // could have param &$output
 		global $wgRequestTime, $egCurrentHit, $egRecordedInDB;
 
-// file_put_contents("/var/www/html/MWHooks.txt", "recordInDatabase\n", FILE_APPEND);
+		// file_put_contents("/var/www/html/MWHooks.txt", "recordInDatabase\n", FILE_APPEND);
 
 		// calculate response time now, in the last hook (that I know of).
 		$egCurrentHit['response_time'] = round( ( microtime( true ) - $wgRequestTime ) * 1000 );
-		
+
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->insert(
 			'userjourney',
@@ -345,7 +314,9 @@ class UserJourney {
 		$alertPoints = $egCurrentHit['user_points'];
 		$alertBadges = $egCurrentHit['user_badges'];
 		$alertMessage = ""; //NULL;
-echo "<script type='text/javascript'>alert('$alertPoints and $alertBadges')</script>";
+		$alertAction = $egCurrentHit['page_action'];
+		// echo "<script type='text/javascript'>alert('$alertPoints and $alertBadges')</script>";
+		// echo "<script>console.log( 'Notifications: $alertPoints Points, $alertBadges Badges, and $alertMessage Message. Event: $alertAction' );</script>";
 
 		if ( $alertPoints > 0 || $alertBadges != "" ){
 			$alertMessage = $alertMessage . "Awesome!";
@@ -357,7 +328,7 @@ echo "<script type='text/javascript'>alert('$alertPoints and $alertBadges')</scr
 			$alertMessage = $alertMessage . "\\nYou got the $alertBadges badge!";
 		}
 		if ( $alertMessage != "" ){
-			echo "<script type='text/javascript'>alert('$alertMessage')</script>";
+			// echo "<script type='text/javascript'>alert('$alertMessage')</script>";
 		}
 		// echo "<script type='text/javascript'>alert('Test $alertMessage')</script>";
 		return true;
@@ -368,7 +339,7 @@ echo "<script type='text/javascript'>alert('$alertPoints and $alertBadges')</scr
 
 		$userJourneyTable = $wgDBprefix . 'userjourney';
 		$schemaDir = __DIR__ . '/schema';
-		
+
 		$updater->addExtensionTable(
 			$userJourneyTable,
 			"$schemaDir/UserJourney.sql"
@@ -381,53 +352,55 @@ echo "<script type='text/javascript'>alert('$alertPoints and $alertBadges')</scr
 
 		return true;
 	}
-	
-	/**
-	 *	See WebRequest::getPathInfo() for ideas/info
-	 *  Make better use of: $wgScript, $wgScriptPath, $wgArticlePath;
-	 *
-	 *  Other recommendations:
-	 *    wfSuppressWarnings();
-	 *    $a = parse_url( $url );
-	 *    wfRestoreWarnings();
-	 **/
+
+	//
+	//	See WebRequest::getPathInfo() for ideas/info
+	//  Make better use of: $wgScript, $wgScriptPath, $wgArticlePath;
+	//
+	//  Other recommendations:
+	//    wfSuppressWarnings();
+	//    $a = parse_url( $url );
+	//    wfRestoreWarnings();
+	//
 	public static function getRefererTitleText ( $refererpage=null ) {
-		
+
 		global $wgScriptPath;
-	
+
 		if ( $refererpage )
 			return $refererpage;
 		else if ( ! isset($_SERVER["HTTP_REFERER"]) )
 			return null;
-	
+
 		$wikiBaseUrl = WebRequest::detectProtocol() . '://' . $_SERVER['HTTP_HOST'] . $wgScriptPath;
-		
-		// if referer URL starts 
+
+		// if referer URL starts
 		if ( strpos($_SERVER["HTTP_REFERER"], $wikiBaseUrl) === 0 ) {
-			
+
 			$questPos = strpos( $_SERVER['HTTP_REFERER'], '?' );
 			$hashPos = strpos( $_SERVER['HTTP_REFERER'], '#' );
-			
+
 			if ($hashPos !== false) {
 				$queryStringLength = $hashPos - $questPos;
 				$queryString = substr($_SERVER['HTTP_REFERER'], $questPos+1, $queryStringLength);
 			} else {
 				$queryString = substr($_SERVER['HTTP_REFERER'], $questPos+1);
 			}
-						
+
 			$query = array();
 			parse_str( $queryString, $query );
 
 			return isset($query['title']) ? $query['title'] : false;
-		
+
 		}
 		else
 			return false;
-		
+
 	}
-	
+
+
 
 
 
 }
+
 

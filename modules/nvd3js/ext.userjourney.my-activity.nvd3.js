@@ -1,6 +1,6 @@
 window.getMovingAverage = function ( dataArray, maLength, weekdaysOnly ) {
 
-	weekdaysOnly = weekdaysOnly || false; 
+	weekdaysOnly = weekdaysOnly || false;
     var denominator;
 
     // initialize early datapoints
@@ -13,7 +13,7 @@ window.getMovingAverage = function ( dataArray, maLength, weekdaysOnly ) {
 
     for ( var i = 0; i < dataArray.length; i++ ) {
 		dayOfWeek = new Date( dataArray[ i ].x ).getDay();
-	
+
 		if ( weekdaysOnly && (dayOfWeek === 0 || dayOfWeek === 6) ) {
 			avgArray[ i ] = {
 				x : dataArray[ i ].x,
@@ -25,11 +25,11 @@ window.getMovingAverage = function ( dataArray, maLength, weekdaysOnly ) {
 			if ( curDays.length > maLength ) {
 				curDays.shift(); // shift first element off
 			}
-			
-			curSum = curDays.reduce(function(p,c) { return p + c; });			
+
+			curSum = curDays.reduce(function(p,c) { return p + c; });
 			denominator = curDays.length;
 			curAvg = curSum / denominator;
-			
+
 			avgArray[ i ] = {
 				x : dataArray[ i ].x,
 				y : curAvg
@@ -64,16 +64,16 @@ $(document).ready(function(){
 	 **/
 	function getData () {
 
-		var rawData = JSON.parse( $('#wiretap-data').text() );
+		var rawData = JSON.parse( $('#userjourney-data').text() );
 
 		rawData[0].color = "#4B70E7";
-		
+
 		rawData.push( {
 			key: "7-Day Moving Average",
 			values: getMovingAverage( rawData[0].values, 7 ),
 			color: "#FFBB44"
 		} );
-		
+
 		rawData.push( {
 			key: "28-Day Moving Average",
 			values: getMovingAverage( rawData[0].values, 28 ),
@@ -113,13 +113,13 @@ $(document).ready(function(){
 		chart.y2Axis
 			.tickFormat(d3.format(',.0f'));
 
-		d3.select('#wiretap-chart svg')
+		d3.select('#userjourney-my-activity-plot svg')
 			.datum( hitsData.dailyHits )
 			.attr( "height" , $(window).height() - 100 )
 			.transition().duration(500)
 			.call(chart);
 
-		// $("#wiretap-chart svg").height( $(window).height() - 100 );
+		// $("#userjourney-chart svg").height( $(window).height() - 100 );
 
 		nv.utils.windowResize(chart.update);
 

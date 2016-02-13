@@ -2,14 +2,14 @@
 	"userjourney": "UserJourney",
 	"userjourney-desc": "[[Special:UserJourney|Tracks user journey]]",
 	"userjourney-viewmode": "View",
-	"userjourney-hits": "Individual hits",
-	"userjourney-dailytotals": "Daily hits totals",
-	"userjourney-dailytotalschart": "Daily hits totals chart",
-	"userjourney-dailyunique-user-hits": "Unique user-hits",
-	"userjourney-dailyunique-user-page-hits": "Unique user-page-hits",
+	"userjourney-overview": "Overview",
+	"userjourney-my-activity": "My Activity",
+	"userjourney-compare-activity": "Compare Activity",
 	"userjourney-filteruser": "filter",
 	"userjourney-filterpage": "filter",
 	"userjourney-unfilter": "Unfilter",
 	"userjourney-rawdata": "Data",
-	"userjourney-chart": "Chart"
+	"userjourney-plot": "Plot",
+	"userjourney-plot-by-peers": "Plot by peers",
+	"userjourney-plot-by-group": "Plot by group"
 }

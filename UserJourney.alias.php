@@ -11,5 +11,5 @@ $specialPageAliases = array();
 
 /** English (English) */
 $specialPageAliases['en'] = array(
-	'Wiretap' => array( 'Wiretap' ),
+	'User Journey' => array( 'User Journey' ),
 );
