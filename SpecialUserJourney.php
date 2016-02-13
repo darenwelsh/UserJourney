@@ -142,6 +142,8 @@ class SpecialUserJourney extends SpecialPage {
 
 		if( $this->getUser()->getID() ){ // Only do stuff if user has an ID
 
+			$wgOut->addModules( 'ext.userjourney.myActivityByYear.nvd3' );
+
 			$pager = new UserJourneyPager();
 			$pager->filterUser = $wgRequest->getVal( 'filterUser' );
 			$pager->filterPage = $wgRequest->getVal( 'filterPage' );
@@ -202,9 +204,43 @@ class SpecialUserJourney extends SpecialPage {
 			$html .= "<p>";
 			$html .= "Over the past {$userDaysSinceFirstRevisionFormatted} days, ";
 			$html .= "{$displayName} has made {$userTotalRevisionsFormatted} revisions to {$userTotalDistinctPagesRevisedFormatted} pages.";
-			$html .= " What if we make a low-ball estimation that for each page ${displayName} has made a contribution, it saved just one person 5 minutes?";
+			$html .= " What if we make a low-ball estimation that for each page ${displayName} has made a contribution";
+			$html .= ", it saved just one person 5 minutes otherwise spent looking up the information from a share drive or giant document?";
 			$html .= " That would be a time savings of {$userHoursSavedEstimate} hours!";
 			$html .= "</p>";
+
+			$html .= "<h2>History</h2>";
+
+			// Query for revisions and pages grouped by year
+			$sql = "SELECT
+						YEAR(rev_timestamp) AS year,
+						COUNT(rev_timestamp) AS revisions,
+						COUNT(DISTINCT rev_page) AS pages
+					FROM revision
+					WHERE rev_user_text = '{$username}'
+					GROUP BY YEAR(rev_timestamp)
+					";
+
+			$res = $dbr->query ( $sql );
+
+		    while( $row = $dbr->fetchRow( $res ) ) {
+
+				list($year, $revisions, $pages) = array($row['year'], $row['revisions'], $row['pages']);
+
+				$data['Revisions'][] = array(
+					'x' => $year,
+					'y' => floatval( $revisions ),
+				);
+
+				$data['Pages'][] = array(
+					'x' => $year,
+					'y' => floatval( $pages ),
+				);
+
+		    }
+
+		    $html .= "<div id='userjourney-my-activity-by-year-plot'><svg height="200px"></svg></div>";
+		    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
 		} else {
 			$url = Title::newFromText('Special:UserLogin')->getLinkUrl('returnto=Special:UserJourney');
@@ -323,10 +359,10 @@ class SpecialUserJourney extends SpecialPage {
 			foreach( $competitors as $competitor ){
 				$sql .= ", '{$competitor}'";
 			}
-			$sql .= ") ORDER BY rev_timestamp ASC
-				LIMIT 1";
+		$sql .= ") ORDER BY rev_timestamp ASC
+			LIMIT 1";
 
-			$res = $dbr->query( $sql );
+		$res = $dbr->query( $sql );
 	    $row = $dbr->fetchRow( $res );
 	    $firstContributionDateFromGroup = $row['day'];
 
@@ -361,17 +397,17 @@ class SpecialUserJourney extends SpecialPage {
 
 	    $res = $dbr->query( $sql );
 
-			while( $row = $dbr->fetchRow( $res ) ) {
+		while( $row = $dbr->fetchRow( $res ) ) {
 
-				foreach( $competitors as $competitor ){
+			foreach( $competitors as $competitor ){
 
-					list($day, $score) = array($row['day'], $row["$competitor"]);
+				list($day, $score) = array($row['day'], $row["$competitor"]);
 
-					$userdata["$competitor"][] = array(
-						'x' => strtotime( $day ) * 1000,
-						'y' => floatval( $score ),
-					);
-				}
+				$userdata["$competitor"][] = array(
+					'x' => strtotime( $day ) * 1000,
+					'y' => floatval( $score ),
+				);
+			}
 
 	    }
 
