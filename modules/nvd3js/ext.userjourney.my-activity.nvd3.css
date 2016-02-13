@@ -1,13 +1,8 @@
-/*
-This currently isn't working to show points for series 0
-
-.nv-series-0 circle.nv-point {
-	fill-opacity: 1 !important;
-	stroke-opacity: 1 !important;
+.nv-scatter .nv-series-0 path.nv-point  {
+        fill-opacity: 1 !important;
+        stroke-opacity: 1 !important;
 }
 
-.nv-series-0 path.nv-line {
-	stroke-width: 0px !important;
+.nv-series-0 path.nv-line  {
+        stroke-width: 0px !important;
 }
-
-*/

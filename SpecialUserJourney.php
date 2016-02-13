@@ -206,125 +206,132 @@ class SpecialUserJourney extends SpecialPage {
     }
 
     $wgOut->setPageTitle( "UserJourney: Activity Plot for $displayName" );
-    $wgOut->addModules( 'ext.userjourney.myActivity.nvd3' );
 
-    $dbr = wfGetDB( DB_SLAVE );
+    if( $this->getUser()->getID() ){ // Only do stuff if user has an ID
 
-		$competitors = array($username);
+	    $wgOut->addModules( 'ext.userjourney.myActivity.nvd3' );
 
-    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
+	    $dbr = wfGetDB( DB_SLAVE );
 
-    $queryDT = function( $competitor ){
-    	$output = "INSERT INTO temp_union (day, {$competitor})
-			SELECT
-				DATE(rev_timestamp) AS day,
-				COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS {$competitor}
-			FROM `revision`
-			WHERE
-				rev_user_text IN ( '{$competitor}' )
-        /* AND rev_timestamp > 20150101000000 */
-			GROUP BY day";
+			$competitors = array($username);
 
-			return $output;
-    };
+	    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
 
-		// Create temp table
-		$sql = "CREATE TEMPORARY TABLE temp_union(
-			day date NULL";
-		// Add column for user "dummy"
-		$sql .= ", dummy float NULL";
-		foreach( $competitors as $competitor ){
-			$sql .= ", {$competitor} float NULL";
-		}
-		$sql .= " )ENGINE = MEMORY";
+	    $queryDT = function( $competitor ){
+	    	$output = "INSERT INTO temp_union (day, {$competitor})
+				SELECT
+					DATE(rev_timestamp) AS day,
+					COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS {$competitor}
+				FROM `revision`
+				WHERE
+					rev_user_text IN ( '{$competitor}' )
+	        /* AND rev_timestamp > 20150101000000 */
+				GROUP BY day";
 
-    $res = $dbr->query( $sql );
+				return $output;
+	    };
 
-    // Add column with dummy user to generate a 0 value for every day during comparison period
-    $sql = "SELECT
-				DATE(rev_timestamp) AS day
-			FROM revision
-			WHERE rev_user_text in ( ''";
-		foreach( $competitors as $competitor ){
-			$sql .= ", '{$competitor}'";
-		}
-		$sql .= ") ORDER BY rev_timestamp ASC
-			LIMIT 1";
-
-		$res = $dbr->query( $sql );
-    $row = $dbr->fetchRow( $res );
-    $firstContributionDateFromGroup = $row['day'];
-
-    $lastDate = date("Ymd", time()); // Today as YYYYMMDD
-    $firstDate = date('Ymd', strtotime( $firstContributionDateFromGroup ) ); // Date of first contribution from users in this group
-    $date = $firstDate;
-    while( $date <= $lastDate ){
-    	$dateTime = date('Y-m-d', strtotime($date * 1000000) ); // Append 0 value for HHMMSS to match timestamp format in revision table
-
-			// $sql = $queryDT('dummy', $dateTime);
-			$sql = "INSERT INTO temp_union (day, dummy) VALUES ('{$dateTime}', '0')";
-
-			$res = $dbr->query( $sql );
-
-			$date = date('Ymd', strtotime($date . ' +1 day') );
-    }
-
-		// Add each competitor's score to temp table
-		foreach( $competitors as $competitor ){
-			$sql = $queryDT($competitor);
-
-			$res = $dbr->query( $sql );
-		}
-
-		// Consolidate rows so each day only has one row
-    $sql = "SELECT
-			day";
-		foreach( $competitors as $competitor ){
-			$sql .= ", max({$competitor}) {$competitor}";
-		}
-		$sql .= " FROM temp_union GROUP BY day";
-
-    $res = $dbr->query( $sql );
-
-		while( $row = $dbr->fetchRow( $res ) ) {
-
+			// Create temp table
+			$sql = "CREATE TEMPORARY TABLE temp_union(
+				day date NULL";
+			// Add column for user "dummy"
+			$sql .= ", dummy float NULL";
 			foreach( $competitors as $competitor ){
+				$sql .= ", {$competitor} float NULL";
+			}
+			$sql .= " )ENGINE = MEMORY";
 
-				list($day, $score) = array($row['day'], $row["$competitor"]);
+	    $res = $dbr->query( $sql );
 
-				$userdata["$competitor"][] = array(
-					'x' => strtotime( $day ) * 1000,
-					'y' => floatval( $score ),
-				);
+	    // Add column with dummy user to generate a 0 value for every day during comparison period
+	    $sql = "SELECT
+					DATE(rev_timestamp) AS day
+				FROM revision
+				WHERE rev_user_text in ( ''";
+			foreach( $competitors as $competitor ){
+				$sql .= ", '{$competitor}'";
+			}
+			$sql .= ") ORDER BY rev_timestamp ASC
+				LIMIT 1";
+
+			$res = $dbr->query( $sql );
+	    $row = $dbr->fetchRow( $res );
+	    $firstContributionDateFromGroup = $row['day'];
+
+	    $lastDate = date("Ymd", time()); // Today as YYYYMMDD
+	    $firstDate = date('Ymd', strtotime( $firstContributionDateFromGroup ) ); // Date of first contribution from users in this group
+	    $date = $firstDate;
+	    while( $date <= $lastDate ){
+	    	$dateTime = date('Y-m-d', strtotime($date * 1000000) ); // Append 0 value for HHMMSS to match timestamp format in revision table
+
+				// $sql = $queryDT('dummy', $dateTime);
+				$sql = "INSERT INTO temp_union (day, dummy) VALUES ('{$dateTime}', '0')";
+
+				$res = $dbr->query( $sql );
+
+				$date = date('Ymd', strtotime($date . ' +1 day') );
+	    }
+
+			// Add each competitor's score to temp table
+			foreach( $competitors as $competitor ){
+				$sql = $queryDT($competitor);
+
+				$res = $dbr->query( $sql );
 			}
 
-    }
-
-		// Remove temp table
-    $sql = "DROP TABLE temp_union";
-    $res = $dbr->query ( $sql );
-
-    foreach( $competitors as $competitor ){
-
-	    $person = User::newFromName("$competitor");
-			$realName = $person->getRealName();
-			if( empty($realName) ){
-				$nameToUse = $competitor;
-			} else {
-				$nameToUse = $realName;
+			// Consolidate rows so each day only has one row
+	    $sql = "SELECT
+				day";
+			foreach( $competitors as $competitor ){
+				$sql .= ", max({$competitor}) {$competitor}";
 			}
+			$sql .= " FROM temp_union GROUP BY day";
 
-	    $data[] = array(
-    		'key' => $nameToUse,
-    		'values' => $userdata["$competitor"],
-  		);
+	    $res = $dbr->query( $sql );
 
-    }
+			while( $row = $dbr->fetchRow( $res ) ) {
+
+				foreach( $competitors as $competitor ){
+
+					list($day, $score) = array($row['day'], $row["$competitor"]);
+
+					$userdata["$competitor"][] = array(
+						'x' => strtotime( $day ) * 1000,
+						'y' => floatval( $score ),
+					);
+				}
+
+	    }
+
+			// Remove temp table
+	    $sql = "DROP TABLE temp_union";
+	    $res = $dbr->query ( $sql );
+
+	    foreach( $competitors as $competitor ){
+
+		    $person = User::newFromName("$competitor");
+				$realName = $person->getRealName();
+				if( empty($realName) ){
+					$nameToUse = $competitor;
+				} else {
+					$nameToUse = $realName;
+				}
+
+		    $data[] = array(
+	    		'key' => $nameToUse,
+	    		'values' => $userdata["$competitor"],
+	  		);
+
+	    }
 
 
-		$html = '';
-    $html .= '<div id="userjourney-my-activity-plot"><svg height="400px"></svg></div>';
-    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+			$html = '';
+	    $html .= '<div id="userjourney-my-activity-plot"><svg height="400px"></svg></div>';
+	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+	  } else {
+			$html = '<br />Sorry, but this feature is not available for anonymous users.<br />';
+		}
+	  }
 
     $wgOut->addHTML( $html );
   }
