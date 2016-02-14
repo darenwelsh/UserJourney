@@ -251,6 +251,76 @@ class SpecialUserJourney extends SpecialPage {
 		    $html .= "<div id='userjourney-my-activity-by-year-plot'><svg height='200px'></svg></div>";
 		    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
+
+			/*
+			*  SUMMARY OF EACH YEAR
+			*/
+			$html .= "Let's take a closer look. For each year, we have listed the most-revised pages for {$displayName}.";
+			$html .= " Without all these contributions, those pages wouldn't be the useful resource they are today.";
+
+			// Get array of years with contributions from user
+			$sql = "SELECT
+						YEAR(rev_timestamp) as year
+					FROM revision
+					WHERE rev_user_text = '{$username}'
+					GROUP BY year
+					ORDER BY year ASC";
+
+			$res = $dbr->query( $sql );
+			$years = array();
+			while( $row = $dbr->fetchRow( $res ) ){
+				$years[] = $row['year'];
+			}
+
+			// Parse through array of years and output section with summary
+			foreach( $years as $year ){
+
+				$html .= "<h3>{$year}</h3>";
+				$html .= "<ol>";
+
+				// Get list of pages most-revised in that year
+				$startTimeStamp = $year * 10000000000;
+				$endTimeStamp = ( $year + 1 ) * 10000000000;
+				$sql = "SELECT
+							page_id,
+							COUNT(*) as count
+						FROM
+						(SELECT
+							rev_page
+						FROM revision
+						WHERE rev_user_text = '{$username}'
+						AND rev_timestamp < {$endTimeStamp}
+						AND rev_timestamp > {$startTimeStamp}
+						)a
+						JOIN
+						(SELECT
+							page_id,
+							page_namespace,
+							page_title
+						FROM page)b
+						ON page_id=rev_page
+						GROUP BY page_title
+						ORDER BY count DESC
+						LIMIT 3";
+
+				$res = $dbr->query( $sql );
+				while( $row = $dbr->fetchRow( $res ) ){
+
+					list($page, $revisions) = array($row['page_id'], $row['count']);
+
+					$pageTitle = Title::newFromID( $page );
+					$pageURL = $this->getSkin()->link( $pageTitle );
+
+					$html .= "<li>{$pageURL} ({$revisions} revisions in this year)</li>";
+				}
+
+				$html .= "</ol>";
+			}
+
+
+
+
+
 		} else {
 			$url = Title::newFromText('Special:UserLogin')->getLinkUrl('returnto=Special:UserJourney');
 
