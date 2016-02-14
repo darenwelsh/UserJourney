@@ -209,7 +209,7 @@ class SpecialUserJourney extends SpecialPage {
 			$html .= " That would be a time savings of {$userHoursSavedEstimate} hours!";
 			$html .= "</p>";
 
-			$html .= "<h2>History</h2>";
+			$html .= "<h2>History Overivew</h2>";
 
 			// Query for revisions and pages grouped by year
 			$sql = "SELECT
@@ -227,19 +227,28 @@ class SpecialUserJourney extends SpecialPage {
 
 				list($year, $revisions, $pages) = array($row['year'], $row['revisions'], $row['pages']);
 
-				$data['Revisions'][] = array(
-					'x' => $year,
+				$userdata['Revisions'][] = array(
+					'x' => intval($year),
 					'y' => floatval( $revisions ),
 				);
 
-				$data['Pages'][] = array(
-					'x' => $year,
+				$userdata['Pages'][] = array(
+					'x' => intval($year),
 					'y' => floatval( $pages ),
 				);
 
 		    }
 
-		    $html .= "<div id='userjourney-my-activity-by-year-plot'><svg height="200px"></svg></div>";
+	  		$data[] = array(
+	    		'key' => 'Pages',
+	    		'values' => $userdata['Pages'],
+	  		);
+	  		$data[] = array(
+	    		'key' => 'Revisions',
+	    		'values' => $userdata['Revisions'],
+	  		);
+
+		    $html .= "<div id='userjourney-my-activity-by-year-plot'><svg height='200px'></svg></div>";
 		    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
 		} else {

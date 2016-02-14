@@ -66,7 +66,7 @@ $(document).ready(function(){
 
 		var rawData = JSON.parse( $('#userjourney-data').text() );
 
-		rawData[0].color = "#4B70E7";
+		// rawData[0].color = "#4B70E7";
 
 		// rawData.push( {
 		// 	key: "7-Day Moving Average",
@@ -95,27 +95,23 @@ $(document).ready(function(){
 
 		window.hitsData = getData();
 		console.log(hitsData);
-		window.chart = nv.models.lineWithFocusChart();
+		window.chart = nv.models.multiBarHorizontalChart()
+                //.rotateLabels(45)
+        ;
+
 
 		chart.xAxis
 			.tickFormat(function(d) {
-				return d3.time.format('%x')(new Date(d))
-			});
-
-		chart.x2Axis
-			.tickFormat(function(d) {
-				return d3.time.format('%x')(new Date(d))
+				// return d3.time.format('%Y')(new Date(d))
+				return d
 			});
 
 		chart.yAxis
 			.tickFormat(d3.format(',.0f'));
 
-		chart.y2Axis
-			.tickFormat(d3.format(',.0f'));
-
 		d3.select('#userjourney-my-activity-by-year-plot svg')
 			.datum( hitsData.dailyHits )
-			.attr( "height" , $(window).height() - 100 )
+			// .attr( "height" , $(window).height() - 100 )
 			.transition().duration(500)
 			.call(chart);
 
