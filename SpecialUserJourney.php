@@ -463,8 +463,79 @@ class SpecialUserJourney extends SpecialPage {
 		$html .= "Distinct Pages Level {$userTotalDistinctPagesLevel}";
 		$html .= "<br /><br />";
 
+		/*
+		*  List of categories with pages revised by user
+		*  Limit to categories with at least 10 pages
+		*  Output: catTitle, pagesInCatRevisedByUser, pagesInCat
+		*/
+		$html .= "Categories:";
+		$html .= "<ol>";
 
+		$sql = "SELECT
+					catTitle,
+					pagesInCatRevisedByUser,
+					pagesInCat
+				FROM
+				(
+				(SELECT
+					cat_pages as pagesInCat,
+					cat_title as catTitle
+				FROM category)d
+				JOIN
+				(
+				SELECT
+					COUNT(cat) as pagesInCatRevisedByUser,
+					cat
+				FROM
+				(SELECT
+					DISTINCT(rev_page)
+				FROM revision
+				WHERE rev_user_text = '{$username}'
+				)a
+				JOIN
+				(SELECT
+					cl_from,
+					cl_to as cat
+				FROM categorylinks
+				)b
+				WHERE rev_page=cl_from
+				GROUP BY cat
+				)c
+				) WHERE cat=catTitle
+				AND pagesInCat > 9
+				ORDER BY (pagesInCatRevisedByUser / pagesInCat) DESC";
 
+		$res = $dbr->query( $sql );
+
+		while( $row = $dbr->fetchRow( $res ) ){
+
+			// Badges based on % of pages in category edited (>50%, >80%, 100%)
+
+			list($category, $catPagesRevised, $catPages) = array($row['catTitle'], $row['pagesInCatRevisedByUser'], $row['pagesInCat']);
+
+			if( $catPagesRevised == $catPages ){
+
+				$pageTitle = Title::newFromText( $category, NS_CATEGORY );
+				$pageURL = $this->getSkin()->link( $pageTitle );
+
+				$html .= "<li>100%: {$pageURL}</li>";
+			} else if( $catPagesRevised >= ( $catPages * 0.8 ) ){
+
+				$pageTitle = Title::newFromText( $category, NS_CATEGORY );
+				$pageURL = $this->getSkin()->link( $pageTitle );
+
+				$html .= "<li>80%: {$pageURL}</li>";
+			} else if( $catPagesRevised >= ( $catPages * 0.5 ) ){
+
+				$pageTitle = Title::newFromText( $category, NS_CATEGORY );
+				$pageURL = $this->getSkin()->link( $pageTitle );
+
+				$html .= "<li>50%: {$pageURL}</li>";
+			}
+
+		}
+
+		$html .= "</ol>";
 
 		$wgOut->addHTML( $html );
 	}
