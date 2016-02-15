@@ -276,6 +276,8 @@ class SpecialUserJourney extends SpecialPage {
 			foreach( $years as $year ){
 
 				$html .= "<h3>{$year}</h3>";
+
+				$html .= "Most-Revised Pages:";
 				$html .= "<ol>";
 
 				// Get list of pages most-revised in that year
@@ -301,7 +303,7 @@ class SpecialUserJourney extends SpecialPage {
 						ON page_id=rev_page
 						GROUP BY page_title
 						ORDER BY count DESC
-						LIMIT 3";
+						LIMIT 10";
 
 				$res = $dbr->query( $sql );
 				while( $row = $dbr->fetchRow( $res ) ){
@@ -315,6 +317,48 @@ class SpecialUserJourney extends SpecialPage {
 				}
 
 				$html .= "</ol>";
+
+				$html .= "Categories of Pages Most-Revised:";
+				$html .= "<ol>";
+
+				// Get list of pages most-revised in that year
+				$startTimeStamp = $year * 10000000000;
+				$endTimeStamp = ( $year + 1 ) * 10000000000;
+
+				$sql = "SELECT
+							cl_to as category,
+							COUNT(*) as count
+						FROM
+						(SELECT
+							rev_page
+						FROM revision
+						WHERE rev_user_text = '{$username}'
+						AND rev_timestamp < {$endTimeStamp}
+						AND rev_timestamp > {$startTimeStamp}
+						)a,
+						(SELECT
+							cl_from,
+							cl_to
+						FROM categorylinks
+						)b
+						WHERE rev_page=cl_from
+						GROUP BY cl_to
+						ORDER BY count DESC
+						LIMIT 10";
+
+				$res = $dbr->query( $sql );
+				while( $row = $dbr->fetchRow( $res ) ){
+
+					list($category, $revisions) = array($row['category'], $row['count']);
+
+					$pageTitle = Title::newFromText( $category, NS_CATEGORY );
+					$pageURL = $this->getSkin()->link( $pageTitle );
+
+					$html .= "<li>{$pageURL} ({$revisions} revisions to pages in this category in this year)</li>";
+				}
+
+				$html .= "</ol>";
+
 			}
 
 
