@@ -21,7 +21,13 @@ class SpecialUserJourney extends SpecialPage {
 
 		$wgOut->addHTML( $this->getPageHeader() );
 
-		if ($this->mMode == 'user-activity-data') {
+		if ($this->mMode == 'user-history') {
+			$this->userHistory();
+		}
+		else if ($this->mMode == 'user-badges') {
+			$this->myScoreData();
+		}
+		else if ($this->mMode == 'user-activity-data') {
 			$this->myScoreData();
 		}
 		else if ( $this->mMode == 'user-activity-plot' ) {
@@ -80,6 +86,10 @@ class SpecialUserJourney extends SpecialPage {
 			//TO-DO add if statement to show extra data plots if logged-in user is in groups sysop or Manager
 			//TO-DO add pull-down menus so these views can show any user's data for sysop or Manager
 
+			$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-history', 'user-history' ) . $unfilterLink . "</li>";
+
+			$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-badges', 'user-badges' ) . $unfilterLink . "</li>";
+
 			$navLine .= "<li>" . wfMessage( 'userjourney-my-activity' )->text()
 				. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'user-activity-data' )
 				. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-activity-plot' )
@@ -136,6 +146,25 @@ class SpecialUserJourney extends SpecialPage {
 	}
 
 	public function overview () {
+		global $wgOut, $wgRequest;
+
+		$wgOut->setPageTitle( 'UserJourney' );
+
+		if( $this->getUser()->getID() ){ // Only do stuff if user has an ID
+
+			$html = "";
+
+		} else {
+			$url = Title::newFromText('Special:UserLogin')->getLinkUrl('returnto=Special:UserJourney');
+
+			$html = "Sorry, but this page is for logged in users. Please <a href='{$url}'>sign in</a> so you can begin your journey!";
+		}
+
+		$wgOut->addHTML( $html );
+	}
+
+
+	public function userHistory () {
 		global $wgOut, $wgRequest;
 
 		$wgOut->setPageTitle( 'UserJourney' );
@@ -370,6 +399,235 @@ class SpecialUserJourney extends SpecialPage {
 
 			$html = "Sorry, but this page is for logged in users. Please <a href='{$url}'>sign in</a> so you can begin your journey!";
 		}
+
+		$wgOut->addHTML( $html );
+	}
+
+
+
+
+	public function userBadges () {
+		global $wgOut, $wgRequest;
+
+		$wgOut->setPageTitle( 'UserJourney' );
+
+		// $pager = new UserJourneyPager();
+		// $pager->filterUser = $wgRequest->getVal( 'filterUser' );
+		// $pager->filterPage = $wgRequest->getVal( 'filterPage' );
+
+		// $body = $pager->getBody();
+		$html = '';
+
+		$username = $this->getUser()->mName;
+		$displayName = self::getDisplayName();
+
+	    $dbr = wfGetDB( DB_SLAVE );
+
+	    // Query for user's first revision timestamp
+	    $sql = "SELECT
+					DATE(rev_timestamp) AS day
+				FROM revision
+				WHERE rev_user_text = '{$username}'
+				ORDER BY rev_timestamp ASC
+				LIMIT 1";
+
+		$res = $dbr->query( $sql );
+	    $row = $dbr->fetchRow( $res );
+
+	    $userFirstRevisionTimestamp = strtotime( $row['day'] ); // Unix timestamp like 1320732000
+	    $userFirstRevisionDate =      date('jS', $userFirstRevisionTimestamp); // 3rd or 4th
+	    $userFirstRevisionDay =       date('l', $userFirstRevisionTimestamp); // Monday or Tuesday
+	    $userFirstRevisionMonth =     date('F', $userFirstRevisionTimestamp); // November
+	    $userFirstRevisionYear =      date('Y', $userFirstRevisionTimestamp); // 2011
+
+	    $userDaysSinceFirstRevision = round( ( ( strtotime( date('Ymd H:m:s') ) - $userFirstRevisionTimestamp ) / (60 * 60 * 24) ), 0);
+	    $userDaysSinceFirstRevisionFormatted = number_format($userDaysSinceFirstRevision);
+
+	    // Query for user's total number of revisions and total number of distinct pages revised
+	    $sql = "SELECT
+					COUNT(rev_timestamp) AS revisions,
+					COUNT(DISTINCT rev_page) AS pages
+				FROM revision
+				WHERE rev_user_text = '{$username}'";
+
+		$res = $dbr->query( $sql );
+	    $row = $dbr->fetchRow( $res );
+
+	    $userTotalRevisions = $row['revisions'];
+	    $userTotalRevisionsFormatted = number_format( $row['revisions'] );
+	    $userTotalDistinctPagesRevised = $row['pages'];
+	    $userTotalDistinctPagesRevisedFormatted = number_format( $userTotalDistinctPagesRevised );
+	    $userHoursSavedEstimate = round( $userTotalDistinctPagesRevised * (5 / 60), 1); // Hours saved
+
+		// The story
+		$html .= "<p>";
+		$html .= "This is a tale of the wiki journey of {$displayName}.";
+		$html .= " Our hero began a quest to share knowledge on the ";
+		$html .= "{$userFirstRevisionDate} day of {$userFirstRevisionMonth} in the year {$userFirstRevisionYear}.";
+		$html .= " But this was no ordinary {$userFirstRevisionDay}.";
+		$html .= " On this fateful day, {$displayName} joined the brave legion of sharing information, citing references, and saving others' time.";
+		$html .= "</p>";
+
+		$html .= "<p>";
+		$html .= "Over the past {$userDaysSinceFirstRevisionFormatted} days, ";
+		$html .= "{$displayName} has made {$userTotalRevisionsFormatted} revisions to {$userTotalDistinctPagesRevisedFormatted} pages.";
+		$html .= " What if we make a low-ball estimation that for each page ${displayName} has made a contribution";
+		$html .= ", it saved just one person 5 minutes otherwise spent looking up the information from a share drive or giant document?";
+		$html .= " That would be a time savings of {$userHoursSavedEstimate} hours!";
+		$html .= "</p>";
+
+		$html .= "<h2>History Overivew</h2>";
+
+		// Query for revisions and pages grouped by year
+		$sql = "SELECT
+					YEAR(rev_timestamp) AS year,
+					COUNT(rev_timestamp) AS revisions,
+					COUNT(DISTINCT rev_page) AS pages
+				FROM revision
+				WHERE rev_user_text = '{$username}'
+				GROUP BY YEAR(rev_timestamp)
+				";
+
+		$res = $dbr->query ( $sql );
+
+	    while( $row = $dbr->fetchRow( $res ) ) {
+
+			list($year, $revisions, $pages) = array($row['year'], $row['revisions'], $row['pages']);
+
+			$userdata['Revisions'][] = array(
+				'x' => intval($year),
+				'y' => floatval( $revisions ),
+			);
+
+			$userdata['Pages'][] = array(
+				'x' => intval($year),
+				'y' => floatval( $pages ),
+			);
+
+	    }
+
+  		$data[] = array(
+    		'key' => 'Pages',
+    		'values' => $userdata['Pages'],
+  		);
+  		$data[] = array(
+    		'key' => 'Revisions',
+    		'values' => $userdata['Revisions'],
+  		);
+
+	    $html .= "<div id='userjourney-my-activity-by-year-plot'><svg height='200px'></svg></div>";
+	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+
+
+		/*
+		*  SUMMARY OF EACH YEAR
+		*/
+		$html .= "Let's take a closer look. For each year, we have listed the most-revised pages for {$displayName}.";
+		$html .= " Without all these contributions, those pages wouldn't be the useful resource they are today.";
+
+		// Get array of years with contributions from user
+		$sql = "SELECT
+					YEAR(rev_timestamp) as year
+				FROM revision
+				WHERE rev_user_text = '{$username}'
+				GROUP BY year
+				ORDER BY year ASC";
+
+		$res = $dbr->query( $sql );
+		$years = array();
+		while( $row = $dbr->fetchRow( $res ) ){
+			$years[] = $row['year'];
+		}
+
+		// Parse through array of years and output section with summary
+		foreach( $years as $year ){
+
+			$html .= "<h3>{$year}</h3>";
+
+			$html .= "Most-Revised Pages:";
+			$html .= "<ol>";
+
+			// Get list of pages most-revised in that year
+			$startTimeStamp = $year * 10000000000;
+			$endTimeStamp = ( $year + 1 ) * 10000000000;
+			$sql = "SELECT
+						page_id,
+						COUNT(*) as count
+					FROM
+					(SELECT
+						rev_page
+					FROM revision
+					WHERE rev_user_text = '{$username}'
+					AND rev_timestamp < {$endTimeStamp}
+					AND rev_timestamp > {$startTimeStamp}
+					)a
+					JOIN
+					(SELECT
+						page_id,
+						page_namespace,
+						page_title
+					FROM page)b
+					ON page_id=rev_page
+					GROUP BY page_title
+					ORDER BY count DESC
+					LIMIT 10";
+
+			$res = $dbr->query( $sql );
+			while( $row = $dbr->fetchRow( $res ) ){
+
+				list($page, $revisions) = array($row['page_id'], $row['count']);
+
+				$pageTitle = Title::newFromID( $page );
+				$pageURL = $this->getSkin()->link( $pageTitle );
+
+				$html .= "<li>{$pageURL} ({$revisions} revisions in this year)</li>";
+			}
+
+			$html .= "</ol>";
+
+			$html .= "Categories of Pages Most-Revised:";
+			$html .= "<ol>";
+
+			// Get list of pages most-revised in that year
+			$startTimeStamp = $year * 10000000000;
+			$endTimeStamp = ( $year + 1 ) * 10000000000;
+
+			$sql = "SELECT
+						cl_to as category,
+						COUNT(*) as count
+					FROM
+					(SELECT
+						rev_page
+					FROM revision
+					WHERE rev_user_text = '{$username}'
+					AND rev_timestamp < {$endTimeStamp}
+					AND rev_timestamp > {$startTimeStamp}
+					)a,
+					(SELECT
+						cl_from,
+						cl_to
+					FROM categorylinks
+					)b
+					WHERE rev_page=cl_from
+					GROUP BY cl_to
+					ORDER BY count DESC
+					LIMIT 10";
+
+			$res = $dbr->query( $sql );
+			while( $row = $dbr->fetchRow( $res ) ){
+
+				list($category, $revisions) = array($row['category'], $row['count']);
+
+				$pageTitle = Title::newFromText( $category, NS_CATEGORY );
+				$pageURL = $this->getSkin()->link( $pageTitle );
+
+				$html .= "<li>{$pageURL} ({$revisions} revisions to pages in this category in this year)</li>";
+			}
+
+			$html .= "</ol>";
+
+		}
+
 
 		$wgOut->addHTML( $html );
 	}
