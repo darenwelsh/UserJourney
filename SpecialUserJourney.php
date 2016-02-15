@@ -477,32 +477,34 @@ class SpecialUserJourney extends SpecialPage {
 					pagesInCat
 				FROM
 				(
-				(SELECT
-					cat_pages as pagesInCat,
-					cat_title as catTitle
-				FROM category)d
-				JOIN
-				(
-				SELECT
-					COUNT(cat) as pagesInCatRevisedByUser,
-					cat
-				FROM
-				(SELECT
-					DISTINCT(rev_page)
-				FROM revision
-				WHERE rev_user_text = '{$username}'
-				)a
-				JOIN
-				(SELECT
-					cl_from,
-					cl_to as cat
-				FROM categorylinks
-				)b
-				WHERE rev_page=cl_from
-				GROUP BY cat
-				)c
+					(SELECT
+						cat_pages as pagesInCat,
+						cat_title as catTitle
+					FROM category
+					)d /* number of pages in categories */
+					JOIN
+					(
+					SELECT
+						COUNT(cat) as pagesInCatRevisedByUser,
+						cat
+					FROM
+						(SELECT
+							DISTINCT(rev_page)
+						FROM revision
+						WHERE rev_user_text = '{$username}'
+						)a /* distinct pages user has revised */
+						JOIN
+						(SELECT
+							cl_from,
+							cl_to as cat
+						FROM categorylinks
+						)b /* pages and their categories */
+						WHERE rev_page=cl_from
+						GROUP BY cat
+						)c /* number of pages in each category revised by user */
 				) WHERE cat=catTitle
 				AND pagesInCat > 9
+				AND pagesInCatRevisedByUser / pagesInCat >= 0.5
 				ORDER BY (pagesInCatRevisedByUser / pagesInCat) DESC";
 
 		$res = $dbr->query( $sql );
@@ -513,24 +515,108 @@ class SpecialUserJourney extends SpecialPage {
 
 			list($category, $catPagesRevised, $catPages) = array($row['catTitle'], $row['pagesInCatRevisedByUser'], $row['pagesInCat']);
 
+			$sql = "SELECT
+						COUNT(DISTINCT(cl_from)) as count,
+						username
+					FROM
+						(SELECT /* pages in EVA category */
+							cl_from, /* pageID */
+							cl_to /* catName */
+						FROM categorylinks
+						WHERE cl_to = '{$category}'
+						)a
+						JOIN
+						(SELECT /* page revisions */
+							rev_page, /* pageID */
+							rev_user_text as username
+						FROM revision
+						)b
+						WHERE cl_from=rev_page
+
+					GROUP BY username
+					ORDER BY count DESC";
+
 			if( $catPagesRevised == $catPages ){
 
 				$pageTitle = Title::newFromText( $category, NS_CATEGORY );
 				$pageURL = $this->getSkin()->link( $pageTitle );
 
-				$html .= "<li>100%: {$pageURL}</li>";
+				$res2 = $dbr->query( $sql );
+
+				$html .= "<li>100%: {$pageURL}";
+				$html .= "<ol>";
+				while( $row2 = $dbr->fetchRow( $res2 ) ){
+
+					list($count, $user) = array($row2['count'], $row2['username']);
+
+					if( ( $count > ($catPages * 0.5) ) && ( $user != $username ) ){
+						$percent = floor( 100 * $count / $catPages );
+						$person = User::newFromName("$user");
+						$realName = $person->getRealName();
+						if( empty($realName) ){
+							$nameToUse = $user;
+						} else {
+							$nameToUse = $realName;
+						}
+						$html .= "<li>{$percent}%: {$nameToUse}</li>";
+					}
+				}
+				$html .= "</ol>";
+				$html .= "</li>";
 			} else if( $catPagesRevised >= ( $catPages * 0.8 ) ){
 
 				$pageTitle = Title::newFromText( $category, NS_CATEGORY );
 				$pageURL = $this->getSkin()->link( $pageTitle );
 
+				$res2 = $dbr->query( $sql );
+
 				$html .= "<li>80%: {$pageURL}</li>";
+				$html .= "<ol>";
+				while( $row2 = $dbr->fetchRow( $res2 ) ){
+
+					list($count, $user) = array($row2['count'], $row2['username']);
+
+					if( ( $count > ($catPages * 0.5) ) && ( $user != $username ) ){
+						$percent = floor( 100 * $count / $catPages );
+						$person = User::newFromName("$user");
+						$realName = $person->getRealName();
+						if( empty($realName) ){
+							$nameToUse = $user;
+						} else {
+							$nameToUse = $realName;
+						}
+						$html .= "<li>{$percent}%: {$nameToUse}</li>";
+					}
+				}
+				$html .= "</ol>";
+				$html .= "</li>";
 			} else if( $catPagesRevised >= ( $catPages * 0.5 ) ){
 
 				$pageTitle = Title::newFromText( $category, NS_CATEGORY );
 				$pageURL = $this->getSkin()->link( $pageTitle );
 
+				$res2 = $dbr->query( $sql );
+
 				$html .= "<li>50%: {$pageURL}</li>";
+				$html .= "<ol>";
+				while( $row2 = $dbr->fetchRow( $res2 ) ){
+
+					list($count, $user) = array($row2['count'], $row2['username']);
+
+					if( ( $count > ($catPages * 0.5) ) && ( $user != $username ) ){
+						$percent = floor( 100 * $count / $catPages );
+						$person = User::newFromName("$user");
+						$realName = $person->getRealName();
+						if( empty($realName) ){
+							$nameToUse = $user;
+						} else {
+							$nameToUse = $realName;
+						}
+						$html .= "<li>{$percent}%: {$nameToUse}</li>";
+					}
+				}
+				$html .= "</ol>";
+				$html .= "</li>";
 			}
 
 		}
