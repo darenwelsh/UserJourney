@@ -48,7 +48,10 @@ class SpecialUserJourney extends SpecialPage {
   //     $this->compareScoreStackedPlot2();
 		// }
 		else if ( $this->mMode == 'compare-activity-by-user-group' ) {
-      $this->compareScoreByUserGroup();
+			$this->compareScoreByUserGroup();
+		}
+		else if ( $this->mMode == 'compare-activity-between-groups' ){
+			$this->compareScoreBetweenGroups();
 		}
 		else {
 			$this->overview();
@@ -101,6 +104,7 @@ class SpecialUserJourney extends SpecialPage {
 				// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot' )
 				// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot2' )
 				. ") (" . $this->createHeaderLink( 'userjourney-plot-by-group', 'compare-activity-by-user-group' )
+				. ") (" . $this->createHeaderLink( 'userjourney-plot-by-group', 'compare-activity-between-groups' )
 				. ")</li>";
 
 			$navLine .= "</ul>";
@@ -994,9 +998,8 @@ function compareScoreByUserGroup( ){
 
     $dbr = wfGetDB( DB_SLAVE );
 
-		// Determine list of competitors based on $userGroup
-    $sql = "
-			SELECT
+	// Determine list of competitors based on $userGroup
+    $sql = "SELECT
 				user_name
 			FROM (
 			SELECT
@@ -1128,6 +1131,262 @@ function compareScoreByUserGroup( ){
 	    $data[] = array(
     		'key' => $nameToUse,
     		'values' => $userdata["$competitor"],
+  		);
+
+    }
+
+
+		$html = '';
+		$html .= '<h2>Stacked Area</h2>';
+	  $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
+		$html .= '<h2>Stacked Area Stream</h2>';
+	  $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
+    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+
+    $wgOut->addHTML( $html );
+  }
+
+
+
+
+// Plot contributions pitting one group against another (1 v 1)
+function compareScoreBetweenGroups( ){
+		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
+    global $wgOut;
+
+    // $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
+    // for now, 2nd group is CX3 && !sysop
+    // for now, 3rd group is !CX3 (&& !sysop)
+
+    $username = $this->getUser()->mName;
+	$displayName = self::getDisplayName();
+
+    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
+    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
+
+    $dbr = wfGetDB( DB_SLAVE );
+
+	// Determine list of users in sysop
+    $sqlSysop = "SELECT
+				user_name
+			FROM (
+			SELECT
+				ug_user,
+				ug_group
+			FROM user_groups
+			WHERE ug_group = 'sysop'
+			) a
+			 JOIN
+			(
+			SELECT
+				user_id,
+				user_name
+			FROM user
+			) b
+			ON ug_user=user_id
+    ";
+
+    $res = $dbr->query( $sqlSysop );
+
+		while( $row = $dbr->fetchRow( $res ) ) {
+
+			$usersInSysop[] = $row['user_name'];
+
+    }
+
+    // Determine list of users in CX3 and not in sysop
+    $sqlCX3NotSysop = "SELECT
+						user_name
+					FROM
+						(SELECT
+							b.ug_user
+						FROM
+							(SELECT
+								ug_user,
+								ug_group
+							FROM user_groups
+							WHERE ug_group IN ('sysop')
+							)a
+							RIGHT JOIN
+							(SELECT
+								ug_user,
+								ug_group
+							FROM user_groups
+							WHERE ug_group IN ('CX3')
+							)b
+							ON a.ug_user=b.ug_user
+							WHERE a.ug_user is NULL)c
+					 JOIN
+					(
+					SELECT
+						user_id,
+						user_name
+					FROM user
+					)d
+					ON c.ug_user=d.user_id";
+
+    $res = $dbr->query( $sqlCX3NotSysop );
+
+		while( $row = $dbr->fetchRow( $res ) ) {
+
+			$usersInCX3[] = $row['user_name'];
+
+    }
+
+    // Determine list of users not in CX3
+    $sqlNotInCX3 = "SELECT
+					user_name
+				FROM
+					(SELECT
+						DISTINCT b.ug_user
+					FROM
+						(SELECT
+							ug_user,
+							ug_group
+						FROM user_groups
+						WHERE ug_group IN ('CX3')
+						)a
+						RIGHT JOIN
+						(SELECT
+							ug_user,
+							ug_group
+						FROM user_groups
+						WHERE ug_group NOT IN ('CX3')
+						)b
+						ON a.ug_user=b.ug_user
+						WHERE a.ug_user is NULL)c
+				 JOIN
+				(
+				SELECT
+					user_id,
+					user_name
+				FROM user
+				)d
+				ON c.ug_user=d.user_id";
+
+    $res = $dbr->query( $sqlNotInCX3 );
+
+		while( $row = $dbr->fetchRow( $res ) ) {
+
+			$usersNotInCX3[] = $row['user_name'];
+
+    }
+
+    $competitors = array(
+    	'usersInSysop' => $usersInSysop,
+    	'usersInCX3' => $usersInCX3,
+    	'usersNotInCX3' => $usersNotInCX3,
+    	);
+
+    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
+
+    $queryDT = function( $competitorTeamName, $competitorUsernames ){
+    	$output = "INSERT INTO temp_union (day, {$competitorTeamName})
+			SELECT
+				DATE(rev_timestamp) AS day,
+				COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS {$competitorTeamName}
+			FROM `revision`
+			WHERE
+				rev_user_text IN ( ";
+
+		foreach( $competitorUsernames as $person ){
+			$output .= " '{$person}', ";
+		}
+		$output .= " '' ";
+
+		$output .= " )
+        /* AND rev_timestamp > 20150101000000 */
+			GROUP BY day";
+
+		return $output;
+    };
+
+	// Create temp table
+	$sql = "CREATE TEMPORARY TABLE temp_union(
+		day date NULL";
+	// Add column for user "dummy"
+	$sql .= ", dummy float NULL";
+	foreach( $competitors as $competitorTeamName => $competitorUsernames ){
+		$sql .= ", {$competitorTeamName} float NULL";
+	}
+	$sql .= " )ENGINE = MEMORY";
+
+    $res = $dbr->query( $sql );
+
+    // Add column with dummy user to generate a 0 value for every day during comparison period
+    // For this function I removed WHERE condition limiting time window to competitors; just use entire wiki history
+    $sql = "SELECT
+				DATE(rev_timestamp) AS day
+			FROM revision
+			ORDER BY rev_timestamp ASC
+			LIMIT 1";
+
+	$res = $dbr->query( $sql );
+    $row = $dbr->fetchRow( $res );
+    $firstContributionDateFromGroup = $row['day'];
+
+    $lastDate = date("Ymd", time()); // Today as YYYYMMDD
+    $firstDate = date('Ymd', strtotime( $firstContributionDateFromGroup ) ); // Date of first contribution from users in this group
+    $date = $firstDate;
+    while( $date <= $lastDate ){
+    	$dateTime = date('Y-m-d', strtotime($date * 1000000) ); // Append 0 value for HHMMSS to match timestamp format in revision table
+
+			// $sql = $queryDT('dummy', $dateTime);
+			$sql = "INSERT INTO temp_union (day, dummy) VALUES ('{$dateTime}', '0')";
+
+			$res = $dbr->query( $sql );
+
+			$date = date('Ymd', strtotime($date . ' +1 day') );
+    }
+
+	// Add each competitor's score to temp table
+	foreach( $competitors as $competitorTeamName => $competitorUsernames ){
+		$sql = $queryDT($competitorTeamName, $competitorUsernames);
+
+		$res = $dbr->query( $sql );
+	}
+
+	// Consolidate rows so each day only has one row
+    $sql = "SELECT
+			day";
+		foreach( $competitors as $competitorTeamName => $competitorUsernames ){
+			$sql .= ", max({$competitorTeamName}) {$competitorTeamName}";
+		}
+		$sql .= " FROM temp_union GROUP BY day";
+
+    $res = $dbr->query( $sql );
+
+	while( $row = $dbr->fetchRow( $res ) ) {
+
+		foreach( $competitors as $competitorTeamName => $competitorUsernames ){
+
+			list($day, $score) = array($row['day'], $row["$competitorTeamName"]);
+
+			$userdata["$competitorTeamName"][] = array(
+				'x' => strtotime( $day ) * 1000,
+				'y' => floatval( $score ),
+			);
+		}
+
+    }
+
+		// Remove temp table
+    $sql = "DROP TABLE temp_union";
+    $res = $dbr->query ( $sql );
+
+    foreach( $competitors as $competitorTeamName => $competitorUsernames ){
+
+	    $person = User::newFromName("$competitorTeamName");
+			$realName = $person->getRealName();
+			if( empty($realName) ){
+				$nameToUse = $competitorTeamName;
+			} else {
+				$nameToUse = $realName;
+			}
+
+	    $data[] = array(
+    		'key' => $nameToUse,
+    		'values' => $userdata["$competitorTeamName"],
   		);
 
     }
