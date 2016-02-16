@@ -504,7 +504,7 @@ class SpecialUserJourney extends SpecialPage {
 						)c /* number of pages in each category revised by user */
 				) WHERE cat=catTitle
 				AND pagesInCat > 9
-				AND pagesInCatRevisedByUser / pagesInCat >= 0.5
+				AND pagesInCatRevisedByUser / pagesInCat >= 0.2
 				ORDER BY (pagesInCatRevisedByUser / pagesInCat) DESC";
 
 		$res = $dbr->query( $sql );
@@ -549,7 +549,7 @@ class SpecialUserJourney extends SpecialPage {
 
 					list($count, $user) = array($row2['count'], $row2['username']);
 
-					if( ( $count > ($catPages * 0.5) ) && ( $user != $username ) ){
+					if( ( $count > ($catPages * 0.2) ) && ( $user != $username ) ){
 						$percent = floor( 100 * $count / $catPages );
 						$person = User::newFromName("$user");
 						$realName = $person->getRealName();
@@ -576,7 +576,7 @@ class SpecialUserJourney extends SpecialPage {
 
 					list($count, $user) = array($row2['count'], $row2['username']);
 
-					if( ( $count > ($catPages * 0.5) ) && ( $user != $username ) ){
+					if( ( $count > ($catPages * 0.2) ) && ( $user != $username ) ){
 						$percent = floor( 100 * $count / $catPages );
 						$person = User::newFromName("$user");
 						$realName = $person->getRealName();
@@ -603,7 +603,34 @@ class SpecialUserJourney extends SpecialPage {
 
 					list($count, $user) = array($row2['count'], $row2['username']);
 
-					if( ( $count > ($catPages * 0.5) ) && ( $user != $username ) ){
+					if( ( $count > ($catPages * 0.2) ) && ( $user != $username ) ){
+						$percent = floor( 100 * $count / $catPages );
+						$person = User::newFromName("$user");
+						$realName = $person->getRealName();
+						if( empty($realName) ){
+							$nameToUse = $user;
+						} else {
+							$nameToUse = $realName;
+						}
+						$html .= "<li>{$percent}%: {$nameToUse}</li>";
+					}
+				}
+				$html .= "</ol>";
+				$html .= "</li>";
+			} else if( $catPagesRevised >= ( $catPages * 0.2 ) ){
+
+				$pageTitle = Title::newFromText( $category, NS_CATEGORY );
+				$pageURL = $this->getSkin()->link( $pageTitle );
+
+				$res2 = $dbr->query( $sql );
+
+				$html .= "<li>50%: {$pageURL}</li>";
+				$html .= "<ol>";
+				while( $row2 = $dbr->fetchRow( $res2 ) ){
+
+					list($count, $user) = array($row2['count'], $row2['username']);
+
+					if( ( $count > ($catPages * 0.2) ) && ( $user != $username ) ){
 						$percent = floor( 100 * $count / $catPages );
 						$person = User::newFromName("$user");
 						$realName = $person->getRealName();
