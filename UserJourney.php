@@ -153,6 +153,7 @@ No Longer Used
 
  $wgResourceModules += array(
 	// 'ext.userjourney.charts' => $userjourneyResourceTemplate + array(
+  // 'position' => 'bottom', // added this since "bottom" was default pre-1.26
 	// 	'styles' => 'charts/ext.userjourney.charts.css',
 	// 	'scripts' => array(
 	// 		'charts/Chart.js',
@@ -162,6 +163,7 @@ No Longer Used
 	// ),
 
 	// 'ext.userjourney.d3.js' => $userjourneyResourceTemplate + array(
+  // 'position' => 'bottom', // added this since "bottom" was default pre-1.26
 	// 	'scripts' => array(
 	// 		'd3js/ext.userjourney.d3.js',
 	// 	),
@@ -170,6 +172,7 @@ No Longer Used
 
   // For "Overview"
   'ext.userjourney.myActivityByYear.nvd3' => $userjourneyResourceTemplate + array(
+    'position' => 'bottom', // added this since "bottom" was default pre-1.26
     'styles' => array(
       'nvd3js/nv.d3.css',
       // 'nvd3js/ext.userjourney.my-activity-by-year.nvd3.css',
@@ -187,6 +190,7 @@ No Longer Used
 
   // For "My Activity"
 	'ext.userjourney.myActivity.nvd3' => $userjourneyResourceTemplate + array(
+    'position' => 'bottom', // added this since "bottom" was default pre-1.26
 		'styles' => array(
 			'nvd3js/nv.d3.css',
 			'nvd3js/ext.userjourney.my-activity.nvd3.css',
@@ -204,6 +208,7 @@ No Longer Used
 
   // For "Compare Activity"
   'ext.userjourney.compare.nvd3' => $userjourneyResourceTemplate + array(
+    'position' => 'bottom', // added this since "bottom" was default pre-1.26
     'styles' => array(
       'nvd3js/nv.d3.css',
       'nvd3js/ext.userjourney.compare.nvd3.css',
@@ -223,6 +228,7 @@ No Longer Used
 
   // For "Compare Scores Stacked Plot"
   // 'ext.userjourney.compareScoreStackedPlot.nvd3' => $userjourneyResourceTemplate + array(
+  // 'position' => 'bottom', // added this since "bottom" was default pre-1.26
   //   'styles' => array(
   //     'nvd3js/nv.d3.css',
   //     // 'nvd3js/ext.userjourney.comparescoresstacked.nvd3.css',
