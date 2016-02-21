@@ -13,5 +13,7 @@
 	"userjourney-rawdata": "Data",
 	"userjourney-plot": "Plot",
 	"userjourney-plot-by-peers": "Plot by peers",
-	"userjourney-plot-by-group": "Plot by group"
+	"userjourney-plot-users-within-group": "Plot users within group",
+	"userjourney-plot-by-group": "Plot by group",
+	"userjourney-plot-views-between-groups": "Plot views by group"
 }

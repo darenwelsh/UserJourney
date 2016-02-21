@@ -153,6 +153,9 @@ $(document).ready(function(){
 
 		window.hitsData = getData();
 		console.log(hitsData);
+
+		d3.scale.category10().range()
+
 		window.chart = nv.models.stackedAreaChart()
 			.margin({right: 50})
 			// .x(function(d) { return d[0] })   //We can modify the data accessor functions...
@@ -162,6 +165,7 @@ $(document).ready(function(){
 			// .transitionDuration(500)
 			.showControls(true)       //Allow user to choose 'Stacked', 'Stream', 'Expanded' mode.
 			.clipEdge(true)
+			.color(d3.scale.category10().range())
 		;
 
 		chart._options.controlOptions = ['Stacked', 'Expanded']; // hide 'Stream' view

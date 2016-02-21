@@ -21,6 +21,7 @@ class SpecialUserJourney extends SpecialPage {
 
 		$wgOut->addHTML( $this->getPageHeader() );
 
+		//TO-DO change to switch?
 		if ($this->mMode == 'user-history') {
 			$this->userHistory();
 		}
@@ -31,14 +32,14 @@ class SpecialUserJourney extends SpecialPage {
 			$this->myScoreData();
 		}
 		else if ( $this->mMode == 'user-activity-plot' ) {
-      $this->myScorePlot();
+			$this->myScorePlot();
 		}
 
 		if ($this->mMode == 'compare-activity-data') {
 			$this->compareScoreData();
 		}
 		else if ( $this->mMode == 'compare-activity-by-similar-activity' ) {
-      $this->compareActivityByPeers();
+			$this->compareActivityByPeers();
 		}
 		// else if ( $this->mMode == 'compare-activity-stacked-plot' ) {
       // $this->compareScoreStackedPlot();
@@ -52,6 +53,9 @@ class SpecialUserJourney extends SpecialPage {
 		}
 		else if ( $this->mMode == 'compare-activity-between-groups' ){
 			$this->compareScoreBetweenGroups();
+		}
+		else if ( $this->mMode == 'compare-views-between-groups' ){
+			$this->compareViewsBetweenGroups();
 		}
 		else {
 			$this->overview();
@@ -86,6 +90,7 @@ class SpecialUserJourney extends SpecialPage {
 
 			$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-overview' ) . $unfilterLink . "</li>";
 
+			//TO-DO clarify naming between modes and messages and functions
 			//TO-DO add if statement to show extra data plots if logged-in user is in groups sysop or Manager
 			//TO-DO add pull-down menus so these views can show any user's data for sysop or Manager
 
@@ -103,8 +108,9 @@ class SpecialUserJourney extends SpecialPage {
 				. ": (" . $this->createHeaderLink( 'userjourney-plot-by-peers', 'compare-activity-by-similar-activity' )
 				// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot' )
 				// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot2' )
-				. ") (" . $this->createHeaderLink( 'userjourney-plot-by-group', 'compare-activity-by-user-group' )
+				. ") (" . $this->createHeaderLink( 'userjourney-plot-users-within-group', 'compare-activity-by-user-group' )
 				. ") (" . $this->createHeaderLink( 'userjourney-plot-by-group', 'compare-activity-between-groups' )
+				. ") (" . $this->createHeaderLink( 'userjourney-plot-views-between-groups', 'compare-views-between-groups' )
 				. ")</li>";
 
 			$navLine .= "</ul>";
@@ -1319,6 +1325,267 @@ function compareScoreBetweenGroups( ){
 				DATE(rev_timestamp) AS day
 			FROM revision
 			ORDER BY rev_timestamp ASC
+			LIMIT 1";
+
+	$res = $dbr->query( $sql );
+    $row = $dbr->fetchRow( $res );
+    $firstContributionDateFromGroup = $row['day'];
+
+    $lastDate = date("Ymd", time()); // Today as YYYYMMDD
+    $firstDate = date('Ymd', strtotime( $firstContributionDateFromGroup ) ); // Date of first contribution from users in this group
+    $date = $firstDate;
+    while( $date <= $lastDate ){
+    	$dateTime = date('Y-m-d', strtotime($date * 1000000) ); // Append 0 value for HHMMSS to match timestamp format in revision table
+
+			// $sql = $queryDT('dummy', $dateTime);
+			$sql = "INSERT INTO temp_union (day, dummy) VALUES ('{$dateTime}', '0')";
+
+			$res = $dbr->query( $sql );
+
+			$date = date('Ymd', strtotime($date . ' +1 day') );
+    }
+
+	// Add each competitor's score to temp table
+	foreach( $competitors as $competitorTeamName => $competitorUsernames ){
+		$sql = $queryDT($competitorTeamName, $competitorUsernames);
+
+		$res = $dbr->query( $sql );
+	}
+
+	// Consolidate rows so each day only has one row
+    $sql = "SELECT
+			day";
+		foreach( $competitors as $competitorTeamName => $competitorUsernames ){
+			$sql .= ", max({$competitorTeamName}) {$competitorTeamName}";
+		}
+		$sql .= " FROM temp_union GROUP BY day";
+
+    $res = $dbr->query( $sql );
+
+	while( $row = $dbr->fetchRow( $res ) ) {
+
+		foreach( $competitors as $competitorTeamName => $competitorUsernames ){
+
+			list($day, $score) = array($row['day'], $row["$competitorTeamName"]);
+
+			$userdata["$competitorTeamName"][] = array(
+				'x' => strtotime( $day ) * 1000,
+				'y' => floatval( $score ),
+			);
+		}
+
+    }
+
+		// Remove temp table
+    $sql = "DROP TABLE temp_union";
+    $res = $dbr->query ( $sql );
+
+    foreach( $competitors as $competitorTeamName => $competitorUsernames ){
+
+	    $person = User::newFromName("$competitorTeamName");
+			$realName = $person->getRealName();
+			if( empty($realName) ){
+				$nameToUse = $competitorTeamName;
+			} else {
+				$nameToUse = $realName;
+			}
+
+	    $data[] = array(
+    		'key' => $nameToUse,
+    		'values' => $userdata["$competitorTeamName"],
+  		);
+
+    }
+
+
+		$html = '';
+		$html .= '<h2>Stacked Area</h2>';
+	  $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
+		$html .= '<h2>Stacked Area Stream</h2>';
+	  $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
+    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+
+    $wgOut->addHTML( $html );
+  }
+
+
+
+
+
+// Plot unique user-page views pitting one group against another (1 v 1)
+function compareViewsBetweenGroups( ){
+	//TO-DO this has a dependency on Extension:Wiretap
+	//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
+    global $wgOut;
+
+    // $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
+    // for now, 2nd group is CX3 && !sysop
+    // for now, 3rd group is !CX3 (&& !sysop)
+
+    $username = $this->getUser()->mName;
+	$displayName = self::getDisplayName();
+
+    $wgOut->setPageTitle( "UserJourney: Unique user-page view comparison plot" );
+    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
+
+    $dbr = wfGetDB( DB_SLAVE );
+
+	// Determine list of users in sysop
+    $sqlSysop = "SELECT
+				user_name
+			FROM (
+			SELECT
+				ug_user,
+				ug_group
+			FROM user_groups
+			WHERE ug_group = 'sysop'
+			) a
+			 JOIN
+			(
+			SELECT
+				user_id,
+				user_name
+			FROM user
+			) b
+			ON ug_user=user_id
+    ";
+
+    $res = $dbr->query( $sqlSysop );
+
+		while( $row = $dbr->fetchRow( $res ) ) {
+
+			$usersInSysop[] = $row['user_name'];
+
+    }
+
+    // Determine list of users in CX3 and not in sysop
+    $sqlCX3NotSysop = "SELECT
+						user_name
+					FROM
+						(SELECT
+							b.ug_user
+						FROM
+							(SELECT
+								ug_user,
+								ug_group
+							FROM user_groups
+							WHERE ug_group IN ('sysop')
+							)a
+							RIGHT JOIN
+							(SELECT
+								ug_user,
+								ug_group
+							FROM user_groups
+							WHERE ug_group IN ('CX3')
+							)b
+							ON a.ug_user=b.ug_user
+							WHERE a.ug_user is NULL)c
+					 JOIN
+					(
+					SELECT
+						user_id,
+						user_name
+					FROM user
+					)d
+					ON c.ug_user=d.user_id";
+
+    $res = $dbr->query( $sqlCX3NotSysop );
+
+		while( $row = $dbr->fetchRow( $res ) ) {
+
+			$usersInCX3[] = $row['user_name'];
+
+    }
+
+    // Determine list of users not in CX3
+    $sqlNotInCX3 = "SELECT
+					user_name
+				FROM
+					(SELECT
+						DISTINCT b.ug_user
+					FROM
+						(SELECT
+							ug_user,
+							ug_group
+						FROM user_groups
+						WHERE ug_group IN ('CX3')
+						)a
+						RIGHT JOIN
+						(SELECT
+							ug_user,
+							ug_group
+						FROM user_groups
+						WHERE ug_group NOT IN ('CX3')
+						)b
+						ON a.ug_user=b.ug_user
+						WHERE a.ug_user is NULL)c
+				 JOIN
+				(
+				SELECT
+					user_id,
+					user_name
+				FROM user
+				)d
+				ON c.ug_user=d.user_id";
+
+    $res = $dbr->query( $sqlNotInCX3 );
+
+		while( $row = $dbr->fetchRow( $res ) ) {
+
+			$usersNotInCX3[] = $row['user_name'];
+
+    }
+
+    $competitors = array(
+    	'usersInSysop' => $usersInSysop,
+    	'usersInCX3' => $usersInCX3,
+    	'usersNotInCX3' => $usersNotInCX3,
+    	);
+
+    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
+
+    $queryDT = function( $competitorTeamName, $competitorUsernames ){
+    	// parts of this query stolen from Extension:Wiretap function getUniqueRows()
+    	$output = "INSERT INTO temp_union (day, {$competitorTeamName})
+			SELECT
+				DATE(hit_timestamp) AS day,
+				COUNT(DISTINCT(CONCAT(user_name,'UNIQUESEPARATOR',page_id))) AS {$competitorTeamName} -- For unique-page views
+				-- COUNT(DISTINCT(w.user_name)) AS {$competitorTeamName} -- For non-unique-page views
+			FROM `wiretap`
+			WHERE
+				user_name IN ( ";
+
+		foreach( $competitorUsernames as $person ){
+			$output .= " '{$person}', ";
+		}
+		$output .= " '' ";
+
+		$output .= " )
+        /* AND rev_timestamp > 20150101000000 */
+        /* AND user_name NOT IN ('Dmeza') */ -- Because he scraped the EVA wiki on 2015-11-03, resulting in 4714 unique user-page views
+			GROUP BY day";
+
+		return $output;
+    };
+
+	// Create temp table
+	$sql = "CREATE TEMPORARY TABLE temp_union(
+		day date NULL";
+	// Add column for user "dummy"
+	$sql .= ", dummy float NULL";
+	foreach( $competitors as $competitorTeamName => $competitorUsernames ){
+		$sql .= ", {$competitorTeamName} float NULL";
+	}
+	$sql .= " )ENGINE = MEMORY";
+
+    $res = $dbr->query( $sql );
+
+    // Add column with dummy user to generate a 0 value for every day during comparison period
+    // For this function I removed WHERE condition limiting time window to competitors; just use entire wiki history
+    $sql = "SELECT
+				DATE(hit_timestamp) AS day
+			FROM wiretap
+			ORDER BY hit_timestamp ASC
 			LIMIT 1";
 
 	$res = $dbr->query( $sql );
