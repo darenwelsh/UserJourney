@@ -23,7 +23,8 @@ window.getMovingAverage = function ( dataArray, maLength, weekdaysOnly ) {
 			};
 		}
 		else {
-			curDays.push( Math.min( scoreCeiling, dataArray[ i ].y ) );
+			// curDays.push( Math.min( scoreCeiling, dataArray[ i ].y ) );
+			curDays.push( dataArray[ i ].y );
 			if ( curDays.length > maLength ) {
 				curDays.shift(); // shift first element off
 			}
