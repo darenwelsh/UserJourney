@@ -991,6 +991,8 @@ class SpecialUserJourney extends SpecialPage {
 function compareScoreByUserGroup( ){
 		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
     global $wgOut;
+    //TO-DO make $scoreCeiling an eg configured in LocalSettings
+    $scoreCeiling = 100; // Limit score to this value or below
 
     $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
 
@@ -1034,11 +1036,11 @@ function compareScoreByUserGroup( ){
 
     // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
 
-    $queryDT = function( $competitor ){
+    $queryDT = function( $competitor, $scoreCeiling ){
     	$output = "INSERT INTO temp_union (day, {$competitor})
 			SELECT
 				DATE(rev_timestamp) AS day,
-				COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS {$competitor}
+				LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitor}
 			FROM `revision`
 			WHERE
 				rev_user_text IN ( '{$competitor}' )
@@ -1091,7 +1093,7 @@ function compareScoreByUserGroup( ){
 
 		// Add each competitor's score to temp table
 		foreach( $competitors as $competitor ){
-			$sql = $queryDT($competitor);
+			$sql = $queryDT($competitor, $scoreCeiling);
 
 			$res = $dbr->query( $sql );
 		}
@@ -1159,6 +1161,8 @@ function compareScoreByUserGroup( ){
 function compareScoreBetweenGroups( ){
 		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
     global $wgOut;
+    //TO-DO make $scoreCeiling an eg configured in LocalSettings
+    $scoreCeiling = 100; // Limit score to this value or below
 
     // $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
     // for now, 2nd group is CX3 && !sysop
@@ -1279,18 +1283,18 @@ function compareScoreBetweenGroups( ){
     }
 
     $competitors = array(
-    	'usersInSysop' => $usersInSysop,
-    	'usersInCX3' => $usersInCX3,
-    	'usersNotInCX3' => $usersNotInCX3,
+    	'Admins' => $usersInSysop,
+    	'CX3' => $usersInCX3,
+    	'Others' => $usersNotInCX3,
     	);
 
     // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
 
-    $queryDT = function( $competitorTeamName, $competitorUsernames ){
+    $queryDT = function( $competitorTeamName, $competitorUsernames, $scoreCeiling ){
     	$output = "INSERT INTO temp_union (day, {$competitorTeamName})
 			SELECT
 				DATE(rev_timestamp) AS day,
-				COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS {$competitorTeamName}
+				LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitorTeamName}
 			FROM `revision`
 			WHERE
 				rev_user_text IN ( ";
@@ -1347,7 +1351,7 @@ function compareScoreBetweenGroups( ){
 
 	// Add each competitor's score to temp table
 	foreach( $competitors as $competitorTeamName => $competitorUsernames ){
-		$sql = $queryDT($competitorTeamName, $competitorUsernames);
+		$sql = $queryDT($competitorTeamName, $competitorUsernames, $scoreCeiling);
 
 		$res = $dbr->query( $sql );
 	}
@@ -1537,9 +1541,9 @@ function compareViewsBetweenGroups( ){
     }
 
     $competitors = array(
-    	'usersInSysop' => $usersInSysop,
-    	'usersInCX3' => $usersInCX3,
-    	'usersNotInCX3' => $usersNotInCX3,
+    	'Admins' => $usersInSysop,
+    	'CX3' => $usersInCX3,
+    	'Others' => $usersNotInCX3,
     	);
 
     // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
@@ -1582,11 +1586,18 @@ function compareViewsBetweenGroups( ){
 
     // Add column with dummy user to generate a 0 value for every day during comparison period
     // For this function I removed WHERE condition limiting time window to competitors; just use entire wiki history
-    $sql = "SELECT
-				DATE(hit_timestamp) AS day
-			FROM wiretap
-			ORDER BY hit_timestamp ASC
-			LIMIT 1";
+   //  $sql = "SELECT
+			// 	DATE(hit_timestamp) AS day
+			// FROM wiretap
+			// ORDER BY hit_timestamp ASC
+			// LIMIT 1";
+
+	// Use this instead of above to make x axis span life of wiki, not life of Extension:Wiretap
+	$sql = "SELECT
+			DATE(rev_timestamp) AS day
+		FROM revision
+		ORDER BY rev_timestamp ASC
+		LIMIT 1";
 
 	$res = $dbr->query( $sql );
     $row = $dbr->fetchRow( $res );
@@ -1678,6 +1689,8 @@ function compareActivityByPeers( ){
 		// TO-DO Modify plots to have some granular/moving-average and some just showing 1-month or 3-month average values
 		// TO-DO Maybe have one page with all data and another page with last 30-60 days
     global $wgOut;
+    //TO-DO make $scoreCeiling an eg configured in LocalSettings
+    $scoreCeiling = 100; // Limit score to this value or below
 
     $daysToDetermineCompetitors = 14; // Number of days in which to compare scores of logged-in user against others (used to find suitable competitors)
     $daysToPlot = 365;
@@ -1706,8 +1719,8 @@ function compareActivityByPeers( ){
 			$date = time() - ( 60 * 60 * 24 * $daysToDetermineCompetitors );
 			$dateString = $dbr->timestamp( $date );
 
-	    $sql = "
-	    	SELECT COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 as score
+	    $sql = "SELECT
+	    	LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) as score
 	      FROM revision
 	      WHERE rev_timestamp > '$dateString'
 	      AND rev_user_text = '{$username}'
@@ -1764,11 +1777,11 @@ function compareActivityByPeers( ){
 
 	    }
 
-	    $queryDT = function( $competitor, $dateString ){
+	    $queryDT = function( $competitor, $dateString, $scoreCeiling ){
 	    	$output = "INSERT INTO temp_union (day, {$competitor})
 				SELECT
 					DATE(rev_timestamp) AS day,
-					COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS {$competitor}
+					LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitor}
 				FROM `revision`
 				WHERE
 					rev_user_text IN ( '{$competitor}' )
@@ -1811,7 +1824,7 @@ function compareActivityByPeers( ){
 				$date = time() - ( 60 * 60 * 24 * $daysToPlot );
 				$dateString = $dbr->timestamp( $date );
 
-				$sql = $queryDT($competitor, $dateString);
+				$sql = $queryDT($competitor, $dateString, $scoreCeiling);
 
 				$res = $dbr->query( $sql );
 			}

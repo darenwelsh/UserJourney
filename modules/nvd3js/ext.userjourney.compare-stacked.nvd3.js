@@ -11,7 +11,7 @@ window.getMovingAverage = function ( dataArray, maLength, weekdaysOnly ) {
 	var curDays = [];
 	var curAvg = 0;
 
-	var scoreCeiling = 100; // Limit max score to some value to prevent spikes from adversely affecting the average
+	// var scoreCeiling = 100; // Limit max score to some value to prevent spikes from adversely affecting the average
 
     for ( var i = 0; i < dataArray.length; i++ ) {
 		dayOfWeek = new Date( dataArray[ i ].x ).getDay();
