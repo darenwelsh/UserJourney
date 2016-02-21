@@ -168,7 +168,8 @@ $(document).ready(function(){
 			.color(d3.scale.category10().range())
 		;
 
-		chart._options.controlOptions = ['Stacked', 'Expanded']; // hide 'Stream' view
+		// Adding stream back in for now
+		// chart._options.controlOptions = ['Stacked', 'Expanded']; // hide 'Stream' view
 
 		chart.xAxis
 			.tickFormat(function(d) {

@@ -1147,8 +1147,8 @@ function compareScoreByUserGroup( ){
 		$html = '';
 		$html .= '<h2>Stacked Area</h2>';
 	  $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
-		$html .= '<h2>Stacked Area Stream</h2>';
-	  $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
+		// $html .= '<h2>Stacked Area Stream</h2>';
+	 //  $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
     $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
     $wgOut->addHTML( $html );
@@ -1405,8 +1405,8 @@ function compareScoreBetweenGroups( ){
 		$html = '';
 		$html .= '<h2>Stacked Area</h2>';
 	  $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
-		$html .= '<h2>Stacked Area Stream</h2>';
-	  $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
+		// $html .= '<h2>Stacked Area Stream</h2>';
+	 //  $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
     $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
     $wgOut->addHTML( $html );
@@ -1673,8 +1673,8 @@ function compareViewsBetweenGroups( ){
 		$html = '';
 		$html .= '<h2>Stacked Area</h2>';
 	  $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
-		$html .= '<h2>Stacked Area Stream</h2>';
-	  $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
+		// $html .= '<h2>Stacked Area Stream</h2>';
+	 //  $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
     $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
     $wgOut->addHTML( $html );
@@ -1879,8 +1879,8 @@ function compareActivityByPeers( ){
 	    $html .= '<div id="userjourney-compare-chart-line-with-window"><svg height="400px"></svg></div>';
 			$html .= '<h2>Stacked Area</h2>';
 	    $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
-			$html .= '<h2>Stacked Area Stream</h2>';
-	    $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
+			// $html .= '<h2>Stacked Area Stream</h2>';
+	  //   $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
 
 	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 		} else {
