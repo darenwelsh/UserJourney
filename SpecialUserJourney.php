@@ -1554,7 +1554,7 @@ function compareViewsBetweenGroups( ){
 			SELECT
 				DATE(hit_timestamp) AS day,
 				COUNT(DISTINCT(CONCAT(user_name,'UNIQUESEPARATOR',page_id))) AS {$competitorTeamName} -- For unique-page views
-				-- COUNT(DISTINCT(w.user_name)) AS {$competitorTeamName} -- For non-unique-page views
+				-- COUNT(DISTINCT(user_name)) AS {$competitorTeamName} -- For non-unique-page views
 			FROM `wiretap`
 			WHERE
 				user_name IN ( ";
