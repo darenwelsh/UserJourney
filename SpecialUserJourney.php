@@ -188,11 +188,11 @@ class SpecialUserJourney extends SpecialPage {
 
 		$wgOut->addModules( 'ext.userjourney.myActivityByYear.nvd3' );
 
-		$pager = new UserJourneyPager();
-		$pager->filterUser = $wgRequest->getVal( 'filterUser' );
-		$pager->filterPage = $wgRequest->getVal( 'filterPage' );
+//		$pager = new UserJourneyPager();
+//		$pager->filterUser = $wgRequest->getVal( 'filterUser' );
+//		$pager->filterPage = $wgRequest->getVal( 'filterPage' );
 
-		$body = $pager->getBody();
+//		$body = $pager->getBody();
 		$html = '';
 
 		$username = $this->getUser()->mName;
