@@ -1713,6 +1713,10 @@ function compareActivityByPeers( ){
 
 	    $dbr = wfGetDB( DB_SLAVE );
 
+		$userTable = $dbr->tableName( 'user' );
+		$userGroupTable = $dbr->tableName( 'user_groups' );
+		$revTable = $dbr->tableName( 'revision' );
+
 	    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
 
 	    // Determine score of logged in user
@@ -1721,7 +1725,7 @@ function compareActivityByPeers( ){
 
 	    $sql = "SELECT
 	    	LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) as score
-	      FROM revision
+	      FROM $revTable
 	      WHERE rev_timestamp > '$dateString'
 	      AND rev_user_text = '{$username}'
 	    ";
@@ -1741,12 +1745,12 @@ function compareActivityByPeers( ){
 						page_count,
 						rev_count,
 						page_count+SQRT(rev_count-page_count)*2 AS score
-					FROM user u
+					FROM $userTable u
 					JOIN
 					(SELECT rev_user,
 						COUNT(DISTINCT rev_page) AS page_count,
 						COUNT(rev_id) AS rev_count
-						FROM revision
+						FROM $revTable
 						WHERE rev_timestamp > '$dateString'
 						AND rev_user_text != '{$username}'
 						GROUP BY rev_user
@@ -1777,12 +1781,12 @@ function compareActivityByPeers( ){
 
 	    }
 
-	    $queryDT = function( $competitor, $dateString, $scoreCeiling ){
+	    $queryDT = function( $competitor, $dateString, $scoreCeiling, $revTable ){
 	    	$output = "INSERT INTO temp_union (day, {$competitor})
 				SELECT
 					DATE(rev_timestamp) AS day,
 					LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitor}
-				FROM `revision`
+				FROM $revTable
 				WHERE
 					rev_user_text IN ( '{$competitor}' )
 					AND rev_timestamp > '$dateString'
@@ -1824,7 +1828,7 @@ function compareActivityByPeers( ){
 				$date = time() - ( 60 * 60 * 24 * $daysToPlot );
 				$dateString = $dbr->timestamp( $date );
 
-				$sql = $queryDT($competitor, $dateString, $scoreCeiling);
+				$sql = $queryDT($competitor, $dateString, $scoreCeiling, $revTable);
 
 				$res = $dbr->query( $sql );
 			}
