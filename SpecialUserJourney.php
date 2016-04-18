@@ -200,10 +200,15 @@ class SpecialUserJourney extends SpecialPage {
 
 	    $dbr = wfGetDB( DB_SLAVE );
 
+		$userTable = $dbr->tableName( 'user' );
+		$userGroupTable = $dbr->tableName( 'user_groups' );
+		$revTable = $dbr->tableName( 'revision' );
+		$catLinksTable = $dbr->tableName( 'categorylinks' );
+
 	    // Query for user's first revision timestamp
 	    $sql = "SELECT
 					DATE(rev_timestamp) AS day
-				FROM revision
+				FROM $revTable
 				WHERE rev_user_text = '{$username}'
 				ORDER BY rev_timestamp ASC
 				LIMIT 1";
@@ -224,7 +229,7 @@ class SpecialUserJourney extends SpecialPage {
 	    $sql = "SELECT
 					COUNT(rev_timestamp) AS revisions,
 					COUNT(DISTINCT rev_page) AS pages
-				FROM revision
+				FROM $revTable
 				WHERE rev_user_text = '{$username}'";
 
 		$res = $dbr->query( $sql );
@@ -260,7 +265,7 @@ class SpecialUserJourney extends SpecialPage {
 					YEAR(rev_timestamp) AS year,
 					COUNT(rev_timestamp) AS revisions,
 					COUNT(DISTINCT rev_page) AS pages
-				FROM revision
+				FROM $revTable
 				WHERE rev_user_text = '{$username}'
 				GROUP BY YEAR(rev_timestamp)
 				";
@@ -305,7 +310,7 @@ class SpecialUserJourney extends SpecialPage {
 		// Get array of years with contributions from user
 		$sql = "SELECT
 					YEAR(rev_timestamp) as year
-				FROM revision
+				FROM $revTable
 				WHERE rev_user_text = '{$username}'
 				GROUP BY year
 				ORDER BY year ASC";
@@ -333,7 +338,7 @@ class SpecialUserJourney extends SpecialPage {
 					FROM
 					(SELECT
 						rev_page
-					FROM revision
+					FROM $revTable
 					WHERE rev_user_text = '{$username}'
 					AND rev_timestamp < {$endTimeStamp}
 					AND rev_timestamp > {$startTimeStamp}
@@ -375,7 +380,7 @@ class SpecialUserJourney extends SpecialPage {
 					FROM
 					(SELECT
 						rev_page
-					FROM revision
+					FROM $revTable
 					WHERE rev_user_text = '{$username}'
 					AND rev_timestamp < {$endTimeStamp}
 					AND rev_timestamp > {$startTimeStamp}
@@ -383,7 +388,7 @@ class SpecialUserJourney extends SpecialPage {
 					(SELECT
 						cl_from,
 						cl_to
-					FROM categorylinks
+					FROM $catLinksTable
 					)b
 					WHERE rev_page=cl_from
 					GROUP BY cl_to
@@ -429,10 +434,16 @@ class SpecialUserJourney extends SpecialPage {
 
 	    $dbr = wfGetDB( DB_SLAVE );
 
+		$userTable = $dbr->tableName( 'user' );
+		$userGroupTable = $dbr->tableName( 'user_groups' );
+		$revTable = $dbr->tableName( 'revision' );
+		$catTable = $dbr->tableName( 'category' );
+		$catLinksTable = $dbr->tableName( 'categorylinks' );
+
 	    // Query for user's first revision timestamp
 	    $sql = "SELECT
 					DATE(rev_timestamp) AS day
-				FROM revision
+				FROM $revTable
 				WHERE rev_user_text = '{$username}'
 				ORDER BY rev_timestamp ASC
 				LIMIT 1";
@@ -446,7 +457,7 @@ class SpecialUserJourney extends SpecialPage {
 	    $sql = "SELECT
 					COUNT(rev_timestamp) AS revisions,
 					COUNT(DISTINCT rev_page) AS pages
-				FROM revision
+				FROM $revTable
 				WHERE rev_user_text = '{$username}'";
 
 		$res = $dbr->query( $sql );
@@ -490,7 +501,7 @@ class SpecialUserJourney extends SpecialPage {
 					(SELECT
 						cat_pages as pagesInCat,
 						cat_title as catTitle
-					FROM category
+					FROM $catTable
 					)d /* number of pages in categories */
 					JOIN
 					(
@@ -500,14 +511,14 @@ class SpecialUserJourney extends SpecialPage {
 					FROM
 						(SELECT
 							DISTINCT(rev_page)
-						FROM revision
+						FROM $revTable
 						WHERE rev_user_text = '{$username}'
 						)a /* distinct pages user has revised */
 						JOIN
 						(SELECT
 							cl_from,
 							cl_to as cat
-						FROM categorylinks
+						FROM $catLinksTable
 						)b /* pages and their categories */
 						WHERE rev_page=cl_from
 						GROUP BY cat
@@ -532,14 +543,14 @@ class SpecialUserJourney extends SpecialPage {
 						(SELECT /* pages in EVA category */
 							cl_from, /* pageID */
 							cl_to /* catName */
-						FROM categorylinks
+						FROM $catLinksTable
 						WHERE cl_to = '{$category}'
 						)a
 						JOIN
 						(SELECT /* page revisions */
 							rev_page, /* pageID */
 							rev_user_text as username
-						FROM revision
+						FROM $revTable
 						)b
 						WHERE cl_from=rev_page
 
@@ -677,12 +688,18 @@ class SpecialUserJourney extends SpecialPage {
 
 		$dbr = wfGetDB( DB_SLAVE );
 
+		$userTable = $dbr->tableName( 'user' );
+		$userGroupTable = $dbr->tableName( 'user_groups' );
+		$revTable = $dbr->tableName( 'revision' );
+		$catTable = $dbr->tableName( 'category' );
+		$catLinksTable = $dbr->tableName( 'categorylinks' );
+
     $sql = "SELECT
               DATE(rev_timestamp) AS day,
               COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score,
               COUNT(DISTINCT rev_page) as pages,
               COUNT(rev_id) as revisions
-            FROM `revision`
+            FROM $revTable
             WHERE
               rev_user_text IN ( '$username' )
             GROUP BY day
@@ -733,7 +750,13 @@ class SpecialUserJourney extends SpecialPage {
 
 	    $dbr = wfGetDB( DB_SLAVE );
 
-			$competitors = array($username);
+		$userTable = $dbr->tableName( 'user' );
+		$userGroupTable = $dbr->tableName( 'user_groups' );
+		$revTable = $dbr->tableName( 'revision' );
+		$catTable = $dbr->tableName( 'category' );
+		$catLinksTable = $dbr->tableName( 'categorylinks' );
+
+		$competitors = array($username);
 
 	    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
 
@@ -742,7 +765,7 @@ class SpecialUserJourney extends SpecialPage {
 				SELECT
 					DATE(rev_timestamp) AS day,
 					COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS {$competitor}
-				FROM `revision`
+				FROM $revTable
 				WHERE
 					rev_user_text IN ( '{$competitor}' )
 	        /* AND rev_timestamp > 20150101000000 */
@@ -766,7 +789,7 @@ class SpecialUserJourney extends SpecialPage {
 	    // Add column with dummy user to generate a 0 value for every day during comparison period
 	    $sql = "SELECT
 					DATE(rev_timestamp) AS day
-				FROM revision
+				FROM $revTable
 				WHERE rev_user_text in ( ''";
 			foreach( $competitors as $competitor ){
 				$sql .= ", '{$competitor}'";
@@ -909,6 +932,12 @@ class SpecialUserJourney extends SpecialPage {
 
 		$dbr = wfGetDB( DB_SLAVE );
 
+		$userTable = $dbr->tableName( 'user' );
+		$userGroupTable = $dbr->tableName( 'user_groups' );
+		$revTable = $dbr->tableName( 'revision' );
+		$catTable = $dbr->tableName( 'category' );
+		$catLinksTable = $dbr->tableName( 'categorylinks' );
+
 		$queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
 
     $sql = "SELECT
@@ -922,7 +951,7 @@ class SpecialUserJourney extends SpecialPage {
 								SELECT
 									DATE(rev_timestamp) AS user_day,
 									{$queryScore} AS user_score
-								FROM `revision`
+								FROM $revTable
 								WHERE
 									rev_user_text IN ( '$username' )
 								GROUP BY user_day
@@ -932,7 +961,7 @@ class SpecialUserJourney extends SpecialPage {
 								SELECT
 									DATE(rev_timestamp) AS user2_day,
 									{$queryScore} AS user2_score
-								FROM `revision`
+								FROM $revTable
 								WHERE
 									rev_user_text IN ( '$username2' )
 								GROUP BY user2_day
@@ -944,7 +973,7 @@ class SpecialUserJourney extends SpecialPage {
 								SELECT
 									DATE(rev_timestamp) AS user_day,
 									{$queryScore} AS user_score
-								FROM `revision`
+								FROM $revTable
 								WHERE
 									rev_user_text IN ( '$username' )
 								GROUP BY user_day
@@ -954,7 +983,7 @@ class SpecialUserJourney extends SpecialPage {
 								SELECT
 									DATE(rev_timestamp) AS user2_day,
 									{$queryScore} AS user2_score
-								FROM `revision`
+								FROM $revTable
 								WHERE
 									rev_user_text IN ( '$username2' )
 								GROUP BY user2_day
@@ -1006,6 +1035,12 @@ function compareScoreByUserGroup( ){
 
     $dbr = wfGetDB( DB_SLAVE );
 
+	$userTable = $dbr->tableName( 'user' );
+	$userGroupTable = $dbr->tableName( 'user_groups' );
+	$revTable = $dbr->tableName( 'revision' );
+	$catTable = $dbr->tableName( 'category' );
+	$catLinksTable = $dbr->tableName( 'categorylinks' );
+
 	// Determine list of competitors based on $userGroup
     $sql = "SELECT
 				user_name
@@ -1013,7 +1048,7 @@ function compareScoreByUserGroup( ){
 			SELECT
 				ug_user,
 				ug_group
-			FROM user_groups
+			FROM $userGroupTable
 			WHERE ug_group = '{$userGroup}'
 			) a
 			 JOIN
@@ -1021,7 +1056,7 @@ function compareScoreByUserGroup( ){
 			SELECT
 				user_id,
 				user_name
-			FROM user
+			FROM $userTable
 			) b
 			ON ug_user=user_id
     ";
@@ -1041,7 +1076,7 @@ function compareScoreByUserGroup( ){
 			SELECT
 				DATE(rev_timestamp) AS day,
 				LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitor}
-			FROM `revision`
+			FROM $revTable
 			WHERE
 				rev_user_text IN ( '{$competitor}' )
         /* AND rev_timestamp > 20150101000000 */
@@ -1065,7 +1100,7 @@ function compareScoreByUserGroup( ){
     // Add column with dummy user to generate a 0 value for every day during comparison period
     $sql = "SELECT
 				DATE(rev_timestamp) AS day
-			FROM revision
+			FROM $revTable
 			WHERE rev_user_text in ( ''";
 		foreach( $competitors as $competitor ){
 			$sql .= ", '{$competitor}'";
@@ -1176,6 +1211,12 @@ function compareScoreBetweenGroups( ){
 
     $dbr = wfGetDB( DB_SLAVE );
 
+		$userTable = $dbr->tableName( 'user' );
+		$userGroupTable = $dbr->tableName( 'user_groups' );
+		$revTable = $dbr->tableName( 'revision' );
+		$catTable = $dbr->tableName( 'category' );
+		$catLinksTable = $dbr->tableName( 'categorylinks' );
+
 	// Determine list of users in sysop
     $sqlSysop = "SELECT
 				user_name
@@ -1183,7 +1224,7 @@ function compareScoreBetweenGroups( ){
 			SELECT
 				ug_user,
 				ug_group
-			FROM user_groups
+			FROM $userGroupTable
 			WHERE ug_group = 'sysop'
 			) a
 			 JOIN
@@ -1191,7 +1232,7 @@ function compareScoreBetweenGroups( ){
 			SELECT
 				user_id,
 				user_name
-			FROM user
+			FROM $userTable
 			) b
 			ON ug_user=user_id
     ";
@@ -1214,14 +1255,14 @@ function compareScoreBetweenGroups( ){
 							(SELECT
 								ug_user,
 								ug_group
-							FROM user_groups
+							FROM $userGroupTable
 							WHERE ug_group IN ('sysop')
 							)a
 							RIGHT JOIN
 							(SELECT
 								ug_user,
 								ug_group
-							FROM user_groups
+							FROM $userGroupTable
 							WHERE ug_group IN ('CX3')
 							)b
 							ON a.ug_user=b.ug_user
@@ -1231,7 +1272,7 @@ function compareScoreBetweenGroups( ){
 					SELECT
 						user_id,
 						user_name
-					FROM user
+					FROM $userTable
 					)d
 					ON c.ug_user=d.user_id";
 
@@ -1253,14 +1294,14 @@ function compareScoreBetweenGroups( ){
 						(SELECT
 							ug_user,
 							ug_group
-						FROM user_groups
+						FROM $userGroupTable
 						WHERE ug_group IN ('CX3')
 						)a
 						RIGHT JOIN
 						(SELECT
 							ug_user,
 							ug_group
-						FROM user_groups
+						FROM $userGroupTable
 						WHERE ug_group NOT IN ('CX3')
 						)b
 						ON a.ug_user=b.ug_user
@@ -1270,7 +1311,7 @@ function compareScoreBetweenGroups( ){
 				SELECT
 					user_id,
 					user_name
-				FROM user
+				FROM $userTable
 				)d
 				ON c.ug_user=d.user_id";
 
@@ -1290,12 +1331,12 @@ function compareScoreBetweenGroups( ){
 
     // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
 
-    $queryDT = function( $competitorTeamName, $competitorUsernames, $scoreCeiling ){
+    $queryDT = function( $competitorTeamName, $competitorUsernames, $scoreCeiling, $revTable ){
     	$output = "INSERT INTO temp_union (day, {$competitorTeamName})
 			SELECT
 				DATE(rev_timestamp) AS day,
 				LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitorTeamName}
-			FROM `revision`
+			FROM $revTable
 			WHERE
 				rev_user_text IN ( ";
 
@@ -1327,7 +1368,7 @@ function compareScoreBetweenGroups( ){
     // For this function I removed WHERE condition limiting time window to competitors; just use entire wiki history
     $sql = "SELECT
 				DATE(rev_timestamp) AS day
-			FROM revision
+			FROM $revTable
 			ORDER BY rev_timestamp ASC
 			LIMIT 1";
 
@@ -1351,7 +1392,7 @@ function compareScoreBetweenGroups( ){
 
 	// Add each competitor's score to temp table
 	foreach( $competitors as $competitorTeamName => $competitorUsernames ){
-		$sql = $queryDT($competitorTeamName, $competitorUsernames, $scoreCeiling);
+		$sql = $queryDT($competitorTeamName, $competitorUsernames, $scoreCeiling, $revTable);
 
 		$res = $dbr->query( $sql );
 	}
@@ -1434,6 +1475,13 @@ function compareViewsBetweenGroups( ){
 
     $dbr = wfGetDB( DB_SLAVE );
 
+	$userTable = $dbr->tableName( 'user' );
+	$userGroupTable = $dbr->tableName( 'user_groups' );
+	$revTable = $dbr->tableName( 'revision' );
+	$catTable = $dbr->tableName( 'category' );
+	$catLinksTable = $dbr->tableName( 'categorylinks' );
+	$wiretapTable = $dbr->tableName( 'wiretap' );
+
 	// Determine list of users in sysop
     $sqlSysop = "SELECT
 				user_name
@@ -1441,7 +1489,7 @@ function compareViewsBetweenGroups( ){
 			SELECT
 				ug_user,
 				ug_group
-			FROM user_groups
+			FROM $userGroupTable
 			WHERE ug_group = 'sysop'
 			) a
 			 JOIN
@@ -1449,7 +1497,7 @@ function compareViewsBetweenGroups( ){
 			SELECT
 				user_id,
 				user_name
-			FROM user
+			FROM $userTable
 			) b
 			ON ug_user=user_id
     ";
@@ -1472,14 +1520,14 @@ function compareViewsBetweenGroups( ){
 							(SELECT
 								ug_user,
 								ug_group
-							FROM user_groups
+							FROM $userGroupTable
 							WHERE ug_group IN ('sysop')
 							)a
 							RIGHT JOIN
 							(SELECT
 								ug_user,
 								ug_group
-							FROM user_groups
+							FROM $userGroupTable
 							WHERE ug_group IN ('CX3')
 							)b
 							ON a.ug_user=b.ug_user
@@ -1489,7 +1537,7 @@ function compareViewsBetweenGroups( ){
 					SELECT
 						user_id,
 						user_name
-					FROM user
+					FROM $userTable
 					)d
 					ON c.ug_user=d.user_id";
 
@@ -1511,14 +1559,14 @@ function compareViewsBetweenGroups( ){
 						(SELECT
 							ug_user,
 							ug_group
-						FROM user_groups
+						FROM $userGroupTable
 						WHERE ug_group IN ('CX3')
 						)a
 						RIGHT JOIN
 						(SELECT
 							ug_user,
 							ug_group
-						FROM user_groups
+						FROM $userGroupTable
 						WHERE ug_group NOT IN ('CX3')
 						)b
 						ON a.ug_user=b.ug_user
@@ -1528,7 +1576,7 @@ function compareViewsBetweenGroups( ){
 				SELECT
 					user_id,
 					user_name
-				FROM user
+				FROM $userTable
 				)d
 				ON c.ug_user=d.user_id";
 
@@ -1548,14 +1596,14 @@ function compareViewsBetweenGroups( ){
 
     // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
 
-    $queryDT = function( $competitorTeamName, $competitorUsernames ){
+    $queryDT = function( $competitorTeamName, $competitorUsernames, $wiretapTable ){
     	// parts of this query stolen from Extension:Wiretap function getUniqueRows()
     	$output = "INSERT INTO temp_union (day, {$competitorTeamName})
 			SELECT
 				DATE(hit_timestamp) AS day,
 				COUNT(DISTINCT(CONCAT(user_name,'UNIQUESEPARATOR',page_id))) AS {$competitorTeamName} -- For unique-page views
 				-- COUNT(DISTINCT(user_name)) AS {$competitorTeamName} -- For non-unique-page views
-			FROM `wiretap`
+			FROM $wiretapTable
 			WHERE
 				user_name IN ( ";
 
@@ -1595,7 +1643,7 @@ function compareViewsBetweenGroups( ){
 	// Use this instead of above to make x axis span life of wiki, not life of Extension:Wiretap
 	$sql = "SELECT
 			DATE(rev_timestamp) AS day
-		FROM revision
+		FROM $revTable
 		ORDER BY rev_timestamp ASC
 		LIMIT 1";
 
@@ -1619,7 +1667,7 @@ function compareViewsBetweenGroups( ){
 
 	// Add each competitor's score to temp table
 	foreach( $competitors as $competitorTeamName => $competitorUsernames ){
-		$sql = $queryDT($competitorTeamName, $competitorUsernames);
+		$sql = $queryDT($competitorTeamName, $competitorUsernames, $wiretapTable);
 
 		$res = $dbr->query( $sql );
 	}
