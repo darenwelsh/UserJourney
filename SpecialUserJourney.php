@@ -760,7 +760,7 @@ class SpecialUserJourney extends SpecialPage {
 
 	    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
 
-	    $queryDT = function( $competitor ){
+	    $queryDT = function( $competitor, $revTable ){
 	    	$output = "INSERT INTO temp_union (day, {$competitor})
 				SELECT
 					DATE(rev_timestamp) AS day,
@@ -817,7 +817,7 @@ class SpecialUserJourney extends SpecialPage {
 
 			// Add each competitor's score to temp table
 			foreach( $competitors as $competitor ){
-				$sql = $queryDT($competitor);
+				$sql = $queryDT($competitor, $revTable);
 
 				$res = $dbr->query( $sql );
 			}
