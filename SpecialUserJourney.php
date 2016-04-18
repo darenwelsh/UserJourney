@@ -1071,7 +1071,7 @@ function compareScoreByUserGroup( ){
 
     // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
 
-    $queryDT = function( $competitor, $scoreCeiling ){
+    $queryDT = function( $competitor, $scoreCeiling, $revTable ){
     	$output = "INSERT INTO temp_union (day, {$competitor})
 			SELECT
 				DATE(rev_timestamp) AS day,
@@ -1128,7 +1128,7 @@ function compareScoreByUserGroup( ){
 
 		// Add each competitor's score to temp table
 		foreach( $competitors as $competitor ){
-			$sql = $queryDT($competitor, $scoreCeiling);
+			$sql = $queryDT($competitor, $scoreCeiling, $revTable);
 
 			$res = $dbr->query( $sql );
 		}
