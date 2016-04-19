@@ -952,10 +952,6 @@ class SpecialUserJourney extends SpecialPage {
 	    global $wgOut;
 	    global $wgScoreCeiling;
 
-	    //TO-DO make $scoreCeiling an eg configured in LocalSettings
-	    $scoreCeiling = 500; // Limit score to this value or below
-	    $scoreCeiling = $wgScoreCeiling;
-
 	    $daysToDetermineCompetitors = 14; // Number of days in which to compare scores of logged-in user against others (used to find suitable competitors)
 	    $daysToPlot = 365;
 	    $daysToDetermineCompetitors += 100; //TO-DO remove - number increased for testing on old wiki
@@ -988,7 +984,7 @@ class SpecialUserJourney extends SpecialPage {
 			$dateString = $dbr->timestamp( $date );
 
 	    $sql = "SELECT
-	    	LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) as score
+	    	LEAST({$wgScoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) as score
 	      FROM $revTable
 	      WHERE rev_timestamp > '$dateString'
 	      AND rev_user_text = '{$username}'
@@ -1045,11 +1041,11 @@ class SpecialUserJourney extends SpecialPage {
 
 	    }
 
-	    $queryDT = function( $competitor, $dateString, $scoreCeiling, $revTable ){
+	    $queryDT = function( $competitor, $dateString, $wgScoreCeiling, $revTable ){
 	    	$output = "INSERT INTO temp_union (day, {$competitor})
 				SELECT
 					DATE(rev_timestamp) AS day,
-					LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitor}
+					LEAST({$wgScoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitor}
 				FROM $revTable
 				WHERE
 					rev_user_text IN ( '{$competitor}' )
@@ -1092,7 +1088,7 @@ class SpecialUserJourney extends SpecialPage {
 				$date = time() - ( 60 * 60 * 24 * $daysToPlot );
 				$dateString = $dbr->timestamp( $date );
 
-				$sql = $queryDT($competitor, $dateString, $scoreCeiling, $revTable);
+				$sql = $queryDT($competitor, $dateString, $wgScoreCeiling, $revTable);
 
 				$res = $dbr->query( $sql );
 			}
@@ -1167,8 +1163,7 @@ class SpecialUserJourney extends SpecialPage {
 function compareScoreByUserGroup( ){
 		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
     global $wgOut;
-    //TO-DO make $scoreCeiling an eg configured in LocalSettings
-    $scoreCeiling = 100; // Limit score to this value or below
+    global $wgScoreCeiling;
 
     $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
 
@@ -1218,11 +1213,11 @@ function compareScoreByUserGroup( ){
 
     // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
 
-    $queryDT = function( $competitor, $scoreCeiling, $revTable ){
+    $queryDT = function( $competitor, $wgScoreCeiling, $revTable ){
     	$output = "INSERT INTO temp_union (day, {$competitor})
 			SELECT
 				DATE(rev_timestamp) AS day,
-				LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitor}
+				LEAST({$wgScoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitor}
 			FROM $revTable
 			WHERE
 				rev_user_text IN ( '{$competitor}' )
@@ -1275,7 +1270,7 @@ function compareScoreByUserGroup( ){
 
 		// Add each competitor's score to temp table
 		foreach( $competitors as $competitor ){
-			$sql = $queryDT($competitor, $scoreCeiling, $revTable);
+			$sql = $queryDT($competitor, $wgScoreCeiling, $revTable);
 
 			$res = $dbr->query( $sql );
 		}
@@ -1343,8 +1338,7 @@ function compareScoreByUserGroup( ){
 function compareScoreBetweenGroups( ){
 		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
     global $wgOut;
-    //TO-DO make $scoreCeiling an eg configured in LocalSettings
-    $scoreCeiling = 100; // Limit score to this value or below
+    global $wgScoreCeiling;
 
     // $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
     // for now, 2nd group is CX3 && !sysop
@@ -1478,11 +1472,11 @@ function compareScoreBetweenGroups( ){
 
     // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
 
-    $queryDT = function( $competitorTeamName, $competitorUsernames, $scoreCeiling, $revTable ){
+    $queryDT = function( $competitorTeamName, $competitorUsernames, $wgScoreCeiling, $revTable ){
     	$output = "INSERT INTO temp_union (day, {$competitorTeamName})
 			SELECT
 				DATE(rev_timestamp) AS day,
-				LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitorTeamName}
+				LEAST({$wgScoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitorTeamName}
 			FROM $revTable
 			WHERE
 				rev_user_text IN ( ";
@@ -1539,7 +1533,7 @@ function compareScoreBetweenGroups( ){
 
 	// Add each competitor's score to temp table
 	foreach( $competitors as $competitorTeamName => $competitorUsernames ){
-		$sql = $queryDT($competitorTeamName, $competitorUsernames, $scoreCeiling, $revTable);
+		$sql = $queryDT($competitorTeamName, $competitorUsernames, $wgScoreCeiling, $revTable);
 
 		$res = $dbr->query( $sql );
 	}
