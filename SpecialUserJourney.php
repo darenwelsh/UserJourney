@@ -1065,15 +1065,15 @@ class SpecialUserJourney extends SpecialPage {
 
 	    };
 
-			// Create temp table
-			$sql = "CREATE TEMPORARY TABLE temp_union(
-				day date NULL";
-			// Add column for user "dummy"
-			$sql .= ", dummy float NULL";
-			foreach( $competitors as $competitor ){
-				$sql .= ", {$competitor} float NULL";
-			}
-			$sql .= " )ENGINE = MEMORY";
+		// Create temp table
+		$sql = "CREATE TEMPORARY TABLE temp_union(
+			day date NULL";
+		// Add column for user "dummy"
+		$sql .= ", dummy float NULL";
+		foreach( $competitors as $competitor ){
+			$sql .= ", {$competitor} float NULL";
+		}
+		$sql .= " )ENGINE = MEMORY";
 
 	    $res = $dbr->query( $sql );
 
