@@ -41,13 +41,6 @@ class SpecialUserJourney extends SpecialPage {
 		else if ( $this->mMode == 'compare-activity-by-similar-activity' ) {
 			$this->compareActivityByPeers();
 		}
-		// else if ( $this->mMode == 'compare-activity-stacked-plot' ) {
-      // $this->compareScoreStackedPlot();
-      // $this->compareSimilarScoresPlots();
-		// }
-		// else if ( $this->mMode == 'compare-activity-stacked-plot2' ) {
-  //     $this->compareScoreStackedPlot2();
-		// }
 		else if ( $this->mMode == 'compare-activity-by-user-group' ) {
 			$this->compareScoreByUserGroup();
 		}
@@ -106,8 +99,6 @@ class SpecialUserJourney extends SpecialPage {
 			$navLine .= "<li>" . wfMessage( 'userjourney-compare-activity' )->text()
 				// . ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'compare-activity-data' ) // not currently displayed, maybe later for admins/Managers
 				. ": (" . $this->createHeaderLink( 'userjourney-plot-by-peers', 'compare-activity-by-similar-activity' )
-				// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot' )
-				// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'compare-activity-stacked-plot2' )
 				. ") (" . $this->createHeaderLink( 'userjourney-plot-users-within-group', 'compare-activity-by-user-group' )
 				. ") (" . $this->createHeaderLink( 'userjourney-plot-by-group', 'compare-activity-between-groups' )
 				. ") (" . $this->createHeaderLink( 'userjourney-plot-views-between-groups', 'compare-views-between-groups' )
@@ -725,12 +716,12 @@ class SpecialUserJourney extends SpecialPage {
 	}
 
 
-  /**
-  * Function generates plot of contribution score for logged-in user over time
-  *
-  * @param $tbd - no parameters now
-  * @return nothing - generates special page
-  */
+	/**
+	* Function generates plot of contribution score for logged-in user over time
+	*
+	* @param $tbd - no parameters now
+	* @return nothing - generates special page
+	*/
 	function myScorePlot( ){
 		//TO-DO Make one plotting function to handle all 3 options, using parameters
 		//			Probably: $competitors (from this list, determine solo vs group comparison), time to compare, time to plot
@@ -876,7 +867,8 @@ class SpecialUserJourney extends SpecialPage {
 	  }
 
     $wgOut->addHTML( $html );
-  }
+
+	}
 
 
 
@@ -885,7 +877,8 @@ class SpecialUserJourney extends SpecialPage {
 
 
 
-
+	//This is currently not displayed. The function need to be updated to match compareActivityByPeers, but show data table
+	//instead of a plot.
 	public function compareScoreData() {
 		global $wgOut;
 
@@ -898,30 +891,6 @@ class SpecialUserJourney extends SpecialPage {
     	'Ejmontal',
     	'Swray'
     	);
-
-		// set each person's score query as a variable to further simplify
-		// allow for 3 people http://stackoverflow.com/questions/2384298/why-does-mysql-report-a-syntax-error-on-full-outer-join
-		// with two tables t1, t2:
-
-		// SELECT * FROM t1
-		// LEFT JOIN t2 ON t1.id = t2.id
-		// UNION
-		// SELECT * FROM t1
-		// RIGHT JOIN t2 ON t1.id = t2.id
-
-		// with three tables t1, t2, t3:
-
-		// SELECT * FROM t1
-		// LEFT JOIN t2 ON t1.id = t2.id
-		// LEFT JOIN t3 ON t2.id = t3.id
-		// UNION
-		// SELECT * FROM t1
-		// RIGHT JOIN t2 ON t1.id = t2.id
-		// LEFT JOIN t3 ON t2.id = t3.id
-		// UNION
-		// SELECT * FROM t1
-		// RIGHT JOIN t2 ON t1.id = t2.id
-		// RIGHT JOIN t3 ON t2.id = t3.id
 
 		$james = User::newFromName("Ejmontal");
 		$name2 = $james->getRealName();
@@ -1011,6 +980,217 @@ class SpecialUserJourney extends SpecialPage {
 		$wgOut->addHTML( $html );
 
 	}
+
+
+
+
+function compareActivityByPeers( ){
+		// TO-DO Modify plots to have some granular/moving-average and some just showing 1-month or 3-month average values
+		// TO-DO Maybe have one page with all data and another page with last 30-60 days
+    global $wgOut;
+    //TO-DO make $scoreCeiling an eg configured in LocalSettings
+    $scoreCeiling = 100; // Limit score to this value or below
+
+    $daysToDetermineCompetitors = 14; // Number of days in which to compare scores of logged-in user against others (used to find suitable competitors)
+    $daysToPlot = 365;
+    $daysToDetermineCompetitors += 100; //TO-DO remove - number increased for testing on old wiki
+    $daysToPlot += 100; //TO-DO remove - number increased for testing on old wiki
+
+    $username = $this->getUser()->mName;
+	$displayName = self::getDisplayName();
+
+    $competitors = array( // For this function, start with only the logged-in user. More are added later.
+    	$username,
+    	);
+
+    $wgOut->setPageTitle( "UserJourney: Score comparison plot" ); //TO-DO is this even doing anything?
+
+		if( $this->getUser()->getID() ){ // Only do stuff if user has an ID
+
+	    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
+	    // $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
+
+	    $dbr = wfGetDB( DB_SLAVE );
+
+		$userTable = $dbr->tableName( 'user' );
+		$userGroupTable = $dbr->tableName( 'user_groups' );
+		$revTable = $dbr->tableName( 'revision' );
+
+	    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
+
+	    // Determine score of logged in user
+			$date = time() - ( 60 * 60 * 24 * $daysToDetermineCompetitors );
+			$dateString = $dbr->timestamp( $date );
+
+	    $sql = "SELECT
+	    	LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) as score
+	      FROM $revTable
+	      WHERE rev_timestamp > '$dateString'
+	      AND rev_user_text = '{$username}'
+	    ";
+
+	    $res = $dbr->query( $sql );
+	    $row = $dbr->fetchRow( $res );
+	    $userRecentScore = round($row['score'], 5);
+
+	    // Determine users with relatively similar scores for the past $daysToDetermineCompetitors
+	    $commonQuery = "
+				(SELECT
+					user_name,
+					score
+				FROM
+					(SELECT user_id,
+						user_name,
+						page_count,
+						rev_count,
+						page_count+SQRT(rev_count-page_count)*2 AS score
+					FROM $userTable u
+					JOIN
+					(SELECT rev_user,
+						COUNT(DISTINCT rev_page) AS page_count,
+						COUNT(rev_id) AS rev_count
+						FROM $revTable
+						WHERE rev_timestamp > '$dateString'
+						AND rev_user_text != '{$username}'
+						GROUP BY rev_user
+						ORDER BY page_count DESC
+					) s ON user_id=rev_user
+	    ";
+
+	    $sql = "
+	    	{$commonQuery}
+	    	ORDER BY score ASC ) t1
+				WHERE score > {$userRecentScore}
+				LIMIT 3 )
+				UNION
+				{$commonQuery}
+				ORDER BY score DESC ) t2
+				WHERE score < {$userRecentScore}
+				LIMIT 2 )
+				ORDER BY score DESC
+	    ";
+
+	    $res = $dbr->query( $sql );
+
+			while( $row = $dbr->fetchRow( $res ) ) {
+
+					list($competitor, $score) = array($row['user_name'], $row['score']);
+
+					$competitors[] = "$competitor";
+
+	    }
+
+	    $queryDT = function( $competitor, $dateString, $scoreCeiling, $revTable ){
+	    	$output = "INSERT INTO temp_union (day, {$competitor})
+				SELECT
+					DATE(rev_timestamp) AS day,
+					LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitor}
+				FROM $revTable
+				WHERE
+					rev_user_text IN ( '{$competitor}' )
+					AND rev_timestamp > '$dateString'
+				GROUP BY day";
+
+				return $output;
+	    };
+
+			// Create temp table
+			$sql = "CREATE TEMPORARY TABLE temp_union(
+				day date NULL";
+			// Add column for user "dummy"
+			$sql .= ", dummy float NULL";
+			foreach( $competitors as $competitor ){
+				$sql .= ", {$competitor} float NULL";
+			}
+			$sql .= " )ENGINE = MEMORY";
+
+	    $res = $dbr->query( $sql );
+
+	    // Add column with dummy user to generate a 0 value for every day during comparison period
+	    $lastDate = date("Ymd", time()); // Today as YYYYMMDD
+	    $firstDate = date('Ymd', strtotime($lastDate . " - {$daysToPlot} days")); // Today - $daysToPlot days
+	    $date = $firstDate;
+	    while( $date <= $lastDate ){
+	    	$dateTime = date('Y-m-d', strtotime($date * 1000000) ); // Append 0 value for HHMMSS to match timestamp format in revision table
+
+				// $sql = $queryDT('dummy', $dateTime);
+				$sql = "INSERT INTO temp_union (day, dummy) VALUES ('{$dateTime}', '0')";
+
+				$res = $dbr->query( $sql );
+
+				$date = date('Ymd', strtotime($date . ' +1 day') );
+	    }
+
+			// Add each competitor's score to temp table
+			foreach( $competitors as $competitor ){
+				// TO-DO update to UPDATE rows instead of INSERT (after generating table with one row for eacy day)
+				$date = time() - ( 60 * 60 * 24 * $daysToPlot );
+				$dateString = $dbr->timestamp( $date );
+
+				$sql = $queryDT($competitor, $dateString, $scoreCeiling, $revTable);
+
+				$res = $dbr->query( $sql );
+			}
+
+			// Consolidate rows so each day only has one row
+	    $sql = "SELECT
+				day";
+			foreach( $competitors as $competitor ){
+				$sql .= ", max({$competitor}) {$competitor}";
+			}
+			$sql .= " FROM temp_union GROUP BY day";
+
+	    $res = $dbr->query( $sql );
+
+			while( $row = $dbr->fetchRow( $res ) ) {
+
+				foreach( $competitors as $competitor ){
+
+					list($day, $score) = array($row['day'], $row["$competitor"]);
+
+					$userdata["$competitor"][] = array(
+						'x' => strtotime( $day ) * 1000,
+						'y' => floatval( $score ),
+					);
+				}
+
+	    }
+
+			// Remove temp table
+	    $sql = "DROP TABLE temp_union";
+	    $res = $dbr->query ( $sql );
+
+	    foreach( $competitors as $competitor ){
+
+		    $person = User::newFromName("$competitor");
+				$realName = $person->getRealName();
+				if( empty($realName) ){
+					$nameToUse = $competitor;
+				} else {
+					$nameToUse = $realName;
+				}
+
+		    $data[] = array(
+	    		'key' => $nameToUse,
+	    		'values' => $userdata["$competitor"],
+	  		);
+
+	    }
+
+			$html = '';
+			$html .= '<h2>Line with Window</h2>';
+	    $html .= '<div id="userjourney-compare-chart-line-with-window"><svg height="400px"></svg></div>';
+			$html .= '<h2>Stacked Area</h2>';
+	    $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
+			// $html .= '<h2>Stacked Area Stream</h2>';
+	  //   $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
+
+	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+		} else {
+			$html = '<br />Sorry, but this feature is not available for anonymous users.<br />';
+		}
+    $wgOut->addHTML( $html );
+  }
 
 
 
@@ -1731,215 +1911,6 @@ function compareViewsBetweenGroups( ){
 
 
 
-
-
-function compareActivityByPeers( ){
-		// TO-DO Modify plots to have some granular/moving-average and some just showing 1-month or 3-month average values
-		// TO-DO Maybe have one page with all data and another page with last 30-60 days
-    global $wgOut;
-    //TO-DO make $scoreCeiling an eg configured in LocalSettings
-    $scoreCeiling = 100; // Limit score to this value or below
-
-    $daysToDetermineCompetitors = 14; // Number of days in which to compare scores of logged-in user against others (used to find suitable competitors)
-    $daysToPlot = 365;
-    $daysToDetermineCompetitors += 100; //TO-DO remove - number increased for testing on old wiki
-    $daysToPlot += 100; //TO-DO remove - number increased for testing on old wiki
-
-    $username = $this->getUser()->mName;
-	$displayName = self::getDisplayName();
-
-    $competitors = array( // For this function, start with only the logged-in user. More are added later.
-    	$username,
-    	);
-
-    $wgOut->setPageTitle( "UserJourney: Score comparison plot" ); //TO-DO is this even doing anything?
-
-		if( $this->getUser()->getID() ){ // Only do stuff if user has an ID
-
-	    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
-	    // $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
-
-	    $dbr = wfGetDB( DB_SLAVE );
-
-		$userTable = $dbr->tableName( 'user' );
-		$userGroupTable = $dbr->tableName( 'user_groups' );
-		$revTable = $dbr->tableName( 'revision' );
-
-	    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
-
-	    // Determine score of logged in user
-			$date = time() - ( 60 * 60 * 24 * $daysToDetermineCompetitors );
-			$dateString = $dbr->timestamp( $date );
-
-	    $sql = "SELECT
-	    	LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) as score
-	      FROM $revTable
-	      WHERE rev_timestamp > '$dateString'
-	      AND rev_user_text = '{$username}'
-	    ";
-
-	    $res = $dbr->query( $sql );
-	    $row = $dbr->fetchRow( $res );
-	    $userRecentScore = round($row['score'], 5);
-
-	    // Determine users with relatively similar scores for the past $daysToDetermineCompetitors
-	    $commonQuery = "
-				(SELECT
-					user_name,
-					score
-				FROM
-					(SELECT user_id,
-						user_name,
-						page_count,
-						rev_count,
-						page_count+SQRT(rev_count-page_count)*2 AS score
-					FROM $userTable u
-					JOIN
-					(SELECT rev_user,
-						COUNT(DISTINCT rev_page) AS page_count,
-						COUNT(rev_id) AS rev_count
-						FROM $revTable
-						WHERE rev_timestamp > '$dateString'
-						AND rev_user_text != '{$username}'
-						GROUP BY rev_user
-						ORDER BY page_count DESC
-					) s ON user_id=rev_user
-	    ";
-
-	    $sql = "
-	    	{$commonQuery}
-	    	ORDER BY score ASC ) t1
-				WHERE score > {$userRecentScore}
-				LIMIT 3 )
-				UNION
-				{$commonQuery}
-				ORDER BY score DESC ) t2
-				WHERE score < {$userRecentScore}
-				LIMIT 2 )
-				ORDER BY score DESC
-	    ";
-
-	    $res = $dbr->query( $sql );
-
-			while( $row = $dbr->fetchRow( $res ) ) {
-
-					list($competitor, $score) = array($row['user_name'], $row['score']);
-
-					$competitors[] = "$competitor";
-
-	    }
-
-	    $queryDT = function( $competitor, $dateString, $scoreCeiling, $revTable ){
-	    	$output = "INSERT INTO temp_union (day, {$competitor})
-				SELECT
-					DATE(rev_timestamp) AS day,
-					LEAST({$scoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitor}
-				FROM $revTable
-				WHERE
-					rev_user_text IN ( '{$competitor}' )
-					AND rev_timestamp > '$dateString'
-				GROUP BY day";
-
-				return $output;
-	    };
-
-			// Create temp table
-			$sql = "CREATE TEMPORARY TABLE temp_union(
-				day date NULL";
-			// Add column for user "dummy"
-			$sql .= ", dummy float NULL";
-			foreach( $competitors as $competitor ){
-				$sql .= ", {$competitor} float NULL";
-			}
-			$sql .= " )ENGINE = MEMORY";
-
-	    $res = $dbr->query( $sql );
-
-	    // Add column with dummy user to generate a 0 value for every day during comparison period
-	    $lastDate = date("Ymd", time()); // Today as YYYYMMDD
-	    $firstDate = date('Ymd', strtotime($lastDate . " - {$daysToPlot} days")); // Today - $daysToPlot days
-	    $date = $firstDate;
-	    while( $date <= $lastDate ){
-	    	$dateTime = date('Y-m-d', strtotime($date * 1000000) ); // Append 0 value for HHMMSS to match timestamp format in revision table
-
-				// $sql = $queryDT('dummy', $dateTime);
-				$sql = "INSERT INTO temp_union (day, dummy) VALUES ('{$dateTime}', '0')";
-
-				$res = $dbr->query( $sql );
-
-				$date = date('Ymd', strtotime($date . ' +1 day') );
-	    }
-
-			// Add each competitor's score to temp table
-			foreach( $competitors as $competitor ){
-				// TO-DO update to UPDATE rows instead of INSERT (after generating table with one row for eacy day)
-				$date = time() - ( 60 * 60 * 24 * $daysToPlot );
-				$dateString = $dbr->timestamp( $date );
-
-				$sql = $queryDT($competitor, $dateString, $scoreCeiling, $revTable);
-
-				$res = $dbr->query( $sql );
-			}
-
-			// Consolidate rows so each day only has one row
-	    $sql = "SELECT
-				day";
-			foreach( $competitors as $competitor ){
-				$sql .= ", max({$competitor}) {$competitor}";
-			}
-			$sql .= " FROM temp_union GROUP BY day";
-
-	    $res = $dbr->query( $sql );
-
-			while( $row = $dbr->fetchRow( $res ) ) {
-
-				foreach( $competitors as $competitor ){
-
-					list($day, $score) = array($row['day'], $row["$competitor"]);
-
-					$userdata["$competitor"][] = array(
-						'x' => strtotime( $day ) * 1000,
-						'y' => floatval( $score ),
-					);
-				}
-
-	    }
-
-			// Remove temp table
-	    $sql = "DROP TABLE temp_union";
-	    $res = $dbr->query ( $sql );
-
-	    foreach( $competitors as $competitor ){
-
-		    $person = User::newFromName("$competitor");
-				$realName = $person->getRealName();
-				if( empty($realName) ){
-					$nameToUse = $competitor;
-				} else {
-					$nameToUse = $realName;
-				}
-
-		    $data[] = array(
-	    		'key' => $nameToUse,
-	    		'values' => $userdata["$competitor"],
-	  		);
-
-	    }
-
-			$html = '';
-			$html .= '<h2>Line with Window</h2>';
-	    $html .= '<div id="userjourney-compare-chart-line-with-window"><svg height="400px"></svg></div>';
-			$html .= '<h2>Stacked Area</h2>';
-	    $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
-			// $html .= '<h2>Stacked Area Stream</h2>';
-	  //   $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
-
-	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-		} else {
-			$html = '<br />Sorry, but this feature is not available for anonymous users.<br />';
-		}
-    $wgOut->addHTML( $html );
-  }
 
 
 
