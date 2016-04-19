@@ -12,6 +12,12 @@ $wgExtensionCredits['specialpage'][] = array(
 );
 
 /*
+ * Configure global variables
+ */
+$wgScoreCeiling = 100;
+
+
+/*
 	STUFF FROM CONTRIBUTION SCORES
 
 */
