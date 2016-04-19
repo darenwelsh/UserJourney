@@ -14,8 +14,13 @@ $wgExtensionCredits['specialpage'][] = array(
 /*
  * Configure global variables
  */
-$wgUJScoreCeiling = 100; //Max score counted toward plots with moving averages
-
+//Max score counted toward plots with moving averages
+$wgUJscoreCeiling = 100;
+// Number of days in which to compare scores of logged-in user against others
+// (used to find suitable competitors)
+$wgUJdaysToDetermineCompetitors = 14;
+// Number of days to plot for competitions
+$wgUJdaysToPlotCompetition = 30;
 
 /*
 	STUFF FROM CONTRIBUTION SCORES
