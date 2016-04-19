@@ -14,7 +14,7 @@ $wgExtensionCredits['specialpage'][] = array(
 /*
  * Configure global variables
  */
-$wgScoreCeiling = 100; //Max score counted toward plots with moving averages
+$wgUJScoreCeiling = 100; //Max score counted toward plots with moving averages
 
 
 /*
