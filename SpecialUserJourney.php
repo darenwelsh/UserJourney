@@ -629,7 +629,11 @@ class SpecialUserJourney extends SpecialPage {
 
 
 	public function myScoreData() {
+
 		global $wgOut;
+		global $wgUJnumRevisions;
+		global $wgUJnumPagesRevised;
+		global $wgUJscoreDefinition;
 
 	    $username = $this->getUser()->mName;
 	    $displayName = self::getDisplayName();
@@ -648,9 +652,9 @@ class SpecialUserJourney extends SpecialPage {
 
 	    $sql = "SELECT
 	              DATE(rev_timestamp) AS day,
-	              COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS score,
-	              COUNT(DISTINCT rev_page) as pages,
-	              COUNT(rev_id) as revisions
+	              {$wgUJscoreDefinition} AS score,
+	              {$wgUJnumPagesRevised} as pages,
+	              {$wgUJnumRevisions} as revisions
 	            FROM $revTable
 	            WHERE
 	              rev_user_text IN ( '$username' )
@@ -689,75 +693,79 @@ class SpecialUserJourney extends SpecialPage {
 		//TO-DO add if statement to not show unless logged-in user
 		//DO-DO Adjust $queryDT - some have one parameter, others two
 		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
-    global $wgOut;
 
-    $username = $this->getUser()->mName;
-	$displayName = self::getDisplayName();
+	    global $wgOut;
 
-    $wgOut->setPageTitle( "UserJourney: Activity Plot for $displayName" );
+	    $username = $this->getUser()->mName;
+		$displayName = self::getDisplayName();
 
-    if( $this->getUser()->getID() ){ // Only do stuff if user has an ID
+	    $wgOut->setPageTitle( "UserJourney: Activity Plot for $displayName" );
 
-	    $wgOut->addModules( 'ext.userjourney.myActivity.nvd3' );
+	    if( $this->getUser()->getID() ){ // Only do stuff if user has an ID
 
-	    $dbr = wfGetDB( DB_SLAVE );
+		    $wgOut->addModules( 'ext.userjourney.myActivity.nvd3' );
 
-		$userTable = $dbr->tableName( 'user' );
-		$userGroupTable = $dbr->tableName( 'user_groups' );
-		$revTable = $dbr->tableName( 'revision' );
-		$catTable = $dbr->tableName( 'category' );
-		$catLinksTable = $dbr->tableName( 'categorylinks' );
+		    $dbr = wfGetDB( DB_SLAVE );
 
-		$competitors = array($username);
+			$userTable = $dbr->tableName( 'user' );
+			$userGroupTable = $dbr->tableName( 'user_groups' );
+			$revTable = $dbr->tableName( 'revision' );
+			$catTable = $dbr->tableName( 'category' );
+			$catLinksTable = $dbr->tableName( 'categorylinks' );
 
-	    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
+			$competitors = array($username);
 
-	    $queryDT = function( $competitor, $revTable ){
-	    	$output = "INSERT INTO temp_union (day, {$competitor})
-				SELECT
-					DATE(rev_timestamp) AS day,
-					COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 AS {$competitor}
-				FROM $revTable
-				WHERE
-					rev_user_text IN ( '{$competitor}' )
-	        /* AND rev_timestamp > 20150101000000 */
-				GROUP BY day";
+		    $queryDT = function( $competitor, $revTable ){
+
+				global $wgUJscoreDefinition;
+
+		    	$output = "INSERT INTO temp_union (day, {$competitor})
+					SELECT
+						DATE(rev_timestamp) AS day,
+						{$wgUJscoreDefinition} AS {$competitor}
+					FROM $revTable
+					WHERE
+						rev_user_text IN ( '{$competitor}' )
+			        /* AND rev_timestamp > 20150101000000 */
+					GROUP BY day";
 
 				return $output;
-	    };
 
-			// Create temp table
-			$sql = "CREATE TEMPORARY TABLE temp_union(
-				day date NULL";
-			// Add column for user "dummy"
-			$sql .= ", dummy float NULL";
-			foreach( $competitors as $competitor ){
-				$sql .= ", {$competitor} float NULL";
-			}
-			$sql .= " )ENGINE = MEMORY";
+		    };
 
-	    $res = $dbr->query( $sql );
+				// Create temp table
+				$sql = "CREATE TEMPORARY TABLE temp_union(
+					day date NULL";
+				// Add column for user "dummy"
+				$sql .= ", dummy float NULL";
+				foreach( $competitors as $competitor ){
+					$sql .= ", {$competitor} float NULL";
+				}
+				$sql .= " )ENGINE = MEMORY";
 
-	    // Add column with dummy user to generate a 0 value for every day during comparison period
-	    $sql = "SELECT
-					DATE(rev_timestamp) AS day
-				FROM $revTable
-				WHERE rev_user_text in ( ''";
-			foreach( $competitors as $competitor ){
-				$sql .= ", '{$competitor}'";
-			}
-		$sql .= ") ORDER BY rev_timestamp ASC
-			LIMIT 1";
+		    $res = $dbr->query( $sql );
 
-		$res = $dbr->query( $sql );
-	    $row = $dbr->fetchRow( $res );
-	    $firstContributionDateFromGroup = $row['day'];
+		    // Add column with dummy user to generate a 0 value for every day during comparison period
+		    $sql = "SELECT
+						DATE(rev_timestamp) AS day
+					FROM $revTable
+					WHERE rev_user_text in ( ''";
+				foreach( $competitors as $competitor ){
+					$sql .= ", '{$competitor}'";
+				}
+			$sql .= ") ORDER BY rev_timestamp ASC
+				LIMIT 1";
 
-	    $lastDate = date("Ymd", time()); // Today as YYYYMMDD
-	    $firstDate = date('Ymd', strtotime( $firstContributionDateFromGroup ) ); // Date of first contribution from users in this group
-	    $date = $firstDate;
-	    while( $date <= $lastDate ){
-	    	$dateTime = date('Y-m-d', strtotime($date * 1000000) ); // Append 0 value for HHMMSS to match timestamp format in revision table
+			$res = $dbr->query( $sql );
+		    $row = $dbr->fetchRow( $res );
+		    $firstContributionDateFromGroup = $row['day'];
+
+		    $lastDate = date("Ymd", time()); // Today as YYYYMMDD
+		    $firstDate = date('Ymd', strtotime( $firstContributionDateFromGroup ) ); // Date of first contribution from users in this group
+		    $date = $firstDate;
+		    while( $date <= $lastDate ){
+
+		    	$dateTime = date('Y-m-d', strtotime($date * 1000000) ); // Append 0 value for HHMMSS to match timestamp format in revision table
 
 				// $sql = $queryDT('dummy', $dateTime);
 				$sql = "INSERT INTO temp_union (day, dummy) VALUES ('{$dateTime}', '0')";
@@ -765,7 +773,8 @@ class SpecialUserJourney extends SpecialPage {
 				$res = $dbr->query( $sql );
 
 				$date = date('Ymd', strtotime($date . ' +1 day') );
-	    }
+
+		    }
 
 			// Add each competitor's score to temp table
 			foreach( $competitors as $competitor ){
@@ -775,59 +784,58 @@ class SpecialUserJourney extends SpecialPage {
 			}
 
 			// Consolidate rows so each day only has one row
-	    $sql = "SELECT
-				day";
+		    $sql = "SELECT
+					day";
 			foreach( $competitors as $competitor ){
 				$sql .= ", max({$competitor}) {$competitor}";
 			}
 			$sql .= " FROM temp_union GROUP BY day";
 
-	    $res = $dbr->query( $sql );
+		    $res = $dbr->query( $sql );
 
-		while( $row = $dbr->fetchRow( $res ) ) {
+			while( $row = $dbr->fetchRow( $res ) ) {
 
-			foreach( $competitors as $competitor ){
+				foreach( $competitors as $competitor ){
 
-				list($day, $score) = array($row['day'], $row["$competitor"]);
+					list($day, $score) = array($row['day'], $row["$competitor"]);
 
-				$userdata["$competitor"][] = array(
-					'x' => strtotime( $day ) * 1000,
-					'y' => floatval( $score ),
-				);
-			}
-
-	    }
-
-			// Remove temp table
-	    $sql = "DROP TABLE temp_union";
-	    $res = $dbr->query ( $sql );
-
-	    foreach( $competitors as $competitor ){
-
-		    $person = User::newFromName("$competitor");
-				$realName = $person->getRealName();
-				if( empty($realName) ){
-					$nameToUse = $competitor;
-				} else {
-					$nameToUse = $realName;
+					$userdata["$competitor"][] = array(
+						'x' => strtotime( $day ) * 1000,
+						'y' => floatval( $score ),
+					);
 				}
 
-		    $data[] = array(
-	    		'key' => $nameToUse,
-	    		'values' => $userdata["$competitor"],
-	  		);
+		    }
 
-	    }
+			// Remove temp table
+		    $sql = "DROP TABLE temp_union";
+		    $res = $dbr->query ( $sql );
 
+		    foreach( $competitors as $competitor ){
+
+			    $person = User::newFromName("$competitor");
+					$realName = $person->getRealName();
+					if( empty($realName) ){
+						$nameToUse = $competitor;
+					} else {
+						$nameToUse = $realName;
+					}
+
+			    $data[] = array(
+		    		'key' => $nameToUse,
+		    		'values' => $userdata["$competitor"],
+		  		);
+
+		    }
 
 			$html = '';
-	    $html .= '<div id="userjourney-my-activity-plot"><svg height="400px"></svg></div>';
-	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-	  } else {
+		    $html .= '<div id="userjourney-my-activity-plot"><svg height="400px"></svg></div>';
+		    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+		  } else {
 			$html = '<br />Sorry, but this feature is not available for anonymous users.<br />';
-	  }
+		  }
 
-    $wgOut->addHTML( $html );
+	    $wgOut->addHTML( $html );
 
 	}
 
@@ -841,7 +849,9 @@ class SpecialUserJourney extends SpecialPage {
 	//This is currently not displayed. The function need to be updated to match compareActivityByPeers, but show data table
 	//instead of a plot.
 	public function compareScoreData() {
+
 		global $wgOut;
+		global $wgUJscoreDefinition;
 
 	    $username = $this->getUser()->mName;
 		$displayName = self::getDisplayName();
@@ -851,24 +861,22 @@ class SpecialUserJourney extends SpecialPage {
 	    	$username,
 	    	'Ejmontal',
 	    	'Swray'
-	    	);
+    	);
 
-			$james = User::newFromName("Ejmontal");
-			$name2 = $james->getRealName();
+		$james = User::newFromName("Ejmontal");
+		$name2 = $james->getRealName();
 
-			$wgOut->setPageTitle( "UserJourney: Compare scores: $displayName vs. $name2" );
+		$wgOut->setPageTitle( "UserJourney: Compare scores: $displayName vs. $name2" );
 
-			$html = '<table class="wikitable sortable"><tr><th>Date</th><th>' . $displayName . '</th><th>' . 'TBD' . '</th></tr>';
+		$html = '<table class="wikitable sortable"><tr><th>Date</th><th>' . $displayName . '</th><th>' . 'TBD' . '</th></tr>';
 
-			$dbr = wfGetDB( DB_SLAVE );
+		$dbr = wfGetDB( DB_SLAVE );
 
-			$userTable = $dbr->tableName( 'user' );
-			$userGroupTable = $dbr->tableName( 'user_groups' );
-			$revTable = $dbr->tableName( 'revision' );
-			$catTable = $dbr->tableName( 'category' );
-			$catLinksTable = $dbr->tableName( 'categorylinks' );
-
-			$queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
+		$userTable = $dbr->tableName( 'user' );
+		$userGroupTable = $dbr->tableName( 'user_groups' );
+		$revTable = $dbr->tableName( 'revision' );
+		$catTable = $dbr->tableName( 'category' );
+		$catLinksTable = $dbr->tableName( 'categorylinks' );
 
 	    $sql = "SELECT
 								COALESCE(user_day, user2_day) AS day,
@@ -880,7 +888,7 @@ class SpecialUserJourney extends SpecialPage {
 									(
 									SELECT
 										DATE(rev_timestamp) AS user_day,
-										{$queryScore} AS user_score
+										{$wgUJscoreDefinition} AS user_score
 									FROM $revTable
 									WHERE
 										rev_user_text IN ( '$username' )
@@ -890,7 +898,7 @@ class SpecialUserJourney extends SpecialPage {
 								(
 									SELECT
 										DATE(rev_timestamp) AS user2_day,
-										{$queryScore} AS user2_score
+										{$wgUJscoreDefinition} AS user2_score
 									FROM $revTable
 									WHERE
 										rev_user_text IN ( '$username2' )
@@ -902,7 +910,7 @@ class SpecialUserJourney extends SpecialPage {
 								(
 									SELECT
 										DATE(rev_timestamp) AS user_day,
-										{$queryScore} AS user_score
+										{$wgUJscoreDefinition} AS user_score
 									FROM $revTable
 									WHERE
 										rev_user_text IN ( '$username' )
@@ -912,7 +920,7 @@ class SpecialUserJourney extends SpecialPage {
 								(
 									SELECT
 										DATE(rev_timestamp) AS user2_day,
-										{$queryScore} AS user2_score
+										{$wgUJscoreDefinition} AS user2_score
 									FROM $revTable
 									WHERE
 										rev_user_text IN ( '$username2' )
@@ -928,11 +936,11 @@ class SpecialUserJourney extends SpecialPage {
 
 	    while( $row = $dbr->fetchRow( $res ) ) {
 
-	      list($day, $userScore, $user2Score) = array($row['day'], $row['user_score'], $row['user2_score']);
-	      $date = date('Y-m-d', strtotime( $day ));
-	      $userScore = round($userScore, 1);
-	      $user2Score = round($user2Score, 1);
-	      $html .= "<tr><td>$date</td><td>$userScore</td><td>$user2Score</td></tr>";
+			list($day, $userScore, $user2Score) = array($row['day'], $row['user_score'], $row['user2_score']);
+			$date = date('Y-m-d', strtotime( $day ));
+			$userScore = round($userScore, 1);
+			$user2Score = round($user2Score, 1);
+			$html .= "<tr><td>$date</td><td>$userScore</td><td>$user2Score</td></tr>";
 
 	    }
 
@@ -953,6 +961,7 @@ class SpecialUserJourney extends SpecialPage {
 	    global $wgUJscoreCeiling;
 	    global $wgUJdaysToDetermineCompetitors;
 		global $wgUJdaysToPlotCompetition;
+		global $wgUJscoreDefinition;
 
 	    $username = $this->getUser()->mName;
 		$displayName = self::getDisplayName();
@@ -974,14 +983,12 @@ class SpecialUserJourney extends SpecialPage {
 		$userGroupTable = $dbr->tableName( 'user_groups' );
 		$revTable = $dbr->tableName( 'revision' );
 
-	    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
-
 	    // Determine score of logged in user
-			$date = time() - ( 60 * 60 * 24 * $wgUJdaysToDetermineCompetitors );
-			$dateString = $dbr->timestamp( $date );
+		$date = time() - ( 60 * 60 * 24 * $wgUJdaysToDetermineCompetitors );
+		$dateString = $dbr->timestamp( $date );
 
 	    $sql = "SELECT
-	    	LEAST({$wgUJscoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) as score
+	    	LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) as score
 	      FROM $revTable
 	      WHERE rev_timestamp > '$dateString'
 	      AND rev_user_text = '{$username}'
@@ -1039,10 +1046,13 @@ class SpecialUserJourney extends SpecialPage {
 	    }
 
 	    $queryDT = function( $competitor, $dateString, $wgUJscoreCeiling, $revTable ){
+
+	    	global $wgUJscoreDefinition;
+
 	    	$output = "INSERT INTO temp_union (day, {$competitor})
 				SELECT
 					DATE(rev_timestamp) AS day,
-					LEAST({$wgUJscoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitor}
+					LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) AS {$competitor}
 				FROM $revTable
 				WHERE
 					rev_user_text IN ( '{$competitor}' )

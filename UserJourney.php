@@ -14,13 +14,26 @@ $wgExtensionCredits['specialpage'][] = array(
 /*
  * Configure global variables
  */
-//Max score counted toward plots with moving averages
+
+// Number of revisions (in string form used within MySQL queries)
+$wgUJnumRevisions = "COUNT(rev_id)";
+
+// Number of pages revised (in string form used within MySQL queries)
+$wgUJnumPagesRevised = "COUNT(DISTINCT rev_page)";
+
+// How the score is calculated (in string form used within MySQL queries)
+$wgUJscoreDefinition = "{$wgUJnumPagesRevised} + SQRT( {$wgUJnumRevisions} - {$wgUJnumPagesRevised} ) * 2";
+
+// Max score counted toward plots with moving averages
 $wgUJscoreCeiling = 100;
+
 // Number of days in which to compare scores of logged-in user against others
 // (used to find suitable competitors)
 $wgUJdaysToDetermineCompetitors = 14;
+
 // Number of days to plot for competitions
 $wgUJdaysToPlotCompetition = 30;
+
 
 /*
 	STUFF FROM CONTRIBUTION SCORES
