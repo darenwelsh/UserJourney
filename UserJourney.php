@@ -16,13 +16,35 @@ $wgExtensionCredits['specialpage'][] = array(
  */
 
 // Number of revisions (in string form used within MySQL queries)
-$wgUJnumRevisions = "COUNT(rev_id)";
+$wgUJnumRevisionsAlias = "rev_count"; // Alias used for MySQL queries
 
 // Number of pages revised (in string form used within MySQL queries)
-$wgUJnumPagesRevised = "COUNT(DISTINCT rev_page)";
+$wgUJnumPagesRevisedAlias = "page_count"; // Alias used for MySQL queries
 
 // How the score is calculated (in string form used within MySQL queries)
-$wgUJscoreDefinition = "{$wgUJnumPagesRevised} + SQRT( {$wgUJnumRevisions} - {$wgUJnumPagesRevised} ) * 2";
+function getScoreDefinition( $scope = "explicit" ){
+
+  global $wgUJnumRevisionsAlias, $wgUJnumPagesRevisedAlias;
+
+  if( $scope === "explicit" ){
+
+    $rev_count = "COUNT(rev_id)";
+    $page_count = "COUNT(DISTINCT rev_page)";
+
+  } else {
+
+    $rev_count = $wgUJnumRevisionsAlias;
+    $page_count = $wgUJnumPagesRevisedAlias;
+
+  }
+
+  $output = "{$page_count} + SQRT( {$rev_count} - {$page_count} ) * 2";
+
+  return $output;
+}
+
+$wgUJscoreDefinition = getScoreDefinition( "explicit" );
+$wgUJscoreDefinitionUsingAliases = getScoreDefinition( "relative" );
 
 // Max score counted toward plots with moving averages
 $wgUJscoreCeiling = 100;

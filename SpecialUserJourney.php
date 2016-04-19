@@ -631,8 +631,6 @@ class SpecialUserJourney extends SpecialPage {
 	public function myScoreData() {
 
 		global $wgOut;
-		global $wgUJnumRevisions;
-		global $wgUJnumPagesRevised;
 		global $wgUJscoreDefinition;
 
 	    $username = $this->getUser()->mName;
@@ -653,8 +651,8 @@ class SpecialUserJourney extends SpecialPage {
 	    $sql = "SELECT
 	              DATE(rev_timestamp) AS day,
 	              {$wgUJscoreDefinition} AS score,
-	              {$wgUJnumPagesRevised} as pages,
-	              {$wgUJnumRevisions} as revisions
+	              COUNT(DISTINCT rev_page) as pages,
+	              COUNT(rev_id) as revisions
 	            FROM $revTable
 	            WHERE
 	              rev_user_text IN ( '$username' )
@@ -961,7 +959,10 @@ class SpecialUserJourney extends SpecialPage {
 	    global $wgUJscoreCeiling;
 	    global $wgUJdaysToDetermineCompetitors;
 		global $wgUJdaysToPlotCompetition;
+		global $wgUJnumRevisionsAlias;
+		global $wgUJnumPagesRevisedAlias;
 		global $wgUJscoreDefinition;
+		global $wgUJscoreDefinitionUsingAliases;
 
 	    $username = $this->getUser()->mName;
 		$displayName = self::getDisplayName();
@@ -988,10 +989,10 @@ class SpecialUserJourney extends SpecialPage {
 		$dateString = $dbr->timestamp( $date );
 
 	    $sql = "SELECT
-	    	LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) as score
-	      FROM $revTable
-	      WHERE rev_timestamp > '$dateString'
-	      AND rev_user_text = '{$username}'
+				LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) as score
+			FROM $revTable
+			WHERE rev_timestamp > '$dateString'
+			AND rev_user_text = '{$username}'
 	    ";
 
 	    $res = $dbr->query( $sql );
@@ -1000,26 +1001,26 @@ class SpecialUserJourney extends SpecialPage {
 
 	    // Determine users with relatively similar scores for the past $wgUJdaysToDetermineCompetitors
 	    $commonQuery = "
-				(SELECT
+			(SELECT
+				user_name,
+				score
+			FROM
+				(SELECT user_id,
 					user_name,
-					score
-				FROM
-					(SELECT user_id,
-						user_name,
-						page_count,
-						rev_count,
-						page_count+SQRT(rev_count-page_count)*2 AS score
-					FROM $userTable u
-					JOIN
-					(SELECT rev_user,
-						COUNT(DISTINCT rev_page) AS page_count,
-						COUNT(rev_id) AS rev_count
-						FROM $revTable
-						WHERE rev_timestamp > '$dateString'
-						AND rev_user_text != '{$username}'
-						GROUP BY rev_user
-						ORDER BY page_count DESC
-					) s ON user_id=rev_user
+					{$wgUJnumPagesRevisedAlias},
+					{$wgUJnumRevisionsAlias},
+					{$wgUJscoreDefinitionUsingAliases} AS score
+				FROM $userTable u
+				JOIN
+				(SELECT rev_user,
+					COUNT(DISTINCT rev_page) AS {$wgUJnumPagesRevisedAlias},
+					COUNT(rev_id) AS {$wgUJnumRevisionsAlias}
+					FROM $revTable
+					WHERE rev_timestamp > '$dateString'
+					AND rev_user_text != '{$username}'
+					GROUP BY rev_user
+					ORDER BY {$wgUJnumPagesRevisedAlias} DESC
+				) s ON user_id=rev_user
 	    ";
 
 	    $sql = "
@@ -1035,13 +1036,14 @@ class SpecialUserJourney extends SpecialPage {
 				ORDER BY score DESC
 	    ";
 
+
 	    $res = $dbr->query( $sql );
 
 			while( $row = $dbr->fetchRow( $res ) ) {
 
-					list($competitor, $score) = array($row['user_name'], $row['score']);
+				list($competitor, $score) = array($row['user_name'], $row['score']);
 
-					$competitors[] = "$competitor";
+				$competitors[] = "$competitor";
 
 	    }
 
@@ -1059,7 +1061,8 @@ class SpecialUserJourney extends SpecialPage {
 					AND rev_timestamp > '$dateString'
 				GROUP BY day";
 
-				return $output;
+			return $output;
+
 	    };
 
 			// Create temp table
@@ -1218,13 +1221,14 @@ function compareScoreByUserGroup( ){
 
     }
 
-    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
-
     $queryDT = function( $competitor, $wgUJscoreCeiling, $revTable ){
+
+    	global $wgUJscoreDefinition;
+
     	$output = "INSERT INTO temp_union (day, {$competitor})
 			SELECT
 				DATE(rev_timestamp) AS day,
-				LEAST({$wgUJscoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitor}
+				LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) AS {$competitor}
 			FROM $revTable
 			WHERE
 				rev_user_text IN ( '{$competitor}' )
@@ -1477,13 +1481,14 @@ function compareScoreBetweenGroups( ){
     	'Others' => $usersNotInCX3,
     	);
 
-    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
-
     $queryDT = function( $competitorTeamName, $competitorUsernames, $wgUJscoreCeiling, $revTable ){
+
+    	global $wgUJscoreDefinition;
+
     	$output = "INSERT INTO temp_union (day, {$competitorTeamName})
 			SELECT
 				DATE(rev_timestamp) AS day,
-				LEAST({$wgUJscoreCeiling}, COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2 ) AS {$competitorTeamName}
+				LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) AS {$competitorTeamName}
 			FROM $revTable
 			WHERE
 				rev_user_text IN ( ";
@@ -1741,8 +1746,6 @@ function compareViewsBetweenGroups( ){
     	'CX3' => $usersInCX3,
     	'Others' => $usersNotInCX3,
     	);
-
-    // $queryScore = "COUNT(DISTINCT rev_page)+SQRT(COUNT(rev_id)-COUNT(DISTINCT rev_page))*2"; // How to calculate score
 
     $queryDT = function( $competitorTeamName, $competitorUsernames, $wiretapTable ){
     	// parts of this query stolen from Extension:Wiretap function getUniqueRows()
