@@ -965,7 +965,7 @@ class SpecialUserJourney extends SpecialPage {
 	*			in format YYYYMMDDhhmmss
 	* @return float $userScore
 	*/
-	function getUserScore( $username = false, $startDate = 0, $endDate = 99999999999999 ){
+	function getUserScore( $username = false, $startDate = false, $endDate = false ){
 
 		// If no username is provided, default to logged-in user
 		if( $username == false ){
@@ -976,7 +976,7 @@ class SpecialUserJourney extends SpecialPage {
 
 		$user = User::newFromName( $username );
 
-		if( $user->getID() && ($startDate < $endDate) ){ // Only do stuff if user has an ID && dates make sense
+		if( $user->getID() ){ // Only do stuff if user has an ID
 
 		    $dbr = wfGetDB( DB_SLAVE );
 
@@ -990,10 +990,18 @@ class SpecialUserJourney extends SpecialPage {
 		    $sql = "SELECT
 					{$wgUJscoreDefinition} as score
 				FROM $revTable
-				WHERE rev_timestamp > '$startDate'
-				AND rev_timestamp < '$endDate'
-				AND rev_user_text = '{$username}'
+				WHERE rev_user_text = '{$username}'
 		    ";
+		    if( $startDate ){
+		    	$sql .= "
+		    		AND  rev_timestamp > '$startDate'
+		    		";
+		    }
+		    if( $endDate ){
+		    	$sql .= "
+		    		AND  rev_timestamp < '$endDate'
+		    		";
+		    }
 
 		    $res = $dbr->query( $sql );
 		    $row = $dbr->fetchRow( $res );
