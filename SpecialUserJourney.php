@@ -951,7 +951,8 @@ class SpecialUserJourney extends SpecialPage {
 
 
 	/**
-	* Function returns contribution score for user based on contributions within x days
+	* Function returns contribution score for user based on contributions within
+	* start and end dates.
 	* When calling, use the following syntax examples:
 	*
 	* $this->getUserScore( 'Jdoe' )
@@ -1019,6 +1020,116 @@ class SpecialUserJourney extends SpecialPage {
 
 
 
+
+	/**
+	* Function generates a list of user scores based on the $startDate and $endDate window.
+	* The $numHigher usernames with scores higher than $score and the $numLower usernames with
+	* scores lower than $score will be returned in an array.
+	* This function will ignore names passed via the $ignoreUsers array.
+	* When calling, use the following syntax examples:
+	*
+	* $this->getCompetitorsByScore( 205, ('Jdoe') )
+	* $this->getCompetitorsByScore( 205, ('Jdoe'), 20150101000000, 20160101000000 )
+	* $this->getCompetitorsByScore( 205, ('Jdoe', 'Bsmith'), false, false, 1, 0 )
+	*
+	* @param $score the score for which you want to find users with similar scores
+	* @param $ignoreUsers array of usernames to ignore (don't include them in the results)
+	*			in format ('username1', 'username2')
+	* @param $startDate the start of the date range in which to calculate the score
+	*			in format YYYYMMDDhhmmss
+	* @param $endDate the end of the date range in which to calculate the score
+	*			in format YYYYMMDDhhmmss
+	* @param $numHigher the maximum number of usernames with higher scores to be returned
+	* @param $numLower the maximum number of usernames with higher scores to be returned
+	* @return array $competitors like ('Jdoe', 'Bsmith')
+	*/
+	function getCompetitorsByScore( $score = 0, $ignoreUsers = false, $startDate = false, $endDate = false, $numHigher = 3, $numLower = 2 ){
+
+		$competitors = array();
+
+		$dbr = wfGetDB( DB_SLAVE );
+
+	    // global $wgUJscoreCeiling;
+	    // $wgUJscoreCeiling was intended to be a cap for daily score. Until this query is revised, don't use.
+	    global $wgUJscoreDefinition, $wgUJnumPagesRevisedAlias, $wgUJnumRevisionsAlias, $wgUJscoreDefinitionUsingAliases;
+
+		$userTable = $dbr->tableName( 'user' );
+		// $userGroupTable = $dbr->tableName( 'user_groups' );
+		$revTable = $dbr->tableName( 'revision' );
+
+	    $commonQuery = "
+			(SELECT
+				user_name,
+				score
+			FROM
+				(SELECT user_id,
+					user_name,
+					{$wgUJnumPagesRevisedAlias},
+					{$wgUJnumRevisionsAlias},
+					{$wgUJscoreDefinitionUsingAliases} AS score
+				FROM $userTable u
+				JOIN
+				(SELECT rev_user,
+					COUNT(DISTINCT rev_page) AS {$wgUJnumPagesRevisedAlias},
+					COUNT(rev_id) AS {$wgUJnumRevisionsAlias}
+					FROM $revTable
+					WHERE rev_id > 0
+		";
+
+		if( $ignoreUsers ){
+
+			$commonQuery .= "
+				AND rev_user_text NOT IN {$ignoreUsers}
+			";
+
+		}
+		if( $startDate ){
+	    	$commonQuery .= "
+	    		AND  rev_timestamp > '$startDate'
+    		";
+	    }
+	    if( $endDate ){
+	    	$commonQuery .= "
+	    		AND  rev_timestamp < '$endDate'
+    		";
+	    }
+
+		$commonQuery .= "
+				GROUP BY rev_user
+					ORDER BY {$wgUJnumPagesRevisedAlias} DESC
+				) s ON user_id=rev_user
+		";
+
+	    $sql = "
+	    	{$commonQuery}
+	    	ORDER BY score ASC ) t1
+				WHERE score >= {$score}
+				LIMIT {$numHigher} )
+				UNION
+				{$commonQuery}
+				ORDER BY score DESC ) t2
+				WHERE score < {$score}
+				LIMIT {$numLower} )
+				ORDER BY score DESC
+	    ";
+
+
+	    $res = $dbr->query( $sql );
+
+		while( $row = $dbr->fetchRow( $res ) ) {
+
+			list($competitor, $score) = array($row['user_name'], $row['score']);
+
+			$competitors[] = "$competitor";
+
+	    }
+
+	    return $competitors;
+
+	}
+
+
+
 	function compareActivityByPeers( ){
 		// TO-DO Modify plots to have some granular/moving-average and some just showing 1-month or 3-month average values
 		// TO-DO Maybe have one page with all data and another page with last 30-60 days
@@ -1035,9 +1146,7 @@ class SpecialUserJourney extends SpecialPage {
 	    $username = $this->getUser()->mName;
 		$displayName = self::getDisplayName();
 
-	    $competitors = array( // For this function, start with only the logged-in user. More are added later.
-	    	$username,
-		);
+	    $competitors = array();
 
 	    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
 
@@ -1055,61 +1164,19 @@ class SpecialUserJourney extends SpecialPage {
 			// Determine score of logged in user (based on $wgUJdaysToDetermineCompetitors number of days)
 		    $userRecentScore = $this->getUserScore( false, $startDate );
 
+			// Determine users with relatively similar scores for the past $wgUJdaysToDetermineCompetitors
+			$competitors = $this->getCompetitorsByScore( $userRecentScore, false, $startDate, false, 4, 2 );
+
+
+
+
+
+
+
 			$userTable = $dbr->tableName( 'user' );
 			$userGroupTable = $dbr->tableName( 'user_groups' );
 			$revTable = $dbr->tableName( 'revision' );
-
-		    // Determine score of logged in user (based on $wgUJdaysToDetermineCompetitors number of days)
-			$date = time() - ( 60 * 60 * 24 * $wgUJdaysToDetermineCompetitors );
-			$dateString = $dbr->timestamp( $date );
-
-		    // Determine users with relatively similar scores for the past $wgUJdaysToDetermineCompetitors
-		    $commonQuery = "
-				(SELECT
-					user_name,
-					score
-				FROM
-					(SELECT user_id,
-						user_name,
-						{$wgUJnumPagesRevisedAlias},
-						{$wgUJnumRevisionsAlias},
-						{$wgUJscoreDefinitionUsingAliases} AS score
-					FROM $userTable u
-					JOIN
-					(SELECT rev_user,
-						COUNT(DISTINCT rev_page) AS {$wgUJnumPagesRevisedAlias},
-						COUNT(rev_id) AS {$wgUJnumRevisionsAlias}
-						FROM $revTable
-						WHERE rev_timestamp > '$dateString'
-						AND rev_user_text != '{$username}'
-						GROUP BY rev_user
-						ORDER BY {$wgUJnumPagesRevisedAlias} DESC
-					) s ON user_id=rev_user
-		    ";
-
-		    $sql = "
-		    	{$commonQuery}
-		    	ORDER BY score ASC ) t1
-					WHERE score > {$userRecentScore}
-					LIMIT 3 )
-					UNION
-					{$commonQuery}
-					ORDER BY score DESC ) t2
-					WHERE score < {$userRecentScore}
-					LIMIT 2 )
-					ORDER BY score DESC
-		    ";
-
-
-		    $res = $dbr->query( $sql );
-
-				while( $row = $dbr->fetchRow( $res ) ) {
-
-					list($competitor, $score) = array($row['user_name'], $row['score']);
-
-					$competitors[] = "$competitor";
-
-		    }
+		    // Create temp table to hold scores for every day
 
 		    $queryDT = function( $competitor, $dateString, $wgUJscoreCeiling, $revTable ){
 
@@ -1199,6 +1266,7 @@ class SpecialUserJourney extends SpecialPage {
 		    $sql = "DROP TABLE temp_union";
 		    $res = $dbr->query ( $sql );
 
+			// Fill $data with contents of temp table
 		    foreach( $competitors as $competitor ){
 
 			    $person = User::newFromName("$competitor");
