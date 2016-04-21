@@ -1164,8 +1164,6 @@ class SpecialUserJourney extends SpecialPage {
 	    	$startDate = $dbr->timestamp( $endDate - ( 60 * 60 * 24 * $wgUJdaysToPlotCompetition ) );
 	    }
 
-		// $userTable = $dbr->tableName( 'user' );
-		// $userGroupTable = $dbr->tableName( 'user_groups' );
 		$revTable = $dbr->tableName( 'revision' );
 
 	    $queryDT = function( $competitor, $startDate, $endDate, $revTable ){
@@ -1218,8 +1216,6 @@ class SpecialUserJourney extends SpecialPage {
 		// Add each competitor's score to temp table
 		foreach( $competitors as $competitor ){
 			// TO-DO update to UPDATE rows instead of INSERT (after generating table with one row for each day)
-			// $date = time() - ( 60 * 60 * 24 * $wgUJdaysToPlotCompetition );
-			// $dateString = $dbr->timestamp( $date );
 
 			$sql = $queryDT($competitor, $startDate, $endDate, $revTable);
 
@@ -1339,177 +1335,178 @@ class SpecialUserJourney extends SpecialPage {
 
 
 
-function compareScoreByUserGroup( ){
-		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
-    global $wgOut;
-    global $wgUJscoreCeiling;
+	function compareScoreByUserGroup( ){
+			//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
+	    global $wgOut;
+	    global $wgUJscoreCeiling;
 
-    $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
+	    $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
 
-    $username = $this->getUser()->mName;
-	$displayName = self::getDisplayName();
+	    $username = $this->getUser()->mName;
+		$displayName = self::getDisplayName();
 
-    $competitors = array();
+	    $competitors = array();
 
-    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
-    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
+	    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
+	    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
 
-    $dbr = wfGetDB( DB_SLAVE );
+	    $dbr = wfGetDB( DB_SLAVE );
 
-	$userTable = $dbr->tableName( 'user' );
-	$userGroupTable = $dbr->tableName( 'user_groups' );
-	$revTable = $dbr->tableName( 'revision' );
-	$catTable = $dbr->tableName( 'category' );
-	$catLinksTable = $dbr->tableName( 'categorylinks' );
+		$userTable = $dbr->tableName( 'user' );
+		$userGroupTable = $dbr->tableName( 'user_groups' );
+		$revTable = $dbr->tableName( 'revision' );
+		$catTable = $dbr->tableName( 'category' );
+		$catLinksTable = $dbr->tableName( 'categorylinks' );
 
-	// Determine list of competitors based on $userGroup
-    $sql = "SELECT
-				user_name
-			FROM (
-			SELECT
-				ug_user,
-				ug_group
-			FROM $userGroupTable
-			WHERE ug_group = '{$userGroup}'
-			) a
-			 JOIN
-			(
-			SELECT
-				user_id,
-				user_name
-			FROM $userTable
-			) b
-			ON ug_user=user_id
-    ";
+		// Determine list of competitors based on $userGroup
+	    $sql = "SELECT
+					user_name
+				FROM (
+				SELECT
+					ug_user,
+					ug_group
+				FROM $userGroupTable
+				WHERE ug_group = '{$userGroup}'
+				) a
+				 JOIN
+				(
+				SELECT
+					user_id,
+					user_name
+				FROM $userTable
+				) b
+				ON ug_user=user_id
+	    ";
 
-    $res = $dbr->query( $sql );
+	    $res = $dbr->query( $sql );
 
-		while( $row = $dbr->fetchRow( $res ) ) {
+			while( $row = $dbr->fetchRow( $res ) ) {
 
-				$competitors[] = $row['user_name'];
+					$competitors[] = $row['user_name'];
 
-    }
+	    }
 
-    $queryDT = function( $competitor, $wgUJscoreCeiling, $revTable ){
+	    $queryDT = function( $competitor, $wgUJscoreCeiling, $revTable ){
 
-    	global $wgUJscoreDefinition;
+	    	global $wgUJscoreDefinition;
 
-    	$output = "INSERT INTO temp_union (day, {$competitor})
-			SELECT
-				DATE(rev_timestamp) AS day,
-				LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) AS {$competitor}
-			FROM $revTable
-			WHERE
-				rev_user_text IN ( '{$competitor}' )
-        /* AND rev_timestamp > 20150101000000 */
-			GROUP BY day";
+	    	$output = "INSERT INTO temp_union (day, {$competitor})
+				SELECT
+					DATE(rev_timestamp) AS day,
+					LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) AS {$competitor}
+				FROM $revTable
+				WHERE
+					rev_user_text IN ( '{$competitor}' )
+	        /* AND rev_timestamp > 20150101000000 */
+				GROUP BY day";
 
-			return $output;
-    };
+				return $output;
+	    };
 
-		// Create temp table
-		$sql = "CREATE TEMPORARY TABLE temp_union(
-			day date NULL";
-		// Add column for user "dummy"
-		$sql .= ", dummy float NULL";
-		foreach( $competitors as $competitor ){
-			$sql .= ", {$competitor} float NULL";
-		}
-		$sql .= " )ENGINE = MEMORY";
-
-    $res = $dbr->query( $sql );
-
-    // Add column with dummy user to generate a 0 value for every day during comparison period
-    $sql = "SELECT
-				DATE(rev_timestamp) AS day
-			FROM $revTable
-			WHERE rev_user_text in ( ''";
-		foreach( $competitors as $competitor ){
-			$sql .= ", '{$competitor}'";
-		}
-		$sql .= ") ORDER BY rev_timestamp ASC
-			LIMIT 1";
-
-		$res = $dbr->query( $sql );
-    $row = $dbr->fetchRow( $res );
-    $firstContributionDateFromGroup = $row['day'];
-
-    $lastDate = date("Ymd", time()); // Today as YYYYMMDD
-    $firstDate = date('Ymd', strtotime( $firstContributionDateFromGroup ) ); // Date of first contribution from users in this group
-    $date = $firstDate;
-    while( $date <= $lastDate ){
-    	$dateTime = date('Y-m-d', strtotime($date * 1000000) ); // Append 0 value for HHMMSS to match timestamp format in revision table
-
-			// $sql = $queryDT('dummy', $dateTime);
-			$sql = "INSERT INTO temp_union (day, dummy) VALUES ('{$dateTime}', '0')";
-
-			$res = $dbr->query( $sql );
-
-			$date = date('Ymd', strtotime($date . ' +1 day') );
-    }
-
-		// Add each competitor's score to temp table
-		foreach( $competitors as $competitor ){
-			$sql = $queryDT($competitor, $wgUJscoreCeiling, $revTable);
-
-			$res = $dbr->query( $sql );
-		}
-
-		// Consolidate rows so each day only has one row
-    $sql = "SELECT
-			day";
-		foreach( $competitors as $competitor ){
-			$sql .= ", max({$competitor}) {$competitor}";
-		}
-		$sql .= " FROM temp_union GROUP BY day";
-
-    $res = $dbr->query( $sql );
-
-		while( $row = $dbr->fetchRow( $res ) ) {
-
+			// Create temp table
+			$sql = "CREATE TEMPORARY TABLE temp_union(
+				day date NULL";
+			// Add column for user "dummy"
+			$sql .= ", dummy float NULL";
 			foreach( $competitors as $competitor ){
+				$sql .= ", {$competitor} float NULL";
+			}
+			$sql .= " )ENGINE = MEMORY";
 
-				list($day, $score) = array($row['day'], $row["$competitor"]);
+	    $res = $dbr->query( $sql );
 
-				$userdata["$competitor"][] = array(
-					'x' => strtotime( $day ) * 1000,
-					'y' => floatval( $score ),
-				);
+	    // Add column with dummy user to generate a 0 value for every day during comparison period
+	    $sql = "SELECT
+					DATE(rev_timestamp) AS day
+				FROM $revTable
+				WHERE rev_user_text in ( ''";
+			foreach( $competitors as $competitor ){
+				$sql .= ", '{$competitor}'";
+			}
+			$sql .= ") ORDER BY rev_timestamp ASC
+				LIMIT 1";
+
+			$res = $dbr->query( $sql );
+	    $row = $dbr->fetchRow( $res );
+	    $firstContributionDateFromGroup = $row['day'];
+
+	    $lastDate = date("Ymd", time()); // Today as YYYYMMDD
+	    $firstDate = date('Ymd', strtotime( $firstContributionDateFromGroup ) ); // Date of first contribution from users in this group
+	    $date = $firstDate;
+	    while( $date <= $lastDate ){
+	    	$dateTime = date('Y-m-d', strtotime($date * 1000000) ); // Append 0 value for HHMMSS to match timestamp format in revision table
+
+				// $sql = $queryDT('dummy', $dateTime);
+				$sql = "INSERT INTO temp_union (day, dummy) VALUES ('{$dateTime}', '0')";
+
+				$res = $dbr->query( $sql );
+
+				$date = date('Ymd', strtotime($date . ' +1 day') );
+	    }
+
+			// Add each competitor's score to temp table
+			foreach( $competitors as $competitor ){
+				$sql = $queryDT($competitor, $wgUJscoreCeiling, $revTable);
+
+				$res = $dbr->query( $sql );
 			}
 
-    }
-
-		// Remove temp table
-    $sql = "DROP TABLE temp_union";
-    $res = $dbr->query ( $sql );
-
-    foreach( $competitors as $competitor ){
-
-	    $person = User::newFromName("$competitor");
-			$realName = $person->getRealName();
-			if( empty($realName) ){
-				$nameToUse = $competitor;
-			} else {
-				$nameToUse = $realName;
+			// Consolidate rows so each day only has one row
+	    $sql = "SELECT
+				day";
+			foreach( $competitors as $competitor ){
+				$sql .= ", max({$competitor}) {$competitor}";
 			}
+			$sql .= " FROM temp_union GROUP BY day";
 
-	    $data[] = array(
-    		'key' => $nameToUse,
-    		'values' => $userdata["$competitor"],
-  		);
+	    $res = $dbr->query( $sql );
 
-    }
+			while( $row = $dbr->fetchRow( $res ) ) {
+
+				foreach( $competitors as $competitor ){
+
+					list($day, $score) = array($row['day'], $row["$competitor"]);
+
+					$userdata["$competitor"][] = array(
+						'x' => strtotime( $day ) * 1000,
+						'y' => floatval( $score ),
+					);
+				}
+
+	    }
+
+			// Remove temp table
+	    $sql = "DROP TABLE temp_union";
+	    $res = $dbr->query ( $sql );
+
+	    foreach( $competitors as $competitor ){
+
+		    $person = User::newFromName("$competitor");
+				$realName = $person->getRealName();
+				if( empty($realName) ){
+					$nameToUse = $competitor;
+				} else {
+					$nameToUse = $realName;
+				}
+
+		    $data[] = array(
+	    		'key' => $nameToUse,
+	    		'values' => $userdata["$competitor"],
+	  		);
+
+	    }
 
 
-		$html = '';
-		$html .= '<h2>Stacked Area</h2>';
-	  $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
-		// $html .= '<h2>Stacked Area Stream</h2>';
-	 //  $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
-    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
+			$html = '';
+			$html .= '<h2>Stacked Area</h2>';
+		  $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
+			// $html .= '<h2>Stacked Area Stream</h2>';
+		 //  $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
+	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
-    $wgOut->addHTML( $html );
-  }
+	    $wgOut->addHTML( $html );
+
+	}
 
 
 
