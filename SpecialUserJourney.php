@@ -1220,7 +1220,7 @@ class SpecialUserJourney extends SpecialPage {
 	* $this->getDailyScoresArray( $competitors )
 	* $this->getDailyScoresArray( $competitors, 20150101000000, 20160101000000 )
 	*
-	* @param $competitors list (array) of usernames to compete
+	* @param $competitors array of usernames to compete
 	* @param $startDate the start of the date range in which to calculate the score
 	*			in format YYYYMMDDhhmmss
 	* @param $endDate the end of the date range in which to calculate the score
@@ -1487,7 +1487,7 @@ function compareScoreBetweenGroups( ){
 
     $competitors = array(
     	'Admins' => $usersInSysop,
-    	'CX3' => $usersInCX3NotSysop,
+    	'CX3 Non-Admins' => $usersInCX3NotSysop,
     	'Others' => $usersNotInCX3,
     	);
 
