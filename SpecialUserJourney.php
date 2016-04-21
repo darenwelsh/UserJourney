@@ -1143,7 +1143,7 @@ class SpecialUserJourney extends SpecialPage {
 	*			in format ('username1', 'username2') or $arrayOfUsersToIgnore
 	* @return array $competitors like ('Jdoe', 'Bsmith')
 	*/
-	function getMembersOfGroup( $group = NULL, $ignoreUsers = false ){
+	function getMembersOfGroup( $group = false, $ignoreUsers = false ){
 
 		$competitors = array();
 
@@ -1160,7 +1160,17 @@ class SpecialUserJourney extends SpecialPage {
 					ug_user,
 					ug_group
 				FROM $userGroupTable
+				";
+
+		if( $group ){
+
+			$sql .= "
 				WHERE ug_group = '{$group}'
+			";
+
+		}
+
+		$sql .= "
 				) a
 				 JOIN
 				(
