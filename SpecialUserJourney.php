@@ -1135,12 +1135,12 @@ class SpecialUserJourney extends SpecialPage {
 	* This function will ignore names passed via the $ignoreUsers array.
 	* When calling, use the following syntax examples:
 	*
-	* $this->getCompetitorsByScore( sysop )
-	* $this->getCompetitorsByScore( sysop, "('Jdoe', 'Bsmith')")
+	* $this->getCompetitorsByScore( contributors, sysop )
+	* $this->getCompetitorsByScore( sysop, ('Jdoe', 'Bsmith'))
 	*
 	* @param $group the group from which you want to find users
 	* @param $ignoreUsers array of usernames to ignore (don't include them in the results)
-	*			in format "('username1', 'username2')"
+	*			in format ('username1', 'username2') or $arrayOfUsersToIgnore
 	* @return array $competitors like ('Jdoe', 'Bsmith')
 	*/
 	function getMembersOfGroup( $group = NULL, $ignoreUsers = false ){
@@ -1171,6 +1171,8 @@ class SpecialUserJourney extends SpecialPage {
 				";
 
 		if( $ignoreUsers ){
+
+			$ignoreUsersString = "('" . implode("', '", $ignoreUsers) . "')";
 
 			$sql .= "
 				WHERE user_name NOT IN {$ignoreUsers}
@@ -1457,78 +1459,17 @@ function compareScoreBetweenGroups( ){
 
     $dbr = wfGetDB( DB_SLAVE );
 
-		$userTable = $dbr->tableName( 'user' );
-		$userGroupTable = $dbr->tableName( 'user_groups' );
-		$revTable = $dbr->tableName( 'revision' );
-		$catTable = $dbr->tableName( 'category' );
-		$catLinksTable = $dbr->tableName( 'categorylinks' );
+	$userTable = $dbr->tableName( 'user' );
+	$userGroupTable = $dbr->tableName( 'user_groups' );
+	$revTable = $dbr->tableName( 'revision' );
+	$catTable = $dbr->tableName( 'category' );
+	$catLinksTable = $dbr->tableName( 'categorylinks' );
 
 	// Determine list of users in sysop
-    $sqlSysop = "SELECT
-				user_name
-			FROM (
-			SELECT
-				ug_user,
-				ug_group
-			FROM $userGroupTable
-			WHERE ug_group = 'sysop'
-			) a
-			 JOIN
-			(
-			SELECT
-				user_id,
-				user_name
-			FROM $userTable
-			) b
-			ON ug_user=user_id
-    ";
-
-    $res = $dbr->query( $sqlSysop );
-
-		while( $row = $dbr->fetchRow( $res ) ) {
-
-			$usersInSysop[] = $row['user_name'];
-
-    }
+	$usersInSysop = $this->getMembersOfGroup( 'sysop' );
 
     // Determine list of users in CX3 and not in sysop
-    $sqlCX3NotSysop = "SELECT
-						user_name
-					FROM
-						(SELECT
-							b.ug_user
-						FROM
-							(SELECT
-								ug_user,
-								ug_group
-							FROM $userGroupTable
-							WHERE ug_group IN ('sysop')
-							)a
-							RIGHT JOIN
-							(SELECT
-								ug_user,
-								ug_group
-							FROM $userGroupTable
-							WHERE ug_group IN ('CX3')
-							)b
-							ON a.ug_user=b.ug_user
-							WHERE a.ug_user is NULL)c
-					 JOIN
-					(
-					SELECT
-						user_id,
-						user_name
-					FROM $userTable
-					)d
-					ON c.ug_user=d.user_id";
-
-    $res = $dbr->query( $sqlCX3NotSysop );
-
-		while( $row = $dbr->fetchRow( $res ) ) {
-
-			$usersInCX3[] = $row['user_name'];
-
-    }
+    $usersInCX3 = $this->getMembersOfGroup( 'CX3', $usersInSysop );
 
     // Determine list of users not in CX3
     $sqlNotInCX3 = "SELECT
