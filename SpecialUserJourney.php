@@ -1130,21 +1130,163 @@ class SpecialUserJourney extends SpecialPage {
 
 
 
+
+
+
+
+	/**
+	* Function generates an array of user scores for each user for each day from $startDate
+	* to $endDate. Use an array variable to pass the list of competitors
+	* When calling, use the following syntax examples:
+	*
+	* $this->getDailyScoresArray( $competitors )
+	* $this->getDailyScoresArray( $competitors, 20150101000000, 20160101000000 )
+	*
+	* @param $competitors list (array) of usernames to compete
+	* @param $startDate the start of the date range in which to calculate the score
+	*			in format YYYYMMDDhhmmss
+	* @param $endDate the end of the date range in which to calculate the score
+	*			in format YYYYMMDDhhmmss
+	* @return array $data with scores for each user for each day to be used for d3
+	*/
+	function getDailyScoresArray( $competitors, $startDate = false, $endDate = false ){
+
+		$data = array();
+
+		$dbr = wfGetDB( DB_SLAVE );
+
+	    global $wgUJscoreDefinition, $wgUJscoreCeiling, $wgUJdaysToPlotCompetition;
+
+	    if( !$endDate ){
+	    	$endDate = $dbr->timestamp( time() );
+	    }
+	    if( !$startDate ){
+	    	$startDate = $dbr->timestamp( $endDate - ( 60 * 60 * 24 * $wgUJdaysToPlotCompetition ) );
+	    }
+
+		// $userTable = $dbr->tableName( 'user' );
+		// $userGroupTable = $dbr->tableName( 'user_groups' );
+		$revTable = $dbr->tableName( 'revision' );
+
+	    $queryDT = function( $competitor, $startDate, $endDate, $revTable ){
+
+	    	global $wgUJscoreDefinition, $wgUJscoreCeiling;
+
+	    	$output = "INSERT INTO temp_union (day, {$competitor})
+				SELECT
+					DATE(rev_timestamp) AS day,
+					LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) AS {$competitor}
+				FROM $revTable
+				WHERE
+					rev_user_text IN ( '{$competitor}' )
+					AND rev_timestamp >= '{$startDate}'
+					AND rev_timestamp < '{$endDate}'
+				GROUP BY day";
+
+			return $output;
+
+	    };
+
+		// Create temp table
+		$sql = "CREATE TEMPORARY TABLE temp_union(
+			day date NULL";
+		// Add column for user "dummy"
+		$sql .= ", dummy float NULL";
+		foreach( $competitors as $competitor ){
+			$sql .= ", {$competitor} float NULL";
+		}
+		$sql .= " )ENGINE = MEMORY";
+
+	    $res = $dbr->query( $sql );
+
+	    // Add column with dummy user to generate a 0 value for every day during comparison period
+	    $dateTime = $startDate;
+
+	    // This causes lots of calls to the db
+	    // Consider trying a for loop in MySQL
+	    // http://stackoverflow.com/questions/5125096/for-loop-example-in-mysql
+	    while( $dateTime <= $endDate ){
+	    	$date = date('Y-m-d', strtotime($dateTime) );
+
+			$sql = "INSERT INTO temp_union (day, dummy) VALUES ('{$date}', '0')";
+
+			$res = $dbr->query( $sql );
+
+			$dateTime = date('Ymd', strtotime($date . ' +1 day') ) * 1000000; // might have to divide by 1000000 to get from YMDhms to YMD
+	    }
+
+		// Add each competitor's score to temp table
+		foreach( $competitors as $competitor ){
+			// TO-DO update to UPDATE rows instead of INSERT (after generating table with one row for each day)
+			// $date = time() - ( 60 * 60 * 24 * $wgUJdaysToPlotCompetition );
+			// $dateString = $dbr->timestamp( $date );
+
+			$sql = $queryDT($competitor, $startDate, $endDate, $revTable);
+
+			$res = $dbr->query( $sql );
+		}
+
+		// Consolidate rows so each day only has one row
+	    $sql = "SELECT
+				day";
+		foreach( $competitors as $competitor ){
+			$sql .= ", max({$competitor}) {$competitor}";
+		}
+		$sql .= " FROM temp_union GROUP BY day";
+
+	    $res = $dbr->query( $sql );
+
+			while( $row = $dbr->fetchRow( $res ) ) {
+
+				foreach( $competitors as $competitor ){
+
+					list($day, $score) = array($row['day'], $row["$competitor"]);
+
+					$userdata["$competitor"][] = array(
+						'x' => strtotime( $day ) * 1000,
+						'y' => floatval( $score
+					),
+				);
+			}
+
+	    }
+
+		// Remove temp table
+	    $sql = "DROP TABLE temp_union";
+	    $res = $dbr->query ( $sql );
+
+		// Fill $data with contents of temp table
+	    foreach( $competitors as $competitor ){
+
+		    $person = User::newFromName("$competitor");
+				$realName = $person->getRealName();
+				if( empty($realName) ){
+					$nameToUse = $competitor;
+				} else {
+					$nameToUse = $realName;
+				}
+
+		    $data[] = array(
+	    		'key' => $nameToUse,
+	    		'values' => $userdata["$competitor"],
+	  		);
+
+	    }
+
+	    return $data;
+
+	}
+
+
+
+
+
+
 	function compareActivityByPeers( ){
 		// TO-DO Modify plots to have some granular/moving-average and some just showing 1-month or 3-month average values
 		// TO-DO Maybe have one page with all data and another page with last 30-60 days
 
-	    global $wgOut;
-	    global $wgUJscoreCeiling;
-	    global $wgUJdaysToDetermineCompetitors;
-		global $wgUJdaysToPlotCompetition;
-		global $wgUJnumRevisionsAlias;
-		global $wgUJnumPagesRevisedAlias;
-		global $wgUJscoreDefinition;
-		global $wgUJscoreDefinitionUsingAliases;
-
-	    $username = $this->getUser()->mName;
-		$displayName = self::getDisplayName();
+	    global $wgOut, $wgUJdaysToDetermineCompetitors, $wgUJdaysToPlotCompetition;
 
 	    $competitors = array();
 
@@ -1157,132 +1299,20 @@ class SpecialUserJourney extends SpecialPage {
 
 		    $dbr = wfGetDB( DB_SLAVE );
 
-		    // Determine score of logged in user (based on $wgUJdaysToDetermineCompetitors number of days)
+			// Determine score of logged in user (based on $wgUJdaysToDetermineCompetitors number of days)
 			$date = time() - ( 60 * 60 * 24 * $wgUJdaysToDetermineCompetitors );
 			$startDate = $dbr->timestamp( $date );
-
-			// Determine score of logged in user (based on $wgUJdaysToDetermineCompetitors number of days)
 		    $userRecentScore = $this->getUserScore( false, $startDate );
 
 			// Determine users with relatively similar scores for the past $wgUJdaysToDetermineCompetitors
 			$competitors = $this->getCompetitorsByScore( $userRecentScore, false, $startDate, false, 4, 2 );
 
+			// Append 0 value for HHMMSS to match timestamp format in revision table
+			$endDate = date("Ymd", time()) * 1000000; // Today as YYYYMMDD000000
+		    $startDate = date('Ymd', strtotime($endDate . " - {$wgUJdaysToPlotCompetition} days")) * 1000000;
 
+		    $data = $this->getDailyScoresArray( $competitors, $startDate, $endDate );
 
-
-
-
-
-			$userTable = $dbr->tableName( 'user' );
-			$userGroupTable = $dbr->tableName( 'user_groups' );
-			$revTable = $dbr->tableName( 'revision' );
-		    // Create temp table to hold scores for every day
-
-		    $queryDT = function( $competitor, $dateString, $wgUJscoreCeiling, $revTable ){
-
-		    	global $wgUJscoreDefinition;
-
-		    	$output = "INSERT INTO temp_union (day, {$competitor})
-					SELECT
-						DATE(rev_timestamp) AS day,
-						LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) AS {$competitor}
-					FROM $revTable
-					WHERE
-						rev_user_text IN ( '{$competitor}' )
-						AND rev_timestamp > '$dateString'
-					GROUP BY day";
-
-				return $output;
-
-		    };
-
-			// Create temp table
-			$sql = "CREATE TEMPORARY TABLE temp_union(
-				day date NULL";
-			// Add column for user "dummy"
-			$sql .= ", dummy float NULL";
-			foreach( $competitors as $competitor ){
-				$sql .= ", {$competitor} float NULL";
-			}
-			$sql .= " )ENGINE = MEMORY";
-
-		    $res = $dbr->query( $sql );
-
-		    // Add column with dummy user to generate a 0 value for every day during comparison period
-		    $lastDate = date("Ymd", time()); // Today as YYYYMMDD
-		    $firstDate = date('Ymd', strtotime($lastDate . " - {$wgUJdaysToPlotCompetition} days")); // Today - $wgUJdaysToPlotCompetition days
-		    $date = $firstDate;
-
-		    // This causes lots of calls to the db
-		    // Consider trying a for loop in MySQL
-		    // http://stackoverflow.com/questions/5125096/for-loop-example-in-mysql
-		    while( $date <= $lastDate ){
-		    	$dateTime = date('Y-m-d', strtotime($date * 1000000) ); // Append 0 value for HHMMSS to match timestamp format in revision table
-
-				$sql = "INSERT INTO temp_union (day, dummy) VALUES ('{$dateTime}', '0')";
-
-				$res = $dbr->query( $sql );
-
-				$date = date('Ymd', strtotime($date . ' +1 day') );
-		    }
-
-			// Add each competitor's score to temp table
-			foreach( $competitors as $competitor ){
-				// TO-DO update to UPDATE rows instead of INSERT (after generating table with one row for eacy day)
-				$date = time() - ( 60 * 60 * 24 * $wgUJdaysToPlotCompetition );
-				$dateString = $dbr->timestamp( $date );
-
-				$sql = $queryDT($competitor, $dateString, $wgUJscoreCeiling, $revTable);
-
-				$res = $dbr->query( $sql );
-			}
-
-			// Consolidate rows so each day only has one row
-		    $sql = "SELECT
-					day";
-			foreach( $competitors as $competitor ){
-				$sql .= ", max({$competitor}) {$competitor}";
-			}
-			$sql .= " FROM temp_union GROUP BY day";
-
-		    $res = $dbr->query( $sql );
-
-				while( $row = $dbr->fetchRow( $res ) ) {
-
-					foreach( $competitors as $competitor ){
-
-						list($day, $score) = array($row['day'], $row["$competitor"]);
-
-						$userdata["$competitor"][] = array(
-							'x' => strtotime( $day ) * 1000,
-							'y' => floatval( $score
-						),
-					);
-				}
-
-		    }
-
-			// Remove temp table
-		    $sql = "DROP TABLE temp_union";
-		    $res = $dbr->query ( $sql );
-
-			// Fill $data with contents of temp table
-		    foreach( $competitors as $competitor ){
-
-			    $person = User::newFromName("$competitor");
-					$realName = $person->getRealName();
-					if( empty($realName) ){
-						$nameToUse = $competitor;
-					} else {
-						$nameToUse = $realName;
-					}
-
-			    $data[] = array(
-		    		'key' => $nameToUse,
-		    		'values' => $userdata["$competitor"],
-		  		);
-
-		    }
 
 			$html = '';
 			$html .= '<h2>Line with Window</h2>';
