@@ -950,6 +950,42 @@ class SpecialUserJourney extends SpecialPage {
 
 
 
+
+
+
+	/**
+	* Function returns date of first revision in the wiki in format YYYYMMDD
+	* When calling, use the following syntax examples:
+	*
+	* $this->getFirstWikiRevisionDate()
+	*
+	* @param
+	* @return float $userScore
+	*/
+	function getFirstWikiRevisionDate(){
+
+	$dbr = wfGetDB( DB_SLAVE );
+
+	$revTable = $dbr->tableName( 'revision' );
+
+	$sql = "SELECT
+			DATE(rev_timestamp) AS day
+		FROM $revTable
+		ORDER BY rev_timestamp ASC
+		LIMIT 1";
+
+	$res = $dbr->query( $sql );
+    $row = $dbr->fetchRow( $res );
+    $firstContributionDateTime = $row['day']; // in format YYYYMMDDHHMMSS
+
+    $firstContributionDate = date('Ymd', strtotime( $firstContributionDateTime ) );
+
+	return $firstContributionDate;
+
+	}
+
+
+
 	/**
 	* Function returns contribution score for user based on contributions within
 	* start and end dates.
