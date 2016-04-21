@@ -1143,7 +1143,7 @@ class SpecialUserJourney extends SpecialPage {
 	*			in format "('username1', 'username2')"
 	* @return array $competitors like ('Jdoe', 'Bsmith')
 	*/
-	function getCompetitorsByGroup( $group = NULL, $ignoreUsers = false ){
+	function getMembersOfGroup( $group = NULL, $ignoreUsers = false ){
 
 		$competitors = array();
 
@@ -1408,7 +1408,7 @@ class SpecialUserJourney extends SpecialPage {
 	    $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
 
 		// Determine list of competitors based on $userGroup
-	    $competitors = $this->getCompetitorsByGroup( 'sysop' );
+	    $competitors = $this->getMembersOfGroup( 'sysop' );
 
 	    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
 	    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
