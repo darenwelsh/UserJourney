@@ -1185,7 +1185,7 @@ class SpecialUserJourney extends SpecialPage {
 			$ignoreUsersString = "('" . implode("', '", $ignoreUsers) . "')";
 
 			$sql .= "
-				WHERE user_name NOT IN {$ignoreUsers}
+				WHERE user_name NOT IN {$ignoreUsersString}
 			";
 
 		}
@@ -1479,50 +1479,15 @@ function compareScoreBetweenGroups( ){
 	$usersInSysop = $this->getMembersOfGroup( 'sysop' );
 
     // Determine list of users in CX3 and not in sysop
-    $usersInCX3 = $this->getMembersOfGroup( 'CX3', $usersInSysop );
+    $usersInCX3NotSysop = $this->getMembersOfGroup( 'CX3', $usersInSysop );
 
     // Determine list of users not in CX3
-    $sqlNotInCX3 = "SELECT
-					user_name
-				FROM
-					(SELECT
-						DISTINCT b.ug_user
-					FROM
-						(SELECT
-							ug_user,
-							ug_group
-						FROM $userGroupTable
-						WHERE ug_group IN ('CX3')
-						)a
-						RIGHT JOIN
-						(SELECT
-							ug_user,
-							ug_group
-						FROM $userGroupTable
-						WHERE ug_group NOT IN ('CX3')
-						)b
-						ON a.ug_user=b.ug_user
-						WHERE a.ug_user is NULL)c
-				 JOIN
-				(
-				SELECT
-					user_id,
-					user_name
-				FROM $userTable
-				)d
-				ON c.ug_user=d.user_id";
-
-    $res = $dbr->query( $sqlNotInCX3 );
-
-		while( $row = $dbr->fetchRow( $res ) ) {
-
-			$usersNotInCX3[] = $row['user_name'];
-
-    }
+    $usersInCX3 = $this->getMembersOfGroup( 'CX3' );
+    $usersNotInCX3 = $this->getMembersOfGroup( false , $usersInCX3 );
 
     $competitors = array(
     	'Admins' => $usersInSysop,
-    	'CX3' => $usersInCX3,
+    	'CX3' => $usersInCX3NotSysop,
     	'Others' => $usersNotInCX3,
     	);
 
@@ -1530,10 +1495,10 @@ function compareScoreBetweenGroups( ){
 
     	global $wgUJscoreDefinition;
 
-    	$output = "INSERT INTO temp_union (day, {$competitorTeamName})
+    	$output = "INSERT INTO temp_union (day, `{$competitorTeamName}`)
 			SELECT
 				DATE(rev_timestamp) AS day,
-				LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) AS {$competitorTeamName}
+				LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) AS `{$competitorTeamName}`
 			FROM $revTable
 			WHERE
 				rev_user_text IN ( ";
@@ -1556,7 +1521,7 @@ function compareScoreBetweenGroups( ){
 	// Add column for user "dummy"
 	$sql .= ", dummy float NULL";
 	foreach( $competitors as $competitorTeamName => $competitorUsernames ){
-		$sql .= ", {$competitorTeamName} float NULL";
+		$sql .= ", `{$competitorTeamName}` float NULL";
 	}
 	$sql .= " )ENGINE = MEMORY";
 
@@ -1599,7 +1564,7 @@ function compareScoreBetweenGroups( ){
     $sql = "SELECT
 			day";
 		foreach( $competitors as $competitorTeamName => $competitorUsernames ){
-			$sql .= ", max({$competitorTeamName}) {$competitorTeamName}";
+			$sql .= ", max(`{$competitorTeamName}`) `{$competitorTeamName}`";
 		}
 		$sql .= " FROM temp_union GROUP BY day";
 
