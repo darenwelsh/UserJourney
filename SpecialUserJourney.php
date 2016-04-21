@@ -1256,17 +1256,18 @@ class SpecialUserJourney extends SpecialPage {
 	* to $endDate. Use an array variable to pass the list of competitors
 	* When calling, use the following syntax examples:
 	*
-	* $this->getDailyScoresArray( $competitors )
-	* $this->getDailyScoresArray( $competitors, 20150101000000, 20160101000000 )
+	* $this->getDailyValuesArray( 'score', $competitors )
+	* $this->getDailyValuesArray( 'views', $competitors, 20150101000000, 20160101000000 )
 	*
 	* @param $competitors array of usernames to compete
+	* @param $valueType 'score' or 'views' - what we want to measure over time
 	* @param $startDate the start of the date range in which to calculate the score
 	*			in format YYYYMMDDhhmmss
 	* @param $endDate the end of the date range in which to calculate the score
 	*			in format YYYYMMDDhhmmss
 	* @return array $data with scores for each user for each day to be used for d3
 	*/
-	function getDailyScoresArray( $competitors, $startDate = false, $endDate = false ){
+	function getDailyValuesArray( $competitors, $valueType = 'score', $startDate = false, $endDate = false ){
 
 		$data = array();
 
@@ -1301,7 +1302,7 @@ class SpecialUserJourney extends SpecialPage {
 				}
 				$output .= " '' ";
 			} else {
-				$output .= "{$competitorName}'";
+				$output .= "'{$competitorName}'";
 			}
 
 			$output .= " )
@@ -1472,7 +1473,7 @@ class SpecialUserJourney extends SpecialPage {
 			$endDate = date("Ymd", time()) * 1000000; // Today as YYYYMMDD000000
 		    $startDate = date('Ymd', strtotime($endDate . " - {$wgUJdaysToPlotCompetition} days")) * 1000000;
 
-		    $data = $this->getDailyScoresArray( $competitors, $startDate, $endDate );
+		    $data = $this->getDailyValuesArray( $competitors, $valueType = 'score', $startDate, $endDate );
 
 
 			$html = '';
@@ -1519,7 +1520,7 @@ class SpecialUserJourney extends SpecialPage {
 		$endDate = date("Ymd", time()) * 1000000; // Today as YYYYMMDD000000
 	    $startDate = date('Ymd', strtotime($endDate . " - {$wgUJdaysToPlotCompetition} days")) * 1000000;
 
-	    $data = $this->getDailyScoresArray( $competitors, $startDate, $endDate );
+	    $data = $this->getDailyValuesArray( $competitors, $valueType = 'score', $startDate, $endDate );
 
 
 		$html = '';
@@ -1583,7 +1584,7 @@ class SpecialUserJourney extends SpecialPage {
 		$endDate = date("Ymd", time()) * 1000000; // Today as YYYYMMDD000000
 	    $startDate = date('Ymd', strtotime($endDate . " - {$wgUJdaysToPlotCompetition} days")) * 1000000;
 
-	    $data = $this->getDailyScoresArray( $competitors, $startDate, $endDate );
+	    $data = $this->getDailyValuesArray( $competitors, $valueType = 'score', $startDate, $endDate );
 
 		$html = '';
 		$html .= '<h2>Line with Window</h2>';
