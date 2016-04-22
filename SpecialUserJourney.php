@@ -1613,11 +1613,11 @@ class SpecialUserJourney extends SpecialPage {
 	    // for now, 2nd group is CX3 && !sysop
 	    // for now, 3rd group is !CX3 (&& !sysop)
 
-		if( $valueType = 'score' ){
+		if( $valueType == 'score' ){
 			$pageTitleDetails = wfMessage( 'userjourney-compare-score-between-groups' )->text();
-		} else if( $valueType = 'views' ){
+		} else if( $valueType == 'views' ){
 			$pageTitleDetails = wfMessage( 'userjourney-compare-views-between-groups' )->text();
-		} else if( $valueType = 'unique-user-views' ){
+		} else if( $valueType == 'unique-user-views' ){
 			$pageTitleDetails = wfMessage( 'userjourney-compare-unique-user-views-between-groups' )->text();
 		} else { // unique-user-page-views
 			$pageTitleDetails = wfMessage( 'userjourney-compare-unique-user-page-views-between-groups' )->text();
