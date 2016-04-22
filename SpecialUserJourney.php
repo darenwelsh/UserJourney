@@ -1286,10 +1286,10 @@ class SpecialUserJourney extends SpecialPage {
 	    	$startDate = $dbr->timestamp( $endDate - ( 60 * 60 * 24 * $wgUJdaysToPlotCompetition ) );
 	    }
 
-		$revTable = $dbr->tableName( 'revision' );
+	    $revTable = $dbr->tableName( 'revision' );
 		$wiretapTable = $dbr->tableName( 'wiretap' );
 
-	    $queryDT = function( $competitorName, $valueType, $groupMembers = false, $startDate, $endDate, $revTable ){
+	    $queryDT = function( $competitorName, $valueType, $groupMembers = false, $startDate, $endDate, $revTable, $wiretapTable ){
 
 	    	global $wgUJscoreDefinition, $wgUJscoreCeiling;
 
@@ -1313,11 +1313,11 @@ class SpecialUserJourney extends SpecialPage {
 						";
 				if( $valueType == 'unique-page-views'){
 					$output .= "
-						COUNT(DISTINCT(CONCAT(user_name,'UNIQUESEPARATOR',page_id))) AS {$competitorTeamName}
+						COUNT(DISTINCT(user_name)) AS `{$competitorName}`
 					";
 				} else {
 					$output .= "
-						COUNT(DISTINCT(user_name)) AS {$competitorTeamName}
+						COUNT(DISTINCT(CONCAT(user_name,'UNIQUESEPARATOR',page_id))) AS `{$competitorName}`
 					";
 				}
 				$output .= "
@@ -1336,10 +1336,25 @@ class SpecialUserJourney extends SpecialPage {
 				$output .= "'{$competitorName}'";
 			}
 
-			$output .= " )
+			$output .= " ) ";
+
+			if( $valueType == 'score' ){
+
+				$output .= "
 					AND rev_timestamp >= '{$startDate}'
 					AND rev_timestamp < '{$endDate}'
-				GROUP BY day";
+					";
+
+			} else {
+
+				$output .= "
+					AND hit_timestamp >= '{$startDate}'
+					AND hit_timestamp < '{$endDate}'
+				";
+
+			}
+
+			$output .= " GROUP BY day ";
 
 			return $output;
 
@@ -1392,7 +1407,7 @@ class SpecialUserJourney extends SpecialPage {
 				$groupMembers = $value;
 			}
 
-			$sql = $queryDT($competitorName, $valueType, $groupMembers, $startDate, $endDate, $revTable);
+			$sql = $queryDT($competitorName, $valueType, $groupMembers, $startDate, $endDate, $revTable, $wiretapTable);
 
 			$res = $dbr->query( $sql );
 		}
@@ -1690,283 +1705,6 @@ class SpecialUserJourney extends SpecialPage {
 	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
 
 	    $wgOut->addHTML( $html );
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	 //    global $wgOut;
-
-	 //    // $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
-	 //    // for now, 2nd group is CX3 && !sysop
-	 //    // for now, 3rd group is !CX3 (&& !sysop)
-
-	 //    $username = $this->getUser()->mName;
-		// $displayName = self::getDisplayName();
-
-	 //    $wgOut->setPageTitle( "UserJourney: Unique user-page view comparison plot" );
-	 //    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
-
-	 //    $dbr = wfGetDB( DB_SLAVE );
-
-		// $userTable = $dbr->tableName( 'user' );
-		// $userGroupTable = $dbr->tableName( 'user_groups' );
-		// $revTable = $dbr->tableName( 'revision' );
-		// $catTable = $dbr->tableName( 'category' );
-		// $catLinksTable = $dbr->tableName( 'categorylinks' );
-		// $wiretapTable = $dbr->tableName( 'wiretap' );
-
-		// // Determine list of users in sysop
-	 //    $sqlSysop = "SELECT
-		// 			user_name
-		// 		FROM (
-		// 		SELECT
-		// 			ug_user,
-		// 			ug_group
-		// 		FROM $userGroupTable
-		// 		WHERE ug_group = 'sysop'
-		// 		) a
-		// 		 JOIN
-		// 		(
-		// 		SELECT
-		// 			user_id,
-		// 			user_name
-		// 		FROM $userTable
-		// 		) b
-		// 		ON ug_user=user_id
-	 //    ";
-
-	 //    $res = $dbr->query( $sqlSysop );
-
-		// 	while( $row = $dbr->fetchRow( $res ) ) {
-
-		// 		$usersInSysop[] = $row['user_name'];
-
-	 //    }
-
-	 //    // Determine list of users in CX3 and not in sysop
-	 //    $sqlCX3NotSysop = "SELECT
-		// 					user_name
-		// 				FROM
-		// 					(SELECT
-		// 						b.ug_user
-		// 					FROM
-		// 						(SELECT
-		// 							ug_user,
-		// 							ug_group
-		// 						FROM $userGroupTable
-		// 						WHERE ug_group IN ('sysop')
-		// 						)a
-		// 						RIGHT JOIN
-		// 						(SELECT
-		// 							ug_user,
-		// 							ug_group
-		// 						FROM $userGroupTable
-		// 						WHERE ug_group IN ('CX3')
-		// 						)b
-		// 						ON a.ug_user=b.ug_user
-		// 						WHERE a.ug_user is NULL)c
-		// 				 JOIN
-		// 				(
-		// 				SELECT
-		// 					user_id,
-		// 					user_name
-		// 				FROM $userTable
-		// 				)d
-		// 				ON c.ug_user=d.user_id";
-
-	 //    $res = $dbr->query( $sqlCX3NotSysop );
-
-		// 	while( $row = $dbr->fetchRow( $res ) ) {
-
-		// 		$usersInCX3[] = $row['user_name'];
-
-	 //    }
-
-	 //    // Determine list of users not in CX3
-	 //    $sqlNotInCX3 = "SELECT
-		// 				user_name
-		// 			FROM
-		// 				(SELECT
-		// 					DISTINCT b.ug_user
-		// 				FROM
-		// 					(SELECT
-		// 						ug_user,
-		// 						ug_group
-		// 					FROM $userGroupTable
-		// 					WHERE ug_group IN ('CX3')
-		// 					)a
-		// 					RIGHT JOIN
-		// 					(SELECT
-		// 						ug_user,
-		// 						ug_group
-		// 					FROM $userGroupTable
-		// 					WHERE ug_group NOT IN ('CX3')
-		// 					)b
-		// 					ON a.ug_user=b.ug_user
-		// 					WHERE a.ug_user is NULL)c
-		// 			 JOIN
-		// 			(
-		// 			SELECT
-		// 				user_id,
-		// 				user_name
-		// 			FROM $userTable
-		// 			)d
-		// 			ON c.ug_user=d.user_id";
-
-	 //    $res = $dbr->query( $sqlNotInCX3 );
-
-		// 	while( $row = $dbr->fetchRow( $res ) ) {
-
-		// 		$usersNotInCX3[] = $row['user_name'];
-
-	 //    }
-
-	 //    $competitors = array(
-	 //    	'Admins' => $usersInSysop,
-	 //    	'CX3' => $usersInCX3,
-	 //    	'Others' => $usersNotInCX3,
-	 //    	);
-
-	 //    $queryDT = function( $competitorTeamName, $competitorUsernames, $wiretapTable ){
-	 //    	// parts of this query stolen from Extension:Wiretap function getUniqueRows()
-	 //    	$output = "INSERT INTO temp_union (day, {$competitorTeamName})
-		// 		SELECT
-		// 			DATE(hit_timestamp) AS day,
-		// 			COUNT(DISTINCT(CONCAT(user_name,'UNIQUESEPARATOR',page_id))) AS {$competitorTeamName} -- For unique-page views
-		// 			-- COUNT(DISTINCT(user_name)) AS {$competitorTeamName} -- For non-unique-page views
-		// 		FROM $wiretapTable
-		// 		WHERE
-		// 			user_name IN ( ";
-
-		// 	foreach( $competitorUsernames as $person ){
-		// 		$output .= " '{$person}', ";
-		// 	}
-		// 	$output .= " '' ";
-
-		// 	$output .= " )
-	 //        /* AND rev_timestamp > 20150101000000 */
-	 //        /* AND user_name NOT IN ('Dmeza') */ -- Because he scraped the EVA wiki on 2015-11-03, resulting in 4714 unique user-page views
-		// 		GROUP BY day";
-
-		// 	return $output;
-	 //    };
-
-		// // Create temp table
-		// $sql = "CREATE TEMPORARY TABLE temp_union(
-		// 	day date NULL";
-		// // Add column for user "dummy"
-		// $sql .= ", dummy float NULL";
-		// foreach( $competitors as $competitorTeamName => $competitorUsernames ){
-		// 	$sql .= ", {$competitorTeamName} float NULL";
-		// }
-		// $sql .= " )ENGINE = MEMORY";
-
-	 //    $res = $dbr->query( $sql );
-
-	 //    // Add column with dummy user to generate a 0 value for every day during comparison period
-	 //    // For this function I removed WHERE condition limiting time window to competitors; just use entire wiki history
-	 //   //  $sql = "SELECT
-		// 		// 	DATE(hit_timestamp) AS day
-		// 		// FROM wiretap
-		// 		// ORDER BY hit_timestamp ASC
-		// 		// LIMIT 1";
-
-		// // Use this instead of above to make x axis span life of wiki, not life of Extension:Wiretap
-		// $sql = "SELECT
-		// 		DATE(rev_timestamp) AS day
-		// 	FROM $revTable
-		// 	ORDER BY rev_timestamp ASC
-		// 	LIMIT 1";
-
-		// $res = $dbr->query( $sql );
-	 //    $row = $dbr->fetchRow( $res );
-	 //    $firstContributionDateFromGroup = $row['day'];
-
-	 //    $lastDate = date("Ymd", time()); // Today as YYYYMMDD
-	 //    $firstDate = date('Ymd', strtotime( $firstContributionDateFromGroup ) ); // Date of first contribution from users in this group
-	 //    $date = $firstDate;
-	 //    while( $date <= $lastDate ){
-	 //    	$dateTime = date('Y-m-d', strtotime($date * 1000000) ); // Append 0 value for HHMMSS to match timestamp format in revision table
-
-		// 		// $sql = $queryDT('dummy', $dateTime);
-		// 		$sql = "INSERT INTO temp_union (day, dummy) VALUES ('{$dateTime}', '0')";
-
-		// 		$res = $dbr->query( $sql );
-
-		// 		$date = date('Ymd', strtotime($date . ' +1 day') );
-	 //    }
-
-		// // Add each competitor's score to temp table
-		// foreach( $competitors as $competitorTeamName => $competitorUsernames ){
-		// 	$sql = $queryDT($competitorTeamName, $competitorUsernames, $wiretapTable);
-
-		// 	$res = $dbr->query( $sql );
-		// }
-
-		// // Consolidate rows so each day only has one row
-	 //    $sql = "SELECT
-		// 		day";
-		// 	foreach( $competitors as $competitorTeamName => $competitorUsernames ){
-		// 		$sql .= ", max({$competitorTeamName}) {$competitorTeamName}";
-		// 	}
-		// 	$sql .= " FROM temp_union GROUP BY day";
-
-	 //    $res = $dbr->query( $sql );
-
-		// while( $row = $dbr->fetchRow( $res ) ) {
-
-		// 	foreach( $competitors as $competitorTeamName => $competitorUsernames ){
-
-		// 		list($day, $score) = array($row['day'], $row["$competitorTeamName"]);
-
-		// 		$userdata["$competitorTeamName"][] = array(
-		// 			'x' => strtotime( $day ) * 1000,
-		// 			'y' => floatval( $score ),
-		// 		);
-		// 	}
-
-	 //    }
-
-		// 	// Remove temp table
-	 //    $sql = "DROP TABLE temp_union";
-	 //    $res = $dbr->query ( $sql );
-
-	 //    foreach( $competitors as $competitorTeamName => $competitorUsernames ){
-
-		//     $person = User::newFromName("$competitorTeamName");
-		// 		$realName = $person->getRealName();
-		// 		if( empty($realName) ){
-		// 			$nameToUse = $competitorTeamName;
-		// 		} else {
-		// 			$nameToUse = $realName;
-		// 		}
-
-		//     $data[] = array(
-	 //    		'key' => $nameToUse,
-	 //    		'values' => $userdata["$competitorTeamName"],
-	 //  		);
-
-	 //    }
-
-
-		// 	$html = '';
-		// 	$html .= '<h2>Stacked Area</h2>';
-		//   $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
-		// 	// $html .= '<h2>Stacked Area Stream</h2>';
-		//  //  $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
-	 //    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-
-	 //    $wgOut->addHTML( $html );
 
 	}
 
