@@ -45,10 +45,16 @@ class SpecialUserJourney extends SpecialPage {
 			$this->compareScoreByUserGroup();
 		}
 		else if ( $this->mMode == 'compare-activity-between-groups' ){
-			$this->compareScoreBetweenGroups();
+			$this->compareBetweenGroups( $valueType = 'score' );
 		}
 		else if ( $this->mMode == 'compare-views-between-groups' ){
-			$this->compareViewsBetweenGroups();
+			$this->compareBetweenGroups( $valueType = 'views' );
+		}
+		else if ( $this->mMode == 'compare-unique-user-views-between-groups' ){
+			$this->compareBetweenGroups( $valueType = 'unique-user-views' );
+		}
+		else if ( $this->mMode == 'compare-unique-user-page-views-between-groups' ){
+			$this->compareBetweenGroups( $valueType = 'unique-user-page-views' );
 		}
 		else {
 			$this->overview();
@@ -98,10 +104,12 @@ class SpecialUserJourney extends SpecialPage {
 
 			$navLine .= "<li>" . wfMessage( 'userjourney-compare-activity' )->text()
 				// . ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'compare-activity-data' ) // not currently displayed, maybe later for admins/Managers
-				. ": (" . $this->createHeaderLink( 'userjourney-plot-by-peers', 'compare-activity-by-similar-activity' )
-				. ") (" . $this->createHeaderLink( 'userjourney-plot-users-within-group', 'compare-activity-by-user-group' )
-				. ") (" . $this->createHeaderLink( 'userjourney-plot-by-group', 'compare-activity-between-groups' )
-				. ") (" . $this->createHeaderLink( 'userjourney-plot-views-between-groups', 'compare-views-between-groups' )
+				. ": (" . $this->createHeaderLink( 'userjourney-compare-by-peers', 'compare-activity-by-similar-activity' )
+				. ") (" . $this->createHeaderLink( 'userjourney-compare-users-within-group', 'compare-activity-by-user-group' )
+				. ") (" . $this->createHeaderLink( 'userjourney-compare-score-between-groups', 'compare-activity-between-groups' )
+				. ") (" . $this->createHeaderLink( 'userjourney-compare-views-between-groups', 'compare-views-between-groups' )
+				. ") (" . $this->createHeaderLink( 'userjourney-compare-unique-user-views-between-groups', 'compare-unique-user-views-between-groups' )
+				. ") (" . $this->createHeaderLink( 'userjourney-compare-unique-user-page-views-between-groups', 'compare-unique-user-page-views-between-groups' )
 				. ")</li>";
 
 			$navLine .= "</ul>";
@@ -1260,7 +1268,8 @@ class SpecialUserJourney extends SpecialPage {
 	* $this->getDailyValuesArray( 'views', $competitors, 20150101000000, 20160101000000 )
 	*
 	* @param $competitors array of usernames to compete
-	* @param $valueType 'score', 'views', or 'unique-page-views' - what we want to measure over time
+	* @param $valueType what we want to measure over time
+	*		'score', 'views', 'unique-user-views', or 'unique-user-page-views'
 	* @param $startDate the start of the date range in which to calculate the score
 	*			in format YYYYMMDDhhmmss
 	* @param $endDate the end of the date range in which to calculate the score
@@ -1275,7 +1284,7 @@ class SpecialUserJourney extends SpecialPage {
 
 	    global $wgUJscoreDefinition, $wgUJscoreCeiling, $wgUJdaysToPlotCompetition;
 
-	    if( !in_array($valueType, array('score','views', 'unique-page-views'), true) ){
+	    if( !in_array($valueType, array('score','views', 'unique-user-views', 'unique-user-page-views'), true) ){
 	    	$valueType = 'score';
 	    }
 
@@ -1309,18 +1318,23 @@ class SpecialUserJourney extends SpecialPage {
 			} else {
 
 				$output .= "
-						DATE(hit_timestamp) AS day,
+						DATE(hit_timestamp) AS day, COUNT(
 						";
-				if( $valueType == 'unique-page-views'){
+				if( $valueType == 'views'){
 					$output .= "
-						COUNT(DISTINCT(user_name)) AS `{$competitorName}`
+						*
 					";
-				} else {
+				} else if ( $valueType == 'unique-user-views'){
 					$output .= "
-						COUNT(DISTINCT(CONCAT(user_name,'UNIQUESEPARATOR',page_id))) AS `{$competitorName}`
+						DISTINCT(user_name)
+					";
+				} else { // unique-user-page-views
+					$output .= "
+						DISTINCT(CONCAT(user_name,'UNIQUESEPARATOR',page_id))
 					";
 				}
 				$output .= "
+						) AS `{$competitorName}`
 					FROM $wiretapTable
 					WHERE
 						user_name IN ( ";
@@ -1582,78 +1596,16 @@ class SpecialUserJourney extends SpecialPage {
 
 
 
-
-	/**
-	* Function generates special page with plots comparing contribution scores over time
-	* between user groups
-	*/
-	function compareScoreBetweenGroups( ){
-			//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
-
-	    global $wgOut, $wgUJscoreCeiling, $wgUJdaysToPlotCompetition;
-
-	    // $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
-	    // for now, 2nd group is CX3 && !sysop
-	    // for now, 3rd group is !CX3 (&& !sysop)
-
-	    $username = $this->getUser()->mName;
-		$displayName = self::getDisplayName();
-
-	    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
-	    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
-
-	    $dbr = wfGetDB( DB_SLAVE );
-
-		$userTable = $dbr->tableName( 'user' );
-		$userGroupTable = $dbr->tableName( 'user_groups' );
-		$revTable = $dbr->tableName( 'revision' );
-		$catTable = $dbr->tableName( 'category' );
-		$catLinksTable = $dbr->tableName( 'categorylinks' );
-
-		// Determine list of users in sysop
-		$usersInSysop = $this->getMembersOfGroup( 'sysop' );
-
-	    // Determine list of users in CX3 and not in sysop
-	    $usersInCX3NotSysop = $this->getMembersOfGroup( 'CX3', $usersInSysop );
-
-	    // Determine list of users not in CX3
-	    $usersInCX3 = $this->getMembersOfGroup( 'CX3' );
-	    $usersNotInCX3 = $this->getMembersOfGroup( false , $usersInCX3 );
-
-	    $competitors = array(
-	    	'Admins' => $usersInSysop,
-	    	'CX3 Non-Admins' => $usersInCX3NotSysop,
-	    	'Others' => $usersNotInCX3,
-	    	);
-
-		// Append 0 value for HHMMSS to match timestamp format in revision table
-		$endDate = date("Ymd", time()) * 1000000; // Today as YYYYMMDD000000
-	    $startDate = date('Ymd', strtotime($endDate . " - {$wgUJdaysToPlotCompetition} days")) * 1000000;
-
-	    $data = $this->getDailyValuesArray( $competitors, $valueType = 'score', $startDate, $endDate );
-
-		$html = '';
-		$html .= '<h2>Line with Window</h2>';
-	    $html .= '<div id="userjourney-compare-chart-line-with-window"><svg height="400px"></svg></div>';
-		$html .= '<h2>Stacked Area</h2>';
-		$html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
-	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-
-	    $wgOut->addHTML( $html );
-
-	}
-
-
-
-
 	/**
 	* Function generates special page with plots comparing page views over time
 	* between user groups
+	*
+	* @param $valueType what we want to measure over time
+	*		'score', 'views', 'unique-user-views', or 'unique-user-page-views'
 	*/
-	function compareViewsBetweenGroups( ){
+	function compareBetweenGroups( $valueType = 'score' ){
 		//TO-DO this has a dependency on Extension:Wiretap
 		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
-
 
 	    global $wgOut, $wgUJscoreCeiling, $wgUJdaysToPlotCompetition;
 
@@ -1661,19 +1613,18 @@ class SpecialUserJourney extends SpecialPage {
 	    // for now, 2nd group is CX3 && !sysop
 	    // for now, 3rd group is !CX3 (&& !sysop)
 
-	    $username = $this->getUser()->mName;
-		$displayName = self::getDisplayName();
+		if( $valueType = 'score' ){
+			$pageTitleDetails = wfMessage( 'userjourney-compare-score-between-groups' )->text();
+		} else if( $valueType = 'views' ){
+			$pageTitleDetails = wfMessage( 'userjourney-compare-views-between-groups' )->text();
+		} else if( $valueType = 'unique-user-views' ){
+			$pageTitleDetails = wfMessage( 'userjourney-compare-unique-user-views-between-groups' )->text();
+		} else { // unique-user-page-views
+			$pageTitleDetails = wfMessage( 'userjourney-compare-unique-user-page-views-between-groups' )->text();
+		}
 
-	    $wgOut->setPageTitle( "UserJourney: Views comparison plot" );
+	    $wgOut->setPageTitle( "UserJourney: Comparing $pageTitleDetails" );
 	    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
-
-	    $dbr = wfGetDB( DB_SLAVE );
-
-		$userTable = $dbr->tableName( 'user' );
-		$userGroupTable = $dbr->tableName( 'user_groups' );
-		$revTable = $dbr->tableName( 'revision' );
-		$catTable = $dbr->tableName( 'category' );
-		$catLinksTable = $dbr->tableName( 'categorylinks' );
 
 		// Determine list of users in sysop
 		$usersInSysop = $this->getMembersOfGroup( 'sysop' );
@@ -1692,10 +1643,10 @@ class SpecialUserJourney extends SpecialPage {
 	    	);
 
 		// Append 0 value for HHMMSS to match timestamp format in revision table
-		$endDate = date("Ymd", time()) * 1000000; // Today as YYYYMMDD000000
+		$endDate = date('Ymd', time()) * 1000000; // Today as YYYYMMDD000000
 	    $startDate = date('Ymd', strtotime($endDate . " - {$wgUJdaysToPlotCompetition} days")) * 1000000;
 
-	    $data = $this->getDailyValuesArray( $competitors, $valueType = 'views', $startDate, $endDate );
+	    $data = $this->getDailyValuesArray( $competitors, $valueType, $startDate, $endDate );
 
 		$html = '';
 		$html .= '<h2>Line with Window</h2>';
@@ -1707,8 +1658,6 @@ class SpecialUserJourney extends SpecialPage {
 	    $wgOut->addHTML( $html );
 
 	}
-
-
 
 
 
