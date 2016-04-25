@@ -34,6 +34,13 @@ class SpecialUserJourney extends SpecialPage {
 		else if ( $this->mMode == 'user-activity-plot' ) {
 			$this->myScorePlot();
 		}
+		else if ( $this->mMode == 'user-activity-plot2' ) {//try new compare() function
+
+			$this->compare( 'Lwelsh', 'score', 20150819000000, false );
+			$this->compare( 'Lwelsh', 'views', 20150819000000, false );
+			$this->compare( 'Lwelsh', 'score-views-ratio', 20150819000000, false );
+
+		}
 
 		if ($this->mMode == 'compare-activity-data') {
 			$this->compareScoreData();
@@ -112,6 +119,7 @@ class SpecialUserJourney extends SpecialPage {
 			$navLine .= "<li>" . wfMessage( 'userjourney-my-activity' )->text()
 				. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'user-activity-data' )
 				. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-activity-plot' )
+				. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-activity-plot2' )
 				. ")</li>";
 
 			$navLine .= "<li>" . wfMessage( 'userjourney-compare-activity' )->text()
@@ -1424,83 +1432,6 @@ class SpecialUserJourney extends SpecialPage {
 			return $output;
 
 		};
-
-
-	  //   $queryDT = function( $competitorName, $valueType, $groupMembers = false, $startDate, $endDate, $revTable, $wiretapTable ){
-
-	  //   	global $wgUJscoreDefinition, $wgUJscoreCeiling;
-
-	  //   	$output = "INSERT INTO temp_union (day, `{$competitorName}`)
-			// 	SELECT
-			// 	";
-
-			// if( $valueType == 'score' ){
-
-			// 	$output .= "
-			// 			DATE(rev_timestamp) AS day,
-			// 			LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) AS `{$competitorName}`
-			// 		FROM $revTable
-			// 		WHERE
-			// 			rev_user_text IN (";
-
-			// } else {
-
-			// 	$output .= "
-			// 			DATE(hit_timestamp) AS day, COUNT(
-			// 			";
-			// 	if( $valueType == 'views'){
-			// 		$output .= "
-			// 			*
-			// 		";
-			// 	} else if ( $valueType == 'unique-user-views'){
-			// 		$output .= "
-			// 			DISTINCT(user_name)
-			// 		";
-			// 	} else { // unique-user-page-views
-			// 		$output .= "
-			// 			DISTINCT(CONCAT(user_name,'UNIQUESEPARATOR',page_id))
-			// 		";
-			// 	}
-			// 	$output .= "
-			// 			) AS `{$competitorName}`
-			// 		FROM $wiretapTable
-			// 		WHERE
-			// 			user_name IN ( ";
-
-			// }
-
-			// if( $groupMembers ){
-			// 	foreach( $groupMembers as $person ){
-			// 		$output .= " '{$person}', ";
-			// 	}
-			// 	$output .= " '' ";
-			// } else {
-			// 	$output .= "'{$competitorName}'";
-			// }
-
-			// $output .= " ) ";
-
-			// if( $valueType == 'score' ){
-
-			// 	$output .= "
-			// 		AND rev_timestamp >= '{$startDate}'
-			// 		AND rev_timestamp < '{$endDate}'
-			// 		";
-
-			// } else {
-
-			// 	$output .= "
-			// 		AND hit_timestamp >= '{$startDate}'
-			// 		AND hit_timestamp < '{$endDate}'
-			// 	";
-
-			// }
-
-			// $output .= " GROUP BY day ";
-
-			// return $output;
-
-	  //   };
 
 		// Create temp table
 		$sql = "CREATE TEMPORARY TABLE temp_union(
