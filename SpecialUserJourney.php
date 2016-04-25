@@ -56,6 +56,9 @@ class SpecialUserJourney extends SpecialPage {
 		else if ( $this->mMode == 'compare-unique-user-page-views-between-groups' ){
 			$this->compareBetweenGroups( $valueType = 'unique-user-page-views' );
 		}
+		else if ( $this->mMode == 'compare-score-views-ratio-between-groups' ){
+			$this->compareBetweenGroups( $valueType = 'score-views-ratio' );
+		}
 		else {
 			$this->overview();
 		}
@@ -110,6 +113,7 @@ class SpecialUserJourney extends SpecialPage {
 				. ") (" . $this->createHeaderLink( 'userjourney-compare-views-between-groups', 'compare-views-between-groups' )
 				. ") (" . $this->createHeaderLink( 'userjourney-compare-unique-user-views-between-groups', 'compare-unique-user-views-between-groups' )
 				. ") (" . $this->createHeaderLink( 'userjourney-compare-unique-user-page-views-between-groups', 'compare-unique-user-page-views-between-groups' )
+				. ") (" . $this->createHeaderLink( 'userjourney-compare-score-views-ratio-between-groups', 'compare-score-views-ratio-between-groups' )
 				. ")</li>";
 
 			$navLine .= "</ul>";
@@ -1258,6 +1262,98 @@ class SpecialUserJourney extends SpecialPage {
 
 
 
+	function applyRatioOnTwoQueries( $competitorName, $subquery1, $valueType1, $subquery2, $valueType2 ){
+
+	   $output = "SELECT
+				   {$valueType1}.day,
+				   (100 * {$valueType1}.`{$competitorName}` / {$valueType2}.`{$competitorName}`) as `{$competitorName}`
+				FROM ( $subquery1 ) {$valueType1}
+				LEFT JOIN ( $subquery2 ) {$valueType2}
+				ON {$valueType1}.day = {$valueType2}.day;
+	   ";
+
+	   return $output;
+
+	}
+
+
+
+
+	function generateDailyValuesQuery( $competitorName, $valueType, $groupMembers = false, $startDate, $endDate, $revTable, $wiretapTable ){
+
+    	global $wgUJscoreDefinition, $wgUJscoreCeiling;
+
+		$output = " SELECT
+			";
+
+		if( $valueType == 'score' ){
+
+			$output .= "
+					DATE(rev_timestamp) AS day,
+					LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) AS `{$competitorName}`
+				FROM $revTable
+				WHERE
+					rev_user_text IN (";
+
+		} else {
+
+			$output .= "
+					DATE(hit_timestamp) AS day, COUNT(
+					";
+			if( $valueType == 'views'){
+				$output .= "
+					*
+				";
+			} else if ( $valueType == 'unique-user-views'){
+				$output .= "
+					DISTINCT(user_name)
+				";
+			} else { // unique-user-page-views
+				$output .= "
+					DISTINCT(CONCAT(user_name,'UNIQUESEPARATOR',page_id))
+				";
+			}
+			$output .= "
+					) AS `{$competitorName}`
+				FROM $wiretapTable
+				WHERE
+					user_name IN ( ";
+
+		}
+
+		if( $groupMembers ){
+			foreach( $groupMembers as $person ){
+				$output .= " '{$person}', ";
+			}
+			$output .= " '' ";
+		} else {
+			$output .= "'{$competitorName}'";
+		}
+
+		$output .= " ) ";
+
+		if( $valueType == 'score' ){
+
+			$output .= "
+				AND rev_timestamp >= '{$startDate}'
+				AND rev_timestamp < '{$endDate}'
+				";
+
+		} else {
+
+			$output .= "
+				AND hit_timestamp >= '{$startDate}'
+				AND hit_timestamp < '{$endDate}'
+			";
+
+		}
+
+		$output .= " GROUP BY day ";
+
+		return $output;
+
+	}
+
 
 	/**
 	* Function generates an array of user scores for each user for each day from $startDate
@@ -1269,7 +1365,7 @@ class SpecialUserJourney extends SpecialPage {
 	*
 	* @param $competitors array of usernames to compete
 	* @param $valueType what we want to measure over time
-	*		'score', 'views', 'unique-user-views', or 'unique-user-page-views'
+	*		'score', 'views', 'unique-user-views', 'unique-user-page-views', or 'score-views-ratio'
 	* @param $startDate the start of the date range in which to calculate the score
 	*			in format YYYYMMDDhhmmss
 	* @param $endDate the end of the date range in which to calculate the score
@@ -1284,7 +1380,7 @@ class SpecialUserJourney extends SpecialPage {
 
 	    global $wgUJscoreDefinition, $wgUJscoreCeiling, $wgUJdaysToPlotCompetition;
 
-	    if( !in_array($valueType, array('score','views', 'unique-user-views', 'unique-user-page-views'), true) ){
+	    if( !in_array($valueType, array('score','views', 'unique-user-views', 'unique-user-page-views', 'score-views-ratio'), true) ){
 	    	$valueType = 'score';
 	    }
 
@@ -1298,81 +1394,103 @@ class SpecialUserJourney extends SpecialPage {
 	    $revTable = $dbr->tableName( 'revision' );
 		$wiretapTable = $dbr->tableName( 'wiretap' );
 
-	    $queryDT = function( $competitorName, $valueType, $groupMembers = false, $startDate, $endDate, $revTable, $wiretapTable ){
+		$queryDT = function( $competitorName, $valueType, $groupMembers = false, $startDate, $endDate, $revTable, $wiretapTable ){
 
-	    	global $wgUJscoreDefinition, $wgUJscoreCeiling;
+	    	$output = "INSERT INTO temp_union (day, `{$competitorName}`) ";
 
-	    	$output = "INSERT INTO temp_union (day, `{$competitorName}`)
-				SELECT
-				";
+	    	if( $valueType == 'score-views-ratio' ){
 
-			if( $valueType == 'score' ){
+	    		$subquery1 = $this->generateDailyValuesQuery( $competitorName, 'score', $groupMembers, $startDate, $endDate, $revTable, $wiretapTable );
+	    		$subquery2 = $this->generateDailyValuesQuery( $competitorName, 'views', $groupMembers, $startDate, $endDate, $revTable, $wiretapTable );
 
-				$output .= "
-						DATE(rev_timestamp) AS day,
-						LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) AS `{$competitorName}`
-					FROM $revTable
-					WHERE
-						rev_user_text IN (";
+				$output .= $this->applyRatioOnTwoQueries( $competitorName, $subquery1, 'score', $subquery2, 'views' );
 
 			} else {
 
-				$output .= "
-						DATE(hit_timestamp) AS day, COUNT(
-						";
-				if( $valueType == 'views'){
-					$output .= "
-						*
-					";
-				} else if ( $valueType == 'unique-user-views'){
-					$output .= "
-						DISTINCT(user_name)
-					";
-				} else { // unique-user-page-views
-					$output .= "
-						DISTINCT(CONCAT(user_name,'UNIQUESEPARATOR',page_id))
-					";
-				}
-				$output .= "
-						) AS `{$competitorName}`
-					FROM $wiretapTable
-					WHERE
-						user_name IN ( ";
+				$output .= $this->generateDailyValuesQuery( $competitorName, $valueType, $groupMembers, $startDate, $endDate, $revTable, $wiretapTable );
 
 			}
-
-			if( $groupMembers ){
-				foreach( $groupMembers as $person ){
-					$output .= " '{$person}', ";
-				}
-				$output .= " '' ";
-			} else {
-				$output .= "'{$competitorName}'";
-			}
-
-			$output .= " ) ";
-
-			if( $valueType == 'score' ){
-
-				$output .= "
-					AND rev_timestamp >= '{$startDate}'
-					AND rev_timestamp < '{$endDate}'
-					";
-
-			} else {
-
-				$output .= "
-					AND hit_timestamp >= '{$startDate}'
-					AND hit_timestamp < '{$endDate}'
-				";
-
-			}
-
-			$output .= " GROUP BY day ";
 
 			return $output;
 
-	    };
+		};
+
+
+	  //   $queryDT = function( $competitorName, $valueType, $groupMembers = false, $startDate, $endDate, $revTable, $wiretapTable ){
+
+	  //   	global $wgUJscoreDefinition, $wgUJscoreCeiling;
+
+	  //   	$output = "INSERT INTO temp_union (day, `{$competitorName}`)
+			// 	SELECT
+			// 	";
+
+			// if( $valueType == 'score' ){
+
+			// 	$output .= "
+			// 			DATE(rev_timestamp) AS day,
+			// 			LEAST({$wgUJscoreCeiling}, {$wgUJscoreDefinition} ) AS `{$competitorName}`
+			// 		FROM $revTable
+			// 		WHERE
+			// 			rev_user_text IN (";
+
+			// } else {
+
+			// 	$output .= "
+			// 			DATE(hit_timestamp) AS day, COUNT(
+			// 			";
+			// 	if( $valueType == 'views'){
+			// 		$output .= "
+			// 			*
+			// 		";
+			// 	} else if ( $valueType == 'unique-user-views'){
+			// 		$output .= "
+			// 			DISTINCT(user_name)
+			// 		";
+			// 	} else { // unique-user-page-views
+			// 		$output .= "
+			// 			DISTINCT(CONCAT(user_name,'UNIQUESEPARATOR',page_id))
+			// 		";
+			// 	}
+			// 	$output .= "
+			// 			) AS `{$competitorName}`
+			// 		FROM $wiretapTable
+			// 		WHERE
+			// 			user_name IN ( ";
+
+			// }
+
+			// if( $groupMembers ){
+			// 	foreach( $groupMembers as $person ){
+			// 		$output .= " '{$person}', ";
+			// 	}
+			// 	$output .= " '' ";
+			// } else {
+			// 	$output .= "'{$competitorName}'";
+			// }
+
+			// $output .= " ) ";
+
+			// if( $valueType == 'score' ){
+
+			// 	$output .= "
+			// 		AND rev_timestamp >= '{$startDate}'
+			// 		AND rev_timestamp < '{$endDate}'
+			// 		";
+
+			// } else {
+
+			// 	$output .= "
+			// 		AND hit_timestamp >= '{$startDate}'
+			// 		AND hit_timestamp < '{$endDate}'
+			// 	";
+
+			// }
+
+			// $output .= " GROUP BY day ";
+
+			// return $output;
+
+	  //   };
 
 		// Create temp table
 		$sql = "CREATE TEMPORARY TABLE temp_union(
@@ -1601,7 +1719,7 @@ class SpecialUserJourney extends SpecialPage {
 	* between user groups
 	*
 	* @param $valueType what we want to measure over time
-	*		'score', 'views', 'unique-user-views', or 'unique-user-page-views'
+	*		'score', 'views', 'unique-user-views', 'unique-user-page-views', or 'score-views-ratio'
 	*/
 	function compareBetweenGroups( $valueType = 'score' ){
 		//TO-DO this has a dependency on Extension:Wiretap
@@ -1619,8 +1737,10 @@ class SpecialUserJourney extends SpecialPage {
 			$pageTitleDetails = wfMessage( 'userjourney-compare-views-between-groups' )->text();
 		} else if( $valueType == 'unique-user-views' ){
 			$pageTitleDetails = wfMessage( 'userjourney-compare-unique-user-views-between-groups' )->text();
-		} else { // unique-user-page-views
+		} else if( $valueType == 'unique-user-page-views' ){
 			$pageTitleDetails = wfMessage( 'userjourney-compare-unique-user-page-views-between-groups' )->text();
+		} else { // score-views-ratio
+			$pageTitleDetails = wfMessage( 'userjourney-compare-score-views-ratio-between-groups' )->text();
 		}
 
 	    $wgOut->setPageTitle( "UserJourney: Comparing $pageTitleDetails" );
