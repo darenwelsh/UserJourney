@@ -44,6 +44,15 @@ class SpecialUserJourney extends SpecialPage {
 		else if ( $this->mMode == 'compare-activity-by-user-group' ) {
 			$this->compareScoreByUserGroup();
 		}
+		else if ( $this->mMode == 'compare-activity-by-user-group2' ) { //try new compare() function
+
+			$competitors = $this->getMembersOfGroup('sysop');
+			$valueType = "score";
+			$startDate = 20150819000000;
+			$endDate = false;
+
+			$this->compare( $competitors, $valueType, $startDate, $endDate );
+		}
 		else if ( $this->mMode == 'compare-activity-between-groups' ){
 			$this->compareBetweenGroups( $valueType = 'score' );
 		}
@@ -109,6 +118,7 @@ class SpecialUserJourney extends SpecialPage {
 				// . ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'compare-activity-data' ) // not currently displayed, maybe later for admins/Managers
 				. ": (" . $this->createHeaderLink( 'userjourney-compare-by-peers', 'compare-activity-by-similar-activity' )
 				. ") (" . $this->createHeaderLink( 'userjourney-compare-users-within-group', 'compare-activity-by-user-group' )
+				. ") (" . $this->createHeaderLink( 'userjourney-compare-users-within-group', 'compare-activity-by-user-group2' )
 				. ") (" . $this->createHeaderLink( 'userjourney-compare-score-between-groups', 'compare-activity-between-groups' )
 				. ") (" . $this->createHeaderLink( 'userjourney-compare-views-between-groups', 'compare-views-between-groups' )
 				. ") (" . $this->createHeaderLink( 'userjourney-compare-unique-user-views-between-groups', 'compare-unique-user-views-between-groups' )
@@ -1787,7 +1797,7 @@ class SpecialUserJourney extends SpecialPage {
 	* between competitors (users and/or groups)
 	*
 	* @param $valueType what we want to measure over time
-	*		'score', 'views', 'unique-user-views', or 'unique-user-page-views'
+	*		'score', 'views', 'unique-user-views', 'unique-user-page-views', or 'score-views-ratio'
 	* @param $competitors array of users and groups to compare
 	*		can be multidimensional array (to two levels)
 	*		('Jdoe', ('Bsmith','Hsimpson'))
@@ -1807,32 +1817,34 @@ class SpecialUserJourney extends SpecialPage {
 			$pageTitleDetails = wfMessage( 'userjourney-compare-views-between-groups' )->text();
 		} else if( $valueType == 'unique-user-views' ){
 			$pageTitleDetails = wfMessage( 'userjourney-compare-unique-user-views-between-groups' )->text();
-		} else { // unique-user-page-views
+		} else if( $valueType == 'unique-user-page-views' ){
 			$pageTitleDetails = wfMessage( 'userjourney-compare-unique-user-page-views-between-groups' )->text();
+		} else { // score-views-ratio
+			$pageTitleDetails = wfMessage( 'userjourney-compare-score-views-ratio-between-groups' )->text();
 		}
 
 	    $wgOut->setPageTitle( "UserJourney: Comparing $pageTitleDetails" );
 	    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
 
-		// Determine list of users in sysop
-		$usersInSysop = $this->getMembersOfGroup( 'sysop' );
+		// // Determine list of users in sysop
+		// $usersInSysop = $this->getMembersOfGroup( 'sysop' );
 
-	    // Determine list of users in CX3 and not in sysop
-	    $usersInCX3NotSysop = $this->getMembersOfGroup( 'CX3', $usersInSysop );
+	 //    // Determine list of users in CX3 and not in sysop
+	 //    $usersInCX3NotSysop = $this->getMembersOfGroup( 'CX3', $usersInSysop );
 
-	    // Determine list of users not in CX3
-	    $usersInCX3 = $this->getMembersOfGroup( 'CX3' );
-	    $usersNotInCX3 = $this->getMembersOfGroup( false , $usersInCX3 );
+	 //    // Determine list of users not in CX3
+	 //    $usersInCX3 = $this->getMembersOfGroup( 'CX3' );
+	 //    $usersNotInCX3 = $this->getMembersOfGroup( false , $usersInCX3 );
 
-	    $competitors = array(
-	    	'Admins' => $usersInSysop,
-	    	'CX3 Non-Admins' => $usersInCX3NotSysop,
-	    	'Others' => $usersNotInCX3,
-	    	);
+	 //    $competitors = array(
+	 //    	'Admins' => $usersInSysop,
+	 //    	'CX3 Non-Admins' => $usersInCX3NotSysop,
+	 //    	'Others' => $usersNotInCX3,
+	 //    	);
 
-		// Append 0 value for HHMMSS to match timestamp format in revision table
-		$endDate = date('Ymd', time()) * 1000000; // Today as YYYYMMDD000000
-	    $startDate = date('Ymd', strtotime($endDate . " - {$wgUJdaysToPlotCompetition} days")) * 1000000;
+		// // Append 0 value for HHMMSS to match timestamp format in revision table
+		// $endDate = date('Ymd', time()) * 1000000; // Today as YYYYMMDD000000
+	 //    $startDate = date('Ymd', strtotime($endDate . " - {$wgUJdaysToPlotCompetition} days")) * 1000000;
 
 	    $data = $this->getDailyValuesArray( $competitors, $valueType, $startDate, $endDate );
 
