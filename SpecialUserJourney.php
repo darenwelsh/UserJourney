@@ -82,7 +82,7 @@ class SpecialUserJourney extends SpecialPage {
 
 			$comparatesArray = array();
 			foreach( $competitors as $competitor ){
-				$comparateLabel = $competitor . "_score";
+				$comparateLabel = $competitor;
 				$comparatesArray[$comparateLabel] = array(
 					'competitor' => array($competitor),
 					'valueType' => 'score',
