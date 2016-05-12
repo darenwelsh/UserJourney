@@ -72,22 +72,75 @@ class SpecialUserJourney extends SpecialPage {
 			$this->compareScoreData();
 		}
 		else if ( $this->mMode == 'compare-activity-by-similar-activity' ) {
-			$this->compareActivityByPeers();
+			// $this->compareActivityByPeers();
+
+			// Determine score of logged in user (based on $wgUJdaysToDetermineCompetitors number of days)
+		    $userRecentScore = $this->getUserScore( false, $this->defaultStartDate() );
+
+			// Determine users with relatively similar scores for the past $wgUJdaysToDetermineCompetitors
+			$competitors = $this->getCompetitorsByScore( $userRecentScore, false, $this->defaultStartDate(), false, 4, 2 );
+
+			$comparatesArray = array();
+			foreach( $competitors as $competitor ){
+				$comparateLabel = $competitor . "_score";
+				$comparatesArray[$comparateLabel] = array(
+					'competitor' => array($competitor),
+					'valueType' => 'score',
+					);
+			}
+
+			$this->compare( $comparatesArray, false, false );
+
 		}
 		else if ( $this->mMode == 'compare-activity-by-user-group' ) {
-			$this->compareScoreByUserGroup();
-		}
-		else if ( $this->mMode == 'compare-activity-by-user-group2' ) { //try new compare() function
 
-			$competitors = $this->getMembersOfGroup('sysop');
-			$valueType = "score";
-			$startDate = 20150819000000;
-			$endDate = false;
+			$competitors = $this->getMembersOfGroup('CX3');
 
-			$this->compare( $competitors, $valueType, $startDate, $endDate );
+			$comparatesArray = array();
+			foreach( $competitors as $competitor ){
+				$comparateLabel = $competitor; // . "_score"; // For now, remove this. TO-DO: fix method to display real name
+				$comparatesArray[$comparateLabel] = array(
+					'competitor' => array($competitor),
+					'valueType' => 'score',
+					);
+			}
+
+			$this->compare( $comparatesArray, false, false );
+
 		}
 		else if ( $this->mMode == 'compare-activity-between-groups' ){
-			$this->compareBetweenGroups( $valueType = 'score' );
+
+			$comparatesArray = array(
+				'CX32' => array(
+					'competitor' => $this->getMembersOfGroup('CX32'),
+					'valueType'  => 'score'
+					),
+				'CX35' => array(
+					'competitor' => $this->getMembersOfGroup('CX35'),
+					'valueType'  => 'score'
+					),
+			);
+
+			// $this->compare( $comparatesArray, 20150819000000, false );
+			$this->compare( $comparatesArray, false, false );
+
+		}
+		else if ( $this->mMode == 'compare-activity-managers-vs-others' ){
+
+			$comparatesArray = array(
+				'Managers' => array(
+					'competitor' => $this->getMembersOfGroup('Manager'),
+					'valueType'  => 'score'
+					),
+				'Employees' => array(
+					'competitor' => $this->getMembersOfGroup('CX3',$this->getMembersOfGroup('Manager')),
+					'valueType'  => 'score'
+					),
+			);
+
+			// $this->compare( $comparatesArray, 20150819000000, false );
+			$this->compare( $comparatesArray, false, false );
+
 		}
 		else if ( $this->mMode == 'compare-views-between-groups' ){
 			$this->compareBetweenGroups( $valueType = 'views' );
@@ -145,19 +198,19 @@ class SpecialUserJourney extends SpecialPage {
 			$navLine .= "<li>" . wfMessage( 'userjourney-my-activity' )->text()
 				. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'user-activity-data' )
 				. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-activity-plot' )
-				. ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-activity-plot2' )
+				// . ") (" . $this->createHeaderLink( 'userjourney-plot', 'user-activity-plot2' )
 				. ")</li>";
 
 			$navLine .= "<li>" . wfMessage( 'userjourney-compare-activity' )->text()
 				// . ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'compare-activity-data' ) // not currently displayed, maybe later for admins/Managers
 				. ": (" . $this->createHeaderLink( 'userjourney-compare-by-peers', 'compare-activity-by-similar-activity' )
 				. ") (" . $this->createHeaderLink( 'userjourney-compare-users-within-group', 'compare-activity-by-user-group' )
-				. ") (" . $this->createHeaderLink( 'userjourney-compare-users-within-group', 'compare-activity-by-user-group2' )
 				. ") (" . $this->createHeaderLink( 'userjourney-compare-score-between-groups', 'compare-activity-between-groups' )
-				. ") (" . $this->createHeaderLink( 'userjourney-compare-views-between-groups', 'compare-views-between-groups' )
-				. ") (" . $this->createHeaderLink( 'userjourney-compare-unique-user-views-between-groups', 'compare-unique-user-views-between-groups' )
-				. ") (" . $this->createHeaderLink( 'userjourney-compare-unique-user-page-views-between-groups', 'compare-unique-user-page-views-between-groups' )
-				. ") (" . $this->createHeaderLink( 'userjourney-compare-score-views-ratio-between-groups', 'compare-score-views-ratio-between-groups' )
+				. ") (" . $this->createHeaderLink( 'userjourney-compare-score-managers-vs-others', 'compare-activity-managers-vs-others' )
+				// . ") (" . $this->createHeaderLink( 'userjourney-compare-views-between-groups', 'compare-views-between-groups' )
+				// . ") (" . $this->createHeaderLink( 'userjourney-compare-unique-user-views-between-groups', 'compare-unique-user-views-between-groups' )
+				// . ") (" . $this->createHeaderLink( 'userjourney-compare-unique-user-page-views-between-groups', 'compare-unique-user-page-views-between-groups' )
+				// . ") (" . $this->createHeaderLink( 'userjourney-compare-score-views-ratio-between-groups', 'compare-score-views-ratio-between-groups' )
 				. ")</li>";
 
 			$navLine .= "</ul>";
@@ -1515,42 +1568,27 @@ class SpecialUserJourney extends SpecialPage {
 
 	function addComparateValuesToTable( $comparatesArray, $startDate, $endDate ){
 
-		// if( is_array( $comparatesNames ) ){
+		global $wgUJdaysToPlotCompetition;
 
-			global $wgUJdaysToPlotCompetition;
+		$dbr = wfGetDB( DB_SLAVE );
 
-			$dbr = wfGetDB( DB_SLAVE );
+		if( !$endDate ){
+	    	$endDate = $dbr->timestamp( time() );
+	    }
+	    if( !$startDate ){
+	    	$startDate = $dbr->timestamp( $endDate - ( 60 * 60 * 24 * $wgUJdaysToPlotCompetition ) );
+	    }
 
-			if( !$endDate ){
-		    	$endDate = $dbr->timestamp( time() );
-		    }
-		    if( !$startDate ){
-		    	$startDate = $dbr->timestamp( $endDate - ( 60 * 60 * 24 * $wgUJdaysToPlotCompetition ) );
-		    }
+	    // Add each competitor's score to temp table
+		foreach( $comparatesArray as $comparateLabel => $comparate ){
+			// TO-DO update to UPDATE rows instead of INSERT (after generating table with one row for each day)
 
-		    // Add each competitor's score to temp table
-			foreach( $comparatesArray as $comparateLabel => $comparate ){
-				// TO-DO update to UPDATE rows instead of INSERT (after generating table with one row for each day)
+			$sql = $this->competitorQuery( $comparateLabel, $comparate, $startDate, $endDate );
 
-				// if( is_array( $competitor ) ){
-				// 	$comparateName = $competitor['name'] . "_" . $valueType;
-				// 	$competitorName = $competitor['name'];
-				// 	$groupMembers = $competitor['members'];
-				// } else {
-				// 	$comparateName = $competitor . "_" . $valueType;
-				// 	$competitorName = $competitor;
-				// 	$groupMembers = $competitor;
-				// }
+			$res = $dbr->query( $sql );
+		}
 
-				$sql = $this->competitorQuery( $comparateLabel, $comparate, $startDate, $endDate );
-				// $sql = $queryDT($competitorName, $valueType, $groupMembers, $startDate, $endDate);
-
-				$res = $dbr->query( $sql );
-			}
-
-			return true;
-
-		// }
+		return true;
 
 	}
 
@@ -1573,106 +1611,15 @@ class SpecialUserJourney extends SpecialPage {
 	*/
 	function getDailyValuesArray( $comparatesArray, $startDate = false, $endDate = false ){
 
-		// $data = array();
-
 		$dbr = wfGetDB( DB_SLAVE );
-
-	 //    global $wgUJscoreDefinition, $wgUJscoreCeiling, $wgUJdaysToPlotCompetition;
-
-	 //    if( !in_array($valueType, array('score','views', 'unique-user-views', 'unique-user-page-views', 'score-views-ratio'), true) ){
-	 //    	$valueType = 'score';
-	 //    }
-
-	 //    if( !$endDate ){
-	 //    	$endDate = $dbr->timestamp( time() );
-	 //    }
-	 //    if( !$startDate ){
-	 //    	$startDate = $dbr->timestamp( $endDate - ( 60 * 60 * 24 * $wgUJdaysToPlotCompetition ) );
-	 //    }
-
-	 //    $revTable = $dbr->tableName( 'revision' );
-		// $wiretapTable = $dbr->tableName( 'wiretap' );
-
-		// $queryDT = function( $competitorName, $valueType, $groupMembers = false, $startDate, $endDate, $revTable, $wiretapTable ){
-
-	 //    	$output = "INSERT INTO temp_union (day, `{$competitorName}`) ";
-
-	 //    	if( $valueType == 'score-views-ratio' ){
-
-	 //    		$subquery1 = $this->generateDailyValuesQuery( $competitorName, 'score', $groupMembers, $startDate, $endDate, $revTable, $wiretapTable );
-	 //    		$subquery2 = $this->generateDailyValuesQuery( $competitorName, 'views', $groupMembers, $startDate, $endDate, $revTable, $wiretapTable );
-
-		// 		$output .= $this->applyRatioOnTwoQueries( $competitorName, $subquery1, 'score', $subquery2, 'views' );
-
-		// 	} else {
-
-		// 		$output .= $this->generateDailyValuesQuery( $competitorName, $valueType, $groupMembers, $startDate, $endDate, $revTable, $wiretapTable );
-
-		// 	}
-
-		// 	return $output;
-
-		// };
 
 		//TO-DO remove func getComparateTableNames
 		// $comparateTableNames = $this->getComparateTableNames( $comparatesArray );
 
 		$tempTable = $this->createTempTable( $comparatesArray, $startDate, $endDate );
 
-		// // Create temp table
-		// $sql = "CREATE TEMPORARY TABLE temp_union(
-		// 	day date NULL";
-		// // Add column for user "dummy"
-		// $sql .= ", dummy float NULL";
-		// foreach( $competitors as $key => $value ){
-
-		// 	if( !is_array($value) ){
-		// 		$competitorName = $value;
-		// 	} else {
-		// 		$competitorName = $key;
-		// 	}
-
-		// 	$sql .= ", `{$competitorName}` float NULL";
-		// }
-		// $sql .= " )ENGINE = MEMORY";
-
-	 //    $res = $dbr->query( $sql );
-
-	 //    // Add column with dummy user to generate a 0 value for every day during comparison period
-	 //    $dateTime = $startDate;
-
-	 //    // This causes lots of calls to the db
-	 //    // Consider trying a for loop in MySQL
-	 //    // http://stackoverflow.com/questions/5125096/for-loop-example-in-mysql
-	 //    while( $dateTime <= $endDate ){
-	 //    	$date = date('Y-m-d', strtotime($dateTime) );
-
-		// 	$sql = "INSERT INTO temp_union (day, dummy) VALUES ('{$date}', '0')";
-
-		// 	$res = $dbr->query( $sql );
-
-		// 	$dateTime = date('Ymd', strtotime($date . ' +1 day') ) * 1000000; // might have to divide by 1000000 to get from YMDhms to YMD
-	 //    }
-
 		// Add each competitor's score to temp table
 		$this->addComparateValuesToTable( $comparatesArray, $startDate, $endDate );
-
-
-		// foreach( $competitors as $key => $value ){
-		// 	// TO-DO update to UPDATE rows instead of INSERT (after generating table with one row for each day)
-
-		// 	if( !is_array($value) ){ // if $competitor is a single person
-		// 		$competitorName = $value;
-		// 		$groupMembers = false;
-		// 	} else { // if $competitor is an array of people
-		// 		$competitorName = $key;
-		// 		$groupMembers = $value;
-		// 	}
-
-		// 	$sql = $queryDT($competitorName, $valueType, $groupMembers, $startDate, $endDate, $revTable, $wiretapTable);
-
-		// 	$res = $dbr->query( $sql );
-		// }
 
 		// Consolidate rows so each day only has one row
 	    $sql = "SELECT
@@ -1680,16 +1627,7 @@ class SpecialUserJourney extends SpecialPage {
 		foreach( $comparatesArray as $comparateLabel => $comparate ){
 			$sql .= ", max(`{$comparateLabel}`) `{$comparateLabel}`";
 		}
-		// foreach( $competitors as $key => $value ){
 
-		// 	if( !is_array($value) ){
-		// 		$competitorName = $value;
-		// 	} else {
-		// 		$competitorName = $key;
-		// 	}
-
-		// 	$sql .= ", max(`{$competitorName}`) `{$competitorName}`";
-		// }
 		$sql .= " FROM temp_union GROUP BY day";
 
 	    $res = $dbr->query( $sql );
@@ -1704,22 +1642,6 @@ class SpecialUserJourney extends SpecialPage {
 					'y' => floatval( $score	),
 				);
 			}
-			// foreach( $competitors as $key => $value ){
-
-			// 	if( !is_array($value) ){
-			// 		$competitorName = $value;
-			// 	} else {
-			// 		$competitorName = $key;
-			// 	}
-
-			// 	list($day, $score) = array($row['day'], $row["$competitorName"]);
-
-			// 	$userdata["$competitorName"][] = array(
-			// 		'x' => strtotime( $day ) * 1000,
-			// 		'y' => floatval( $score	),
-			// 	);
-
-			// }
 
 	    }
 
@@ -1730,223 +1652,37 @@ class SpecialUserJourney extends SpecialPage {
 		// Fill $data with contents of temp table
 		foreach( $comparatesArray as $comparateLabel => $comparate ){
 
-			// if( is_array( $competitor ) ){
-			// 	$competitorName = $competitor['name'];
-			// 	$comparateName = $competitor['name'] . "_" . $valueType;
-			// } else {
-			// 	$competitorName = $competitor;
-			// 	$comparateName = $competitor . "_" . $valueType;
-			// }
-
 			//TO-DO Add this back in to the appropriate place to use real names where possible
-			// $person = User::newFromName("$competitorName");
-			// 	$realName = $person->getRealName();
-			// 	if( empty($realName) ){
-			// 		$nameToUse = $competitorName;
-			// 	} else {
-			// 		$nameToUse = $realName;
-			// 	}
+			if( count( $comparate['competitor'] ) > 1 ){
 
-		    $data[] = array(
-	    		'key' => $comparateLabel,
-	    		'values' => $userdata["$comparateLabel"],
-	  		);
-
-		}
-	  //   foreach( $competitors as $key => $value ){
-
-	  //   	if( !is_array($value) ){
-			// 	$competitorName = $value;
-			// } else {
-			// 	$competitorName = $key;
-			// }
-
-		 //    $person = User::newFromName("$competitorName");
-			// 	$realName = $person->getRealName();
-			// 	if( empty($realName) ){
-			// 		$nameToUse = $competitorName;
-			// 	} else {
-			// 		$nameToUse = $realName;
-			// 	}
-
-		 //    $data[] = array(
-	  //   		'key' => $nameToUse,
-	  //   		'values' => $userdata["$competitorName"],
-	  // 		);
-
-	  //   }
-
-	    return $data;
-
-	}
-
-
-
-
-function getDailyValuesArray2( $competitors, $valueType = 'score', $startDate = false, $endDate = false ){
-
-		$data = array();
-
-		$dbr = wfGetDB( DB_SLAVE );
-
-	    global $wgUJscoreDefinition, $wgUJscoreCeiling, $wgUJdaysToPlotCompetition;
-
-	    if( !in_array($valueType, array('score','views', 'unique-user-views', 'unique-user-page-views', 'score-views-ratio'), true) ){
-	    	$valueType = 'score';
-	    }
-
-	    if( !$endDate ){
-	    	$endDate = $dbr->timestamp( time() );
-	    }
-	    if( !$startDate ){
-	    	$startDate = $dbr->timestamp( $endDate - ( 60 * 60 * 24 * $wgUJdaysToPlotCompetition ) );
-	    }
-
-	    $revTable = $dbr->tableName( 'revision' );
-		$wiretapTable = $dbr->tableName( 'wiretap' );
-
-		$queryDT = function( $competitorName, $valueType, $groupMembers = false, $startDate, $endDate, $revTable, $wiretapTable ){
-
-	    	$output = "INSERT INTO temp_union (day, `{$competitorName}`) ";
-
-	    	if( $valueType == 'score-views-ratio' ){
-
-	    		$subquery1 = $this->generateDailyValuesQuery( $competitorName, 'score', $groupMembers, $startDate, $endDate, $revTable, $wiretapTable );
-	    		$subquery2 = $this->generateDailyValuesQuery( $competitorName, 'views', $groupMembers, $startDate, $endDate, $revTable, $wiretapTable );
-
-				$output .= $this->applyRatioOnTwoQueries( $competitorName, $subquery1, 'score', $subquery2, 'views' );
+				$nameToUse = $comparateLabel;
 
 			} else {
 
-				$output .= $this->generateDailyValuesQuery( $competitorName, $valueType, $groupMembers, $startDate, $endDate, $revTable, $wiretapTable );
-
-			}
-
-			return $output;
-
-		};
-
-		// Create temp table
-		$sql = "CREATE TEMPORARY TABLE temp_union(
-			day date NULL";
-		// Add column for user "dummy"
-		$sql .= ", dummy float NULL";
-		foreach( $competitors as $key => $value ){
-
-			if( !is_array($value) ){
-				$competitorName = $value;
-			} else {
-				$competitorName = $key;
-			}
-
-			$sql .= ", `{$competitorName}` float NULL";
-		}
-		$sql .= " )ENGINE = MEMORY";
-
-	    $res = $dbr->query( $sql );
-
-	    // Add column with dummy user to generate a 0 value for every day during comparison period
-	    $dateTime = $startDate;
-
-	    // This causes lots of calls to the db
-	    // Consider trying a for loop in MySQL
-	    // http://stackoverflow.com/questions/5125096/for-loop-example-in-mysql
-	    while( $dateTime <= $endDate ){
-	    	$date = date('Y-m-d', strtotime($dateTime) );
-
-			$sql = "INSERT INTO temp_union (day, dummy) VALUES ('{$date}', '0')";
-
-			$res = $dbr->query( $sql );
-
-			$dateTime = date('Ymd', strtotime($date . ' +1 day') ) * 1000000; // might have to divide by 1000000 to get from YMDhms to YMD
-	    }
-
-		// Add each competitor's score to temp table
-		foreach( $competitors as $key => $value ){
-			// TO-DO update to UPDATE rows instead of INSERT (after generating table with one row for each day)
-
-			if( !is_array($value) ){ // if $competitor is a single person
-				$competitorName = $value;
-				$groupMembers = false;
-			} else { // if $competitor is an array of people
-				$competitorName = $key;
-				$groupMembers = $value;
-			}
-
-			$sql = $queryDT($competitorName, $valueType, $groupMembers, $startDate, $endDate, $revTable, $wiretapTable);
-
-			$res = $dbr->query( $sql );
-		}
-
-		// Consolidate rows so each day only has one row
-	    $sql = "SELECT
-				day";
-		foreach( $competitors as $key => $value ){
-
-			if( !is_array($value) ){
-				$competitorName = $value;
-			} else {
-				$competitorName = $key;
-			}
-
-			$sql .= ", max(`{$competitorName}`) `{$competitorName}`";
-		}
-		$sql .= " FROM temp_union GROUP BY day";
-
-	    $res = $dbr->query( $sql );
-
-			while( $row = $dbr->fetchRow( $res ) ) {
-
-				foreach( $competitors as $key => $value ){
-
-					if( !is_array($value) ){
-						$competitorName = $value;
-					} else {
-						$competitorName = $key;
-					}
-
-					list($day, $score) = array($row['day'], $row["$competitorName"]);
-
-					$userdata["$competitorName"][] = array(
-						'x' => strtotime( $day ) * 1000,
-						'y' => floatval( $score
-					),
-				);
-			}
-
-	    }
-
-		// Remove temp table
-	    $sql = "DROP TABLE temp_union";
-	    $res = $dbr->query ( $sql );
-
-		// Fill $data with contents of temp table
-	    foreach( $competitors as $key => $value ){
-
-	    	if( !is_array($value) ){
-				$competitorName = $value;
-			} else {
-				$competitorName = $key;
-			}
-
-		    $person = User::newFromName("$competitorName");
+				$name = $comparate['competitor'][0];
+				$person = User::newFromName("$name");
 				$realName = $person->getRealName();
 				if( empty($realName) ){
-					$nameToUse = $competitorName;
+					$nameToUse = $comparateLabel;
 				} else {
 					$nameToUse = $realName;
 				}
 
+			}
+
+
 		    $data[] = array(
 	    		'key' => $nameToUse,
-	    		'values' => $userdata["$competitorName"],
+	    		'values' => $userdata["$comparateLabel"],
 	  		);
 
-	    }
+		}
 
 	    return $data;
 
 	}
+
+
 
 	function defaultEndDate(){
 
@@ -1969,179 +1705,17 @@ function getDailyValuesArray2( $competitors, $valueType = 'score', $startDate = 
 
 
 
-	/**
-	* Function generates special page with plots comparing contribution scores over time
-	* for logged-in user against other users with similar recent activity
-	*/
-	function compareActivityByPeers( ){
-		// TO-DO Modify plots to have some granular/moving-average and some just showing 1-month or 3-month average values
-		// TO-DO Maybe have one page with all data and another page with last 30-60 days
-
-	    global $wgOut, $wgUJdaysToDetermineCompetitors, $wgUJdaysToPlotCompetition;
-
-	    $competitors = array();
-
-	    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
-
-		if( $this->getUser()->getID() ){ // Only do stuff if user has an ID
-
-		    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
-		    // $wgOut->addModules( 'ext.userjourney.compareScoreStackedPlot.nvd3' );
-
-		    $dbr = wfGetDB( DB_SLAVE );
-
-			// Determine score of logged in user (based on $wgUJdaysToDetermineCompetitors number of days)
-			$date = time() - ( 60 * 60 * 24 * $wgUJdaysToDetermineCompetitors );
-			$startDate = $dbr->timestamp( $date );
-		    $userRecentScore = $this->getUserScore( false, $startDate );
-
-			// Determine users with relatively similar scores for the past $wgUJdaysToDetermineCompetitors
-			$competitors = $this->getCompetitorsByScore( $userRecentScore, false, $startDate, false, 4, 2 );
-
-			// Append 0 value for HHMMSS to match timestamp format in revision table
-			$endDate = date("Ymd", time()) * 1000000; // Today as YYYYMMDD000000
-		    $startDate = date('Ymd', strtotime($endDate . " - {$wgUJdaysToPlotCompetition} days")) * 1000000;
-
-		    $data = $this->getDailyValuesArray( $competitors, $valueType = 'score', $startDate, $endDate );
-
-
-			$html = '';
-			$html .= '<h2>Line with Window</h2>';
-		    $html .= '<div id="userjourney-compare-chart-line-with-window"><svg height="400px"></svg></div>';
-			$html .= '<h2>Stacked Area</h2>';
-		    $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
-			// $html .= '<h2>Stacked Area Stream</h2>';
-			//   $html .= '<div id="userjourney-compare-chart-stream"><svg height="400px"></svg></div>';
-
-		    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-
-		} else {
-
-			$html = '<br />Sorry, but this feature is not available for anonymous users.<br />';
-
-		}
-
-	    $wgOut->addHTML( $html );
-
-	}
-
-
-
-
-
-	/**
-	* Function generates special page with plots comparing contribution scores over time
-	* for users within a group
-	*/
-	function compareScoreByUserGroup( ){
-			//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
-	    global $wgOut, $wgUJscoreCeiling, $wgUJdaysToPlotCompetition;
-
-	    $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
-
-		// Determine list of competitors based on $userGroup
-	    $competitors = $this->getMembersOfGroup( 'sysop' );
-
-	    $wgOut->setPageTitle( "UserJourney: Score comparison plot" );
-	    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
-
-		// Append 0 value for HHMMSS to match timestamp format in revision table
-		$endDate = date("Ymd", time()) * 1000000; // Today as YYYYMMDD000000
-	    $startDate = date('Ymd', strtotime($endDate . " - {$wgUJdaysToPlotCompetition} days")) * 1000000;
-
-	    $data = $this->getDailyValuesArray( $competitors, $valueType = 'score', $startDate, $endDate );
-
-
-		$html = '';
-		$html .= '<h2>Line with Window</h2>';
-	    $html .= '<div id="userjourney-compare-chart-line-with-window"><svg height="400px"></svg></div>';
-		$html .= '<h2>Stacked Area</h2>';
-	    $html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
-	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-
-	    $wgOut->addHTML( $html );
-
-	}
-
-
-
-	/**
-	* Function generates special page with plots comparing page views over time
-	* between user groups
-	*
-	* @param $valueType what we want to measure over time
-	*		'score', 'views', 'unique-user-views', 'unique-user-page-views', or 'score-views-ratio'
-	*/
-	function compareBetweenGroups( $valueType = 'score' ){
-		//TO-DO this has a dependency on Extension:Wiretap
-		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
-
-	    global $wgOut, $wgUJdaysToPlotCompetition;
-
-	    // $userGroup = "sysop"; // CX3, sysop, Curator, Manager, Beta-tester, use Contributor with caution
-	    // for now, 2nd group is CX3 && !sysop
-	    // for now, 3rd group is !CX3 (&& !sysop)
-
-		if( $valueType == 'score' ){
-			$pageTitleDetails = wfMessage( 'userjourney-compare-score-between-groups' )->text();
-		} else if( $valueType == 'views' ){
-			$pageTitleDetails = wfMessage( 'userjourney-compare-views-between-groups' )->text();
-		} else if( $valueType == 'unique-user-views' ){
-			$pageTitleDetails = wfMessage( 'userjourney-compare-unique-user-views-between-groups' )->text();
-		} else if( $valueType == 'unique-user-page-views' ){
-			$pageTitleDetails = wfMessage( 'userjourney-compare-unique-user-page-views-between-groups' )->text();
-		} else { // score-views-ratio
-			$pageTitleDetails = wfMessage( 'userjourney-compare-score-views-ratio-between-groups' )->text();
-		}
-
-	    $wgOut->setPageTitle( "UserJourney: Comparing $pageTitleDetails" );
-	    $wgOut->addModules( 'ext.userjourney.compare.nvd3' );
-
-		// Determine list of users in sysop
-		$usersInSysop = $this->getMembersOfGroup( 'sysop' );
-
-	    // Determine list of users in CX3 and not in sysop
-	    $usersInCX3NotSysop = $this->getMembersOfGroup( 'CX3', $usersInSysop );
-
-	    // Determine list of users not in CX3
-	    $usersInCX3 = $this->getMembersOfGroup( 'CX3' );
-	    $usersNotInCX3 = $this->getMembersOfGroup( false , $usersInCX3 );
-
-	    $competitors = array(
-	    	'Admins' => $usersInSysop,
-	    	'CX3 Non-Admins' => $usersInCX3NotSysop,
-	    	'Others' => $usersNotInCX3,
-	    	);
-
-		// Append 0 value for HHMMSS to match timestamp format in revision table
-		$endDate = date('Ymd', time()) * 1000000; // Today as YYYYMMDD000000
-	    $startDate = date('Ymd', strtotime($endDate . " - {$wgUJdaysToPlotCompetition} days")) * 1000000;
-
-	    $data = $this->getDailyValuesArray( $competitors, $valueType, $startDate, $endDate );
-
-		$html = '';
-		$html .= '<h2>Line with Window</h2>';
-	    $html .= '<div id="userjourney-compare-chart-line-with-window"><svg height="400px"></svg></div>';
-		$html .= '<h2>Stacked Area</h2>';
-		$html .= '<div id="userjourney-compare-chart-stacked"><svg height="400px"></svg></div>';
-	    $html .= "<script type='text/template-json' id='userjourney-data'>" . json_encode( $data ) . "</script>";
-
-	    $wgOut->addHTML( $html );
-
-	}
-
 
 
 
 	/**
 	* Function generates special page with plots comparing values over time
-	* between competitors (users and/or groups)
+	* between comparates. A comparate can be any group of users and any measureable variable
+	* like score, views, etc.
 	*
-	* @param $valueType what we want to measure over time
-	*		'score', 'views', 'unique-user-views', 'unique-user-page-views', or 'score-views-ratio'
-	* @param $competitors array of users and groups to compare
-	*		can be multidimensional array (to two levels)
-	*		('Jdoe', ('Bsmith','Hsimpson'))
+	* @param $comparatesArray
+	* @param $startDate
+	* @param $endDate
 	*/
 	function compare( $comparatesArray = false, $startDate = false, $endDate = false ){
 		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
