@@ -136,7 +136,7 @@ $(document).ready(function(){
 			// } );
 
 			rawData.push( {
-				key: username + " 20-Weekday Avg (no weekends)",
+				key: username, // + " 20-Weekday Avg (no weekends)",
 				values: getMovingAverage( rawData[ i ].values, 20, true ),
 				// color: "#FF8000"
 			} );

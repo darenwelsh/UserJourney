@@ -12,8 +12,12 @@
 	"userjourney-unfilter": "Unfilter",
 	"userjourney-rawdata": "Data",
 	"userjourney-plot": "Plot",
-	"userjourney-plot-by-peers": "Plot by peers",
-	"userjourney-plot-users-within-group": "Plot users within group",
-	"userjourney-plot-by-group": "Plot by group",
-	"userjourney-plot-views-between-groups": "Plot views by group"
+	"userjourney-compare-by-peers": "people like me",
+	"userjourney-compare-users-within-group": "people within group",
+	"userjourney-compare-score-between-groups": "score by group",
+	"userjourney-compare-score-managers-vs-others": "managers vs employees",
+	"userjourney-compare-views-between-groups": "views by group",
+	"userjourney-compare-unique-user-views-between-groups": "unique user views by group",
+	"userjourney-compare-unique-user-page-views-between-groups": "unique user-page views by group",
+	"userjourney-compare-score-views-ratio-between-groups": "score-view ratio by group"
 }

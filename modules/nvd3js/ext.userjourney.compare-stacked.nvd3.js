@@ -136,7 +136,7 @@ $(document).ready(function(){
 			// } );
 
 			rawData.push( {
-				key: username + " 20-Weekday Avg (no weekends)",
+				key: username, // + " 20-Weekday Avg (no weekends)",
 				values: getMovingAverage( rawData[ i ].values, 20, true ),
 				// color: "#FF8000"
 			} );
@@ -166,7 +166,7 @@ $(document).ready(function(){
 			// .transitionDuration(500)
 			.showControls(true)       //Allow user to choose 'Stacked', 'Stream', 'Expanded' mode.
 			.clipEdge(true)
-			.color(d3.scale.category10().range())
+			.color(d3.scale.category20().range())
 		;
 
 		// Adding stream back in for now
