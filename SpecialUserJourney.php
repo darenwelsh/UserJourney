@@ -36,52 +36,35 @@ class SpecialUserJourney extends SpecialPage {
 		}
 		else if ( $this->mMode == 'user-activity-plot2' ) {//try new compare() function
 
-			$adminsArray = array(
-				'name' => 'Admins',
-				'members' => $this->getMembersOfGroup('sysop')
-				);
-
-			$CX3NonAdminsArray = array(
-				'name' => 'CX3 Non-Admins',
-				'members' => $this->getMembersOfGroup( 'CX3', $adminsArray )
-				);
-
-			// $comparatesArray = array(
-			// 	'Lwelsh' => 'score',
-			// 	'Lwelsh' => 'views',
-			// 	'Lwelsh' => 'score-views-ratio',
-			// 	$adminsArray => 'score-views-ratio',
-			// 	$CX3NonAdminsArray => 'score-views-ratio',
-			// );
-
 			$comparatesArray = array(
-				'Lwelsh_score' => array(
-					'competitor' => array('Lwelsh'),
-					'valueType' => 'score',
-					),
-				'Lwelsh_views' => array(
-					'competitor' => array('Lwelsh'),
-					'valueType' => 'views'
-					),
-				// 'Lwelsh_score-views-ratio' => array(
+				// 'Lwelsh_score' => array(
 				// 	'competitor' => array('Lwelsh'),
-				// 	'valueType' => 'score-views-ratio'
+				// 	'valueType'  => 'score',
 				// 	),
-				// 'Admins_score-views-ratio' => array(
-				// 	'competitor' => $adminsArray,
-				// 	'valueType' => 'score-views-ratio'
+				// 'Lwelsh_views' => array(
+				// 	'competitor' => array('Lwelsh'),
+				// 	'valueType'  => 'views'
 				// 	),
-				'Admins_score' => array(
-					'competitor' => $this->getMembersOfGroup('sysop'),
-					'valueType' => 'score'
+				'Lwelsh_score-views-ratio' => array(
+					'competitor' => array('Lwelsh'),
+					'valueType'  => 'score-views-ratio'
 					),
-				// 'CX3 Non-Admins_score-views-ratio' => array(
-				// 	'competitor' => $CX3NonAdminsArray,
-				// 	'valueType' => 'score-views-ratio'
+				'Admins_score-views-ratio' => array(
+					'competitor' => $this->getMembersOfGroup('sysop', array('Lwelsh') ),
+					'valueType'  => 'score-views-ratio'
+					),
+				// 'Admins_score' => array(
+				// 	'competitor' => $this->getMembersOfGroup('sysop'),
+				// 	'valueType'  => 'score'
 				// 	),
+				'CX3 Non-Admins_score-views-ratio' => array(
+					'competitor' => $this->getMembersOfGroup('CX3',$this->getMembersOfGroup('sysop')),
+					'valueType'  => 'score-views-ratio'
+					),
 			);
 
-			$this->compare( $comparatesArray, 20150819000000, false );
+			// $this->compare( $comparatesArray, 20150819000000, false );
+			$this->compare( $comparatesArray, false, false );
 
 		}
 
@@ -1294,7 +1277,7 @@ class SpecialUserJourney extends SpecialPage {
 
 		if( $ignoreUsers ){
 
-			$ignoreUsersString = "('" . implode("', '", $ignoreUsers['members']) . "')";
+			$ignoreUsersString = "('" . implode("', '", $ignoreUsers) . "')";
 
 			$sql .= "
 				WHERE user_name NOT IN {$ignoreUsersString}
@@ -1450,12 +1433,12 @@ class SpecialUserJourney extends SpecialPage {
 
 		$dbr = wfGetDB( DB_SLAVE );
 
-		if( !$endDate ){
-	    	$endDate = $dbr->timestamp( time() );
-	    }
-	    if( !$startDate ){
-	    	$startDate = $dbr->timestamp( $endDate - ( 60 * 60 * 24 * $wgUJdaysToPlotCompetition ) );
-	    }
+		// if( !$endDate ){
+	 //    	$endDate = $dbr->timestamp( time() );
+	 //    }
+	 //    if( !$startDate ){
+	 //    	$startDate = $dbr->timestamp( $endDate - ( 60 * 60 * 24 * $wgUJdaysToPlotCompetition ) );
+	 //    }
 
 		$sql = "CREATE TEMPORARY TABLE temp_union(
 			day date NULL";
@@ -1965,9 +1948,24 @@ function getDailyValuesArray2( $competitors, $valueType = 'score', $startDate = 
 
 	}
 
+	function defaultEndDate(){
 
+		// Append 0 value for HHMMSS to match timestamp format in revision table
+		return date("Ymd", time()) * 1000000; // Today as YYYYMMDD000000
 
+	}
 
+	function defaultStartDate( $endDate = false ){
+
+		global $wgUJdaysToPlotCompetition;
+
+		if( !$endDate ){
+			$endDate = $this->defaultEndDate();
+		}
+
+		return date('Ymd', strtotime($endDate . " - {$wgUJdaysToPlotCompetition} days")) * 1000000;
+
+	}
 
 
 
@@ -2145,16 +2143,26 @@ function getDailyValuesArray2( $competitors, $valueType = 'score', $startDate = 
 	*		can be multidimensional array (to two levels)
 	*		('Jdoe', ('Bsmith','Hsimpson'))
 	*/
-	function compare( $comparatesArray = false, $startDate, $endDate ){
+	function compare( $comparatesArray = false, $startDate = false, $endDate = false ){
 		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
 
-	    global $wgOut;
+	    global $wgOut, $wgUJdaysToPlotCompetition;
+
+	    $dbr = wfGetDB( DB_SLAVE );
 
 		// if( !$comparatesArray ){
 		// 	// TO-DO
 		// 	// compare by peers
 		// }
 
+		if( !$endDate ){
+	    	// $endDate = $dbr->timestamp( time() );
+	    	$endDate = $this->defaultEndDate();
+	    }
+	    if( !$startDate ){
+	    	// $startDate = $dbr->timestamp( $endDate - ( 60 * 60 * 24 * $wgUJdaysToPlotCompetition ) );
+	    	$startDate = $this->defaultStartDate( $endDate );
+	    }
 
 		//TO-DO - replace with a single page title for any comparison
 		// if( $valueType == 'score' ){
