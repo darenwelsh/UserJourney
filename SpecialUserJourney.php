@@ -15,7 +15,7 @@ class SpecialUserJourney extends SpecialPage {
 	function execute( $parser = null ) {
 		global $wgRequest, $wgOut;
 
-		list( $limit, $offset ) = wfCheckLimits();
+		list( $limit, $offset ) = $wgRequest->getLimitOffset();
 
 		$this->mMode = $wgRequest->getVal( 'show' );
 
