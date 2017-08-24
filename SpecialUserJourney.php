@@ -165,7 +165,7 @@ class SpecialUserJourney extends SpecialPage {
 		if( $this->getUser()->getID() ){ // Only do stuff if user has an ID
 
 			// show the names of the different views
-			$navLine = '<strong>' . wfMsg( 'userjourney-viewmode' ) . ':</strong> ';
+			$navLine = '<strong>' . wfMessage( 'userjourney-viewmode' ) . ':</strong> ';
 
 			$filterUser = $wgRequest->getVal( 'filterUser' );
 			$filterPage = $wgRequest->getVal( 'filterPage' );
@@ -175,7 +175,7 @@ class SpecialUserJourney extends SpecialPage {
 				$UserJourneyTitle = SpecialPage::getTitleFor( 'UserJourney' );
 				$unfilterLink = ': (' . Xml::element( 'a',
 					array( 'href' => $UserJourneyTitle->getLocalURL() ),
-					wfMsg( 'userjourney-unfilter' )
+					wfMessage( 'userjourney-unfilter' )
 				) . ')';
 
 			}
@@ -236,12 +236,12 @@ class SpecialUserJourney extends SpecialPage {
 		if ( $this->mMode == $query_param ) {
 			return Xml::element( 'strong',
 				null,
-				wfMsg( $msg )
+				wfMessage( $msg )
 			);
 		} else {
 			return Xml::element( 'a',
 				array( 'href' => $UserJourneyTitle->getLocalURL( array( 'show' => $query_param ) ) ),
-				wfMsg( $msg )
+				wfMessage( $msg )
 			);
 		}
 
@@ -1848,7 +1848,7 @@ class UserJourneyPager extends ReverseChronologicalPager {
 
 	function formatRow( $row ) {
 		$userPage = Title::makeTitle( NS_USER, $row->user_name );
-		$name = $this->getSkin()->makeLinkObj( $userPage, htmlspecialchars( $userPage->getText() ) );
+		$name = Linker::link( $userPage, htmlspecialchars( $userPage->getText() ) );
 
 
 		if ( $this->filterUser ) {
@@ -1858,7 +1858,7 @@ class UserJourneyPager extends ReverseChronologicalPager {
 			$url = Title::newFromText('Special:UserJourney')->getLocalUrl(
 				array( 'filterUser' => $row->user_name )
 			);
-			$msg = wfMsg( 'userjourney-filteruser' );
+			$msg = wfMessage( 'userjourney-filteruser' );
 
 			$name .= ' (' . Xml::element(
 				'a',
@@ -1885,7 +1885,7 @@ class UserJourneyPager extends ReverseChronologicalPager {
 			$url = Title::newFromText('Special:UserJourney')->getLocalUrl(
 				array( 'filterPage' => $row->page_name )
 			);
-			$msg = wfMsg( 'userjourney-filterpage' );
+			$msg = wfMessage( 'userjourney-filterpage' );
 
 			$page .= ' (' . Xml::element(
 				'a',
