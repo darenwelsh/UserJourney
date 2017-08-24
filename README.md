@@ -15,3 +15,17 @@ MediaWiki extension to track each users' progression from new contributor to mas
 
 This extension is in early development. [Extension:Wiretap] (https://github.com/enterprisemediawiki/Wiretap) was used for a baseline to begin this project.
 
+## Example screenshots
+
+### User History
+![User History](example/UserHistory.jpg)
+
+### User Badges
+Obviously this would look better with images, not just text.
+![User Badges](example/UserBadges.jpg)
+
+### User Activity
+![User Activity Plot](example/UserActivityPlot.jpg)
+
+### User Activity Comparison
+![User Activity Comparison Plots](example/UserActivityComparisonPlot.jpg)
