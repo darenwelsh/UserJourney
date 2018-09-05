@@ -5,7 +5,102 @@
 		"[https://www.mediawiki.org/wiki/User:Darenwelsh Daren Welsh]"
 	],
 	"url": "https://github.com/darenwelsh/UserJourney",
-	"description": "Profile each user's journey as a wiki contributor",
-	"type": "other",
+	"description": "userjourney-desc",
+	"type": "specialpage",
+	"SpecialPages": {
+		"UserJourney": "SpecialUserJourney"
+	},
+	"MessagesDirs": {
+		"UserJourney": [
+			"i18n"
+		]
+	},
+	"ExtensionMessagesFiles": {
+		"Wiretap": "UserJourney.i18n.php",
+		"WiretapAlias": "UserJourney.alias.php"
+	},
+	"AutoloadClasses": {
+		"Wiretap": "UserJourney.body.php",
+		"SpecialWiretap": "SpecialUserJourney.php"
+	},
+	"ResourceModules": {
+		// For "Overview"
+  		"ext.userjourney.myActivityByYear.nvd3": {
+			"position": "bottom", // added this since "bottom" was default pre-1.26
+			"styles": [
+				"nvd3js/nv.d3.css",
+				// "nvd3js/ext.userjourney.my-activity-by-year.nvd3.css",
+			],
+			"scripts": [
+				"nvd3js/nv.d3.js",
+				"nvd3js/ext.userjourney.my-activity-by-year.nvd3.js",
+			],
+			"dependencies": [
+				// "ext.userjourney.d3.js",
+				"d3.js",
+			],
+		},
+		// For "My Activity"
+		"ext.userjourney.myActivity.nvd3": {
+			"position": "bottom", // added this since "bottom" was default pre-1.26
+			"styles": [
+				"nvd3js/nv.d3.css",
+				"nvd3js/ext.userjourney.my-activity.nvd3.css",
+			],
+			"scripts": [
+				"nvd3js/nv.d3.js",
+				"nvd3js/ext.userjourney.my-activity.nvd3.js",
+			],
+			"dependencies": [
+				// "ext.userjourney.d3.js",
+				"d3.js",
+			],
+		},
+		// For "Compare Activity"
+  		"ext.userjourney.compare.nvd3": {
+			"position": "bottom", // added this since "bottom" was default pre-1.26
+  			"styles": [
+				"nvd3js/nv.d3.css",
+				"nvd3js/ext.userjourney.compare.nvd3.css",
+			],
+			"scripts": [
+				"nvd3js/nv.d3.js",
+				"nvd3js/ext.userjourney.compare-line-with-window.nvd3.js",
+				"nvd3js/ext.userjourney.compare-stacked.nvd3.js",
+				// "nvd3js/ext.userjourney.compare-stream.nvd3.js",
+			],
+			"dependencies": [
+				// "ext.userjourney.d3.js",
+				"d3.js",
+			],
+		},
+	},
+	"ResourceFileModulePaths": {
+		"localBasePath": "modules",
+		"remoteExtPath": "UserJourney/modules"
+	},
+	"Hooks": {
+		"ParserFirstCallInit": [
+			"efContributionScores_Setup"
+		],
+		"ArticlePageDataBefore": [
+			"UserJourney::onArticlePageDataBefore"
+		],
+		"BeforeInitialize": [
+			"UserJourney::onBeforeInitialize"
+		],
+		"PageContentSaveComplete": [
+			"UserJourney::onPageContentSaveComplete"
+		],
+		"AfterFinalPageOutput": [
+			"UserJourney::recordInDatabase"
+		],
+		"LoadExtensionSchemaUpdates": [
+			"UserJourney::updateDatabase"
+		],
+		//"BeforePageDisplay": [
+		//	"UserJourney::onBeforePageDisplay"
+		//]
+	},
 	"manifest_version": 1
 }
