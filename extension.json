@@ -78,9 +78,6 @@
 		"ArticlePageDataBefore": [
 			"UserJourney::onArticlePageDataBefore"
 		],
-		"BeforeInitialize": [
-			"UserJourney::onBeforeInitialize"
-		],
 		"PageContentSaveComplete": [
 			"UserJourney::onPageContentSaveComplete"
 		],
