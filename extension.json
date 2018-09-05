@@ -24,25 +24,21 @@
 		"SpecialWiretap": "SpecialUserJourney.php"
 	},
 	"ResourceModules": {
-		// For "Overview"
   		"ext.userjourney.myActivityByYear.nvd3": {
-			"position": "bottom", // added this since "bottom" was default pre-1.26
+			"position": "bottom",
 			"styles": [
 				"nvd3js/nv.d3.css",
-				// "nvd3js/ext.userjourney.my-activity-by-year.nvd3.css",
 			],
 			"scripts": [
 				"nvd3js/nv.d3.js",
 				"nvd3js/ext.userjourney.my-activity-by-year.nvd3.js",
 			],
 			"dependencies": [
-				// "ext.userjourney.d3.js",
 				"d3.js",
 			],
 		},
-		// For "My Activity"
 		"ext.userjourney.myActivity.nvd3": {
-			"position": "bottom", // added this since "bottom" was default pre-1.26
+			"position": "bottom",
 			"styles": [
 				"nvd3js/nv.d3.css",
 				"nvd3js/ext.userjourney.my-activity.nvd3.css",
@@ -98,9 +94,6 @@
 		"LoadExtensionSchemaUpdates": [
 			"UserJourney::updateDatabase"
 		],
-		//"BeforePageDisplay": [
-		//	"UserJourney::onBeforePageDisplay"
-		//]
 	},
 	"manifest_version": 1
 }
