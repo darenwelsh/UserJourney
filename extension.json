@@ -16,12 +16,12 @@
 		]
 	},
 	"ExtensionMessagesFiles": {
-		"Wiretap": "UserJourney.i18n.php",
-		"WiretapAlias": "UserJourney.alias.php"
+		"UserJourney": "UserJourney.i18n.php",
+		"UserJourneyAlias": "UserJourney.alias.php"
 	},
 	"AutoloadClasses": {
-		"Wiretap": "UserJourney.body.php",
-		"SpecialWiretap": "SpecialUserJourney.php"
+		"UserJourney": "UserJourney.body.php",
+		"SpecialUserJourney": "SpecialUserJourney.php"
 	},
 	"ResourceModules": {
   		"ext.userjourney.myActivityByYear.nvd3": {
