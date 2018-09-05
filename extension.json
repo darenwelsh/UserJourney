@@ -71,22 +71,5 @@
 		"localBasePath": "modules",
 		"remoteExtPath": "UserJourney/modules"
 	},
-	"Hooks": {
-		"ParserFirstCallInit": [
-			"efContributionScores_Setup"
-		],
-		"ArticlePageDataBefore": [
-			"UserJourney::onArticlePageDataBefore"
-		],
-		"PageContentSaveComplete": [
-			"UserJourney::onPageContentSaveComplete"
-		],
-		"AfterFinalPageOutput": [
-			"UserJourney::recordInDatabase"
-		],
-		"LoadExtensionSchemaUpdates": [
-			"UserJourney::updateDatabase"
-		]
-	},
 	"manifest_version": 1
 }
