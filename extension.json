@@ -1,0 +1,11 @@
+{
+	"name": "UserJourney",
+	"version": "0.1",
+	"author": [
+		"[https://www.mediawiki.org/wiki/User:Darenwelsh Daren Welsh]"
+	],
+	"url": "https://github.com/darenwelsh/UserJourney",
+	"description": "Profile each user's journey as a wiki contributor",
+	"type": "other",
+	"manifest_version": 1
+}
