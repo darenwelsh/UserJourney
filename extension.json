@@ -27,45 +27,45 @@
   		"ext.userjourney.myActivityByYear.nvd3": {
 			"position": "bottom",
 			"styles": [
-				"nvd3js/nv.d3.css",
+				"nvd3js/nv.d3.css"
 			],
 			"scripts": [
 				"nvd3js/nv.d3.js",
-				"nvd3js/ext.userjourney.my-activity-by-year.nvd3.js",
+				"nvd3js/ext.userjourney.my-activity-by-year.nvd3.js"
 			],
 			"dependencies": [
-				"d3.js",
-			],
+				"d3.js"
+			]
 		},
 		"ext.userjourney.myActivity.nvd3": {
 			"position": "bottom",
 			"styles": [
 				"nvd3js/nv.d3.css",
-				"nvd3js/ext.userjourney.my-activity.nvd3.css",
+				"nvd3js/ext.userjourney.my-activity.nvd3.css"
 			],
 			"scripts": [
 				"nvd3js/nv.d3.js",
-				"nvd3js/ext.userjourney.my-activity.nvd3.js",
+				"nvd3js/ext.userjourney.my-activity.nvd3.js"
 			],
 			"dependencies": [
-				"d3.js",
-			],
+				"d3.js"
+			]
 		},
   		"ext.userjourney.compare.nvd3": {
 			"position": "bottom",
   			"styles": [
 				"nvd3js/nv.d3.css",
-				"nvd3js/ext.userjourney.compare.nvd3.css",
+				"nvd3js/ext.userjourney.compare.nvd3.css"
 			],
 			"scripts": [
 				"nvd3js/nv.d3.js",
 				"nvd3js/ext.userjourney.compare-line-with-window.nvd3.js",
-				"nvd3js/ext.userjourney.compare-stacked.nvd3.js",
+				"nvd3js/ext.userjourney.compare-stacked.nvd3.js"
 			],
 			"dependencies": [
-				"d3.js",
-			],
-		},
+				"d3.js"
+			]
+		}
 	},
 	"ResourceFileModulePaths": {
 		"localBasePath": "modules",
