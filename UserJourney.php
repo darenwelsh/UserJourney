@@ -54,45 +54,45 @@ if ( function_exists( 'wfLoadExtension' ) ) {
  */
 
 // Number of revisions (in string form used within MySQL queries)
-$wgUJnumRevisionsAlias = "rev_count"; // Alias used for MySQL queries
+// $wgUJnumRevisionsAlias = "rev_count"; // Alias used for MySQL queries
 
 // Number of pages revised (in string form used within MySQL queries)
-$wgUJnumPagesRevisedAlias = "page_count"; // Alias used for MySQL queries
+// $wgUJnumPagesRevisedAlias = "page_count"; // Alias used for MySQL queries
 
 // How the score is calculated (in string form used within MySQL queries)
-function getScoreDefinition( $scope = "explicit" ){
+// function getScoreDefinition( $scope = "explicit" ){
 
-  global $wgUJnumRevisionsAlias, $wgUJnumPagesRevisedAlias;
+//   global $wgUJnumRevisionsAlias, $wgUJnumPagesRevisedAlias;
 
-  if( $scope === "explicit" ){
+//   if( $scope === "explicit" ){
 
-    $rev_count = "COUNT(rev_id)";
-    $page_count = "COUNT(DISTINCT rev_page)";
+//     $rev_count = "COUNT(rev_id)";
+//     $page_count = "COUNT(DISTINCT rev_page)";
 
-  } else {
+//   } else {
 
-    $rev_count = $wgUJnumRevisionsAlias;
-    $page_count = $wgUJnumPagesRevisedAlias;
+//     $rev_count = $wgUJnumRevisionsAlias;
+//     $page_count = $wgUJnumPagesRevisedAlias;
 
-  }
+//   }
 
-  $output = "{$page_count} + SQRT( {$rev_count} - {$page_count} ) * 2";
+//   $output = "{$page_count} + SQRT( {$rev_count} - {$page_count} ) * 2";
 
-  return $output;
-}
+//   return $output;
+// }
 
-$wgUJscoreDefinition = getScoreDefinition( "explicit" );
-$wgUJscoreDefinitionUsingAliases = getScoreDefinition( "relative" );
+// $wgUJscoreDefinition = getScoreDefinition( "explicit" );
+// $wgUJscoreDefinitionUsingAliases = getScoreDefinition( "relative" );
 
 // Max score counted toward plots with moving averages
-$wgUJscoreCeiling = 100;
+// $wgUJscoreCeiling = 100;
 
 // Number of days in which to compare scores of logged-in user against others
 // (used to find suitable competitors)
-$wgUJdaysToDetermineCompetitors = 14;
+// $wgUJdaysToDetermineCompetitors = 14;
 
 // Number of days to plot for competitions
-$wgUJdaysToPlotCompetition = 30;
+// $wgUJdaysToPlotCompetition = 30;
 
 
 /*
@@ -186,7 +186,7 @@ function efContributionScores_Render( &$parser, $usertext, $metric = 'score' ) {
 */
 
 
-
+/*
 $wgExtensionMessagesFiles['UserJourney'] = __DIR__ . '/UserJourney.i18n.php';
 $GLOBALS['wgMessagesDirs']['UserJourney'] = __DIR__ . '/i18n';
 
@@ -229,7 +229,7 @@ $wgHooks['LoadExtensionSchemaUpdates'][] = 'UserJourney::updateDatabase';
 
 No Longer Used
 */
-
+/*
  $userjourneyResourceTemplate = array(
  	'localBasePath' => __DIR__ . '/modules',
  	'remoteExtPath' => 'UserJourney/modules',
