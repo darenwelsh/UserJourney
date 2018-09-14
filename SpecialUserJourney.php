@@ -462,7 +462,7 @@ class SpecialUserJourney extends SpecialPage {
 				list($page, $revisions) = array($row['page_id'], $row['count']);
 
 				$pageTitle = Title::newFromID( $page );
-				$pageURL = $this->getTitle();
+				$pageURL =  Linker::link( $pageTitle);
 
 				$html .= "<li>{$pageURL} ({$revisions} revisions in this year)</li>";
 			}
