@@ -71,5 +71,12 @@
 		"localBasePath": "modules",
 		"remoteExtPath": "UserJourney/modules"
 	},
+	"config": {
+		"wgUJscoreDefinition": "COUNT(DISTINCT rev_page) + SQRT( COUNT(rev_id) - COUNT(DISTINCT rev_page) ) * 2",
+		"wgUJscoreDefinitionUsingAliases": "page_count  + SQRT( rev_count - page_count ) * 2",
+		"wgUJscoreCeiling" = 100,
+		"wgUJdaysToDetermineCompetitors" = 14,
+		"wgUJdaysToPlotCompetition" = 30
+	},
 	"manifest_version": 1
 }
