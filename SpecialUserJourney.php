@@ -185,15 +185,15 @@ class SpecialUserJourney extends SpecialPage {
 
 			$navLine .= "<ul>";
 
-			$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-overview' ) . $unfilterLink . "</li>";
+			$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-overview' ) . " ($filterUser)</li>";
 
 			//TO-DO clarify naming between modes and messages and functions
 			//TO-DO add if statement to show extra data plots if logged-in user is in groups sysop or Manager
 			//TO-DO add pull-down menus so these views can show any user's data for sysop or Manager
 
-			$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-history', 'user-history' ) . $unfilterLink . "</li>";
+			$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-history', 'user-history' ) . "</li>";
 
-			$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-badges', 'user-badges' ) . $unfilterLink . "</li>";
+			$navLine .= "<li>" . $this->createHeaderLink( 'userjourney-badges', 'user-badges' ) . "</li>";
 
 			$navLine .= "<li>" . wfMessage( 'userjourney-my-activity' )->text()
 				. ": (" . $this->createHeaderLink( 'userjourney-rawdata', 'user-activity-data' )
@@ -248,16 +248,21 @@ class SpecialUserJourney extends SpecialPage {
 	}
 
 	public function getDisplayName () {
-		$username = $this->getUser()->mName;
-	    $userRealName = $this->getUser()->mRealName;
-	    if( $userRealName ){
-	    	$displayName = $userRealName;
-	    }
-	    else{
-	    	$displayName = $username;
-	    }
+		$filterUser = $wgRequest->getVal( 'filterUser' );
+		if( $filterUser ){
+			$displayName = $filterUser;
+			//$userRealName = UserIdentity::getName; //TODO find way to display other user's real name
+		} else {		
+			$username = $this->getUser()->mName;
+			$userRealName = $this->getUser()->mRealName;
+			if( $userRealName ){
+				$displayName = $userRealName;
+			} else {
+				$displayName = $username;
+			}
+		}
 
-	    return $displayName;
+		return $displayName;
 	}
 
 	public function overview () {
@@ -297,8 +302,14 @@ class SpecialUserJourney extends SpecialPage {
 //		$body = $pager->getBody();
 		$html = '';
 
-		$username = $this->getUser()->mName;
-		$displayName = self::getDisplayName();
+		$filterUser = $wgRequest->getVal( 'filterUser' );
+		if( $filterUser ){
+			$username = $filterUser;
+			$displayName = $filterUser; //TODO find way to display other user's real name
+		} else {
+			$username = $this->getUser()->mName;
+			$displayName = self::getDisplayName();
+		}
 
 	    $dbr = wfGetDB( DB_SLAVE );
 
@@ -533,8 +544,14 @@ class SpecialUserJourney extends SpecialPage {
 		// $body = $pager->getBody();
 		$html = '';
 
-		$username = $this->getUser()->mName;
-		$displayName = self::getDisplayName();
+		$filterUser = $wgRequest->getVal( 'filterUser' );
+		if( $filterUser ){
+			$username = $filterUser;
+			$displayName = $filterUser; //TODO find way to display other user's real name
+		} else {
+			$username = $this->getUser()->mName;
+			$displayName = self::getDisplayName();
+		}
 
 	    $dbr = wfGetDB( DB_SLAVE );
 
@@ -748,8 +765,14 @@ class SpecialUserJourney extends SpecialPage {
 		global $wgOut;
 		global $wgUJscoreDefinition;
 
-	    $username = $this->getUser()->mName;
-	    $displayName = self::getDisplayName();
+		$filterUser = $wgRequest->getVal( 'filterUser' );
+		if( $filterUser ){
+			$username = $filterUser;
+			$displayName = $filterUser; //TODO find way to display other user's real name
+		} else {
+		    $username = $this->getUser()->mName;
+		    $displayName = self::getDisplayName();
+		}
 
 		$wgOut->setPageTitle( "UserJourney: Activity Data for $displayName" );
 
@@ -806,8 +829,14 @@ class SpecialUserJourney extends SpecialPage {
 
 	    global $wgOut;
 
-	    $username = $this->getUser()->mName;
-		$displayName = self::getDisplayName();
+		$filterUser = $wgRequest->getVal( 'filterUser' );
+		if( $filterUser ){
+			$username = $filterUser;
+			$displayName = $filterUser; //TODO find way to display other user's real name
+		} else {
+		    $username = $this->getUser()->mName;
+			$displayName = self::getDisplayName();
+		}
 
 	    $wgOut->setPageTitle( "UserJourney: Activity Plot for $displayName" );
 
@@ -963,8 +992,14 @@ class SpecialUserJourney extends SpecialPage {
 		global $wgOut;
 		global $wgUJscoreDefinition;
 
-	    $username = $this->getUser()->mName;
-		$displayName = self::getDisplayName();
+		$filterUser = $wgRequest->getVal( 'filterUser' );
+		if( $filterUser ){
+			$username = $filterUser;
+			$displayName = $filterUser; //TODO find way to display other user's real name
+		} else {
+		    $username = $this->getUser()->mName;
+			$displayName = self::getDisplayName();
+		}
 
 	    $username2 = 'Ejmontal'; //Competitor
 	    $competitors = array( // TO-DO: move this array to where func it called and pass as parameter
