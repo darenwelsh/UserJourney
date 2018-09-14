@@ -72,11 +72,11 @@
 		"remoteExtPath": "UserJourney/modules"
 	},
 	"config": {
-		"wgUJscoreDefinition": "COUNT(DISTINCT rev_page) + SQRT( COUNT(rev_id) - COUNT(DISTINCT rev_page) ) * 2",
-		"wgUJscoreDefinitionUsingAliases": "page_count  + SQRT( rev_count - page_count ) * 2",
-		"wgUJscoreCeiling": 100,
-		"wgUJdaysToDetermineCompetitors": 14,
-		"wgUJdaysToPlotCompetition": 30
+		"UJscoreDefinition": "COUNT(DISTINCT rev_page) + SQRT( COUNT(rev_id) - COUNT(DISTINCT rev_page) ) * 2",
+		"UJscoreDefinitionUsingAliases": "page_count  + SQRT( rev_count - page_count ) * 2",
+		"UJscoreCeiling": 100,
+		"UJdaysToDetermineCompetitors": 14,
+		"UJdaysToPlotCompetition": 30
 	},
 	"manifest_version": 1
 }
