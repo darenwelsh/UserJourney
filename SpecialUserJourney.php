@@ -1199,7 +1199,7 @@ class SpecialUserJourney extends SpecialPage {
 
 	    // global $wgUJscoreCeiling;
 	    // $wgUJscoreCeiling was intended to be a cap for daily score. Until this query is revised, don't use.
-	    global $wgUJscoreDefinition, $wgUJnumPagesRevisedAlias, $wgUJnumRevisionsAlias, $wgUJscoreDefinitionUsingAliases;
+	    global $wgUJscoreDefinition, $wgUJscoreDefinitionUsingAliases;
 
 		$userTable = $dbr->tableName( 'user' );
 		// $userGroupTable = $dbr->tableName( 'user_groups' );
@@ -1212,14 +1212,14 @@ class SpecialUserJourney extends SpecialPage {
 			FROM
 				(SELECT user_id,
 					user_name,
-					{$wgUJnumPagesRevisedAlias},
-					{$wgUJnumRevisionsAlias},
+					page_count,
+					rev_count,
 					{$wgUJscoreDefinitionUsingAliases} AS score
 				FROM $userTable u
 				JOIN
 				(SELECT rev_user,
-					COUNT(DISTINCT rev_page) AS {$wgUJnumPagesRevisedAlias},
-					COUNT(rev_id) AS {$wgUJnumRevisionsAlias}
+					COUNT(DISTINCT rev_page) AS page_count,
+					COUNT(rev_id) AS rev_count
 					FROM $revTable
 					WHERE rev_id > 0
 		";
@@ -1244,7 +1244,7 @@ class SpecialUserJourney extends SpecialPage {
 
 		$commonQuery .= "
 				GROUP BY rev_user
-					ORDER BY {$wgUJnumPagesRevisedAlias} DESC
+					ORDER BY page_count DESC
 				) s ON user_id=rev_user
 		";
 
