@@ -503,7 +503,7 @@ class SpecialUserJourney extends SpecialPage {
 				list($category, $revisions) = array($row['category'], $row['count']);
 
 				$pageTitle = Title::newFromText( $category, NS_CATEGORY );
-				$pageURL = $this->getSkin()->link( $pageTitle );
+				$pageURL = Linker::link( $pageTitle);
 
 				$html .= "<li>{$pageURL} ({$revisions} revisions to pages in this category in this year)</li>";
 			}
@@ -705,7 +705,7 @@ class SpecialUserJourney extends SpecialPage {
 					ORDER BY count DESC";
 
 		$pageTitle = Title::newFromText( $catTitle, NS_CATEGORY );
-		$pageURL = $this->getSkin()->link( $pageTitle );
+		$pageURL = Linker::link( $pageTitle);
 
 		$res = $dbr->query( $sql );
 
@@ -1875,7 +1875,7 @@ class UserJourneyPager extends ReverseChronologicalPager {
 		if ( ! $pageTitle )
 			$page = $row->page_name; // if somehow still no page, just show text
 		else
-			$page = $this->getSkin()->link( $pageTitle );
+			$page = Linker::link( $pageTitle);
 
 
 		if ( $this->filterPage ) {
