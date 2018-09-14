@@ -1896,7 +1896,7 @@ class UserJourneyPager extends ReverseChronologicalPager {
 
 		if ( $row->referer_title ) {
 			$referer = Title::newFromText( $row->referer_title );
-			$referer = $this->getSkin()->link( $referer );
+			$referer = Linker::link( $referer );
 		}
 		else
 			$referer = '';
