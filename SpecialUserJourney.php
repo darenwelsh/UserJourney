@@ -248,6 +248,8 @@ class SpecialUserJourney extends SpecialPage {
 	}
 
 	public function getDisplayName () {
+		global $wgRequest;
+		
 		$filterUser = $wgRequest->getVal( 'filterUser' );
 		if( $filterUser ){
 			$displayName = $filterUser;
@@ -827,7 +829,7 @@ class SpecialUserJourney extends SpecialPage {
 		//DO-DO Adjust $queryDT - some have one parameter, others two
 		//TO-DO add dropdown menu to select groups (but hide Viewer and Contributor and any groups > x people )
 
-	    global $wgOut;
+	    global $wgOut, $wgRequest;
 
 		$filterUser = $wgRequest->getVal( 'filterUser' );
 		if( $filterUser ){
@@ -989,7 +991,7 @@ class SpecialUserJourney extends SpecialPage {
 	//instead of a plot.
 	public function compareScoreData() {
 
-		global $wgOut;
+		global $wgOut, $wgRequest;
 		global $wgUJscoreDefinition;
 
 		$filterUser = $wgRequest->getVal( 'filterUser' );
