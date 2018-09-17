@@ -14,6 +14,15 @@ class SpecialUserJourney extends SpecialPage {
 
 	function execute( $parser = null ) {
 		global $wgRequest, $wgOut;
+		
+		$filterUser = $wgRequest->getVal( 'filterUser' );
+		if( $filterUser ){
+			$username = $filterUser;
+			$displayName = $filterUser; //TODO find way to display other user's real name
+		} else {
+			$username = $this->getUser()->mName;
+			$displayName = self::getDisplayName();
+		}
 
 		list( $limit, $offset ) = $wgRequest->getLimitOffset();
 
@@ -75,7 +84,7 @@ class SpecialUserJourney extends SpecialPage {
 			// $this->compareActivityByPeers();
 
 			// Determine score of logged in user (based on $wgUJdaysToDetermineCompetitors number of days)
-		    $userRecentScore = $this->getUserScore( false, $this->defaultStartDate() );
+		    $userRecentScore = $this->getUserScore( $username, $this->defaultStartDate() );
 
 			// Determine users with relatively similar scores for the past $wgUJdaysToDetermineCompetitors
 			$competitors = $this->getCompetitorsByScore( $userRecentScore, false, $this->defaultStartDate(), false, 4, 2 );
@@ -1230,13 +1239,25 @@ class SpecialUserJourney extends SpecialPage {
 	*/
 	function getCompetitorsByScore( $score = 0, $ignoreUsers = false, $startDate = false, $endDate = false, $numHigher = 3, $numLower = 2 ){
 
+		// global $wgUJscoreCeiling;
+		// $wgUJscoreCeiling was intended to be a cap for daily score. Until this query is revised, don't use.
+		global $wgUJscoreDefinition, $wgUJscoreDefinitionUsingAliases, $wgRequest;
+		
 		$competitors = array();
 
 		$dbr = wfGetDB( DB_SLAVE );
 
-	    // global $wgUJscoreCeiling;
-	    // $wgUJscoreCeiling was intended to be a cap for daily score. Until this query is revised, don't use.
-	    global $wgUJscoreDefinition, $wgUJscoreDefinitionUsingAliases;
+                $filterUser = $wgRequest->getVal( 'filterUser' );
+                if( $filterUser ){
+                        $username = $filterUser;
+                        $displayName = $filterUser; //TODO find way to display other user's real name
+                } else {
+                        $username = $this->getUser()->mName;
+                        $displayName = self::getDisplayName();
+                }
+
+		$competitors[] = "$username";
+
 
 		$userTable = $dbr->tableName( 'user' );
 		// $userGroupTable = $dbr->tableName( 'user_groups' );
