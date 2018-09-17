@@ -1309,14 +1309,16 @@ class SpecialUserJourney extends SpecialPage {
 	    $sql = "
 	    	{$commonQuery}
 	    	ORDER BY score ASC ) t1
-				WHERE score >= {$score}
-				LIMIT {$numHigher} )
-				UNION
-				{$commonQuery}
-				ORDER BY score DESC ) t2
-				WHERE score < {$score}
-				LIMIT {$numLower} )
-				ORDER BY score DESC
+		WHERE score >= {$score}
+		ORDER BY score ASC
+		LIMIT {$numHigher})
+		UNION
+		{$commonQuery}
+		ORDER BY score DESC ) t2
+		WHERE score < {$score}
+		ORDER BY score DESC
+		LIMIT {$numLower} )
+		ORDER BY score DESC
 	    ";
 
 
