@@ -76,7 +76,13 @@
 		"UJscoreDefinitionUsingAliases": "page_count  + SQRT( rev_count - page_count ) * 2",
 		"UJscoreCeiling": 100,
 		"UJdaysToDetermineCompetitors": 40,
-		"UJdaysToPlotCompetition": 60
+		"UJdaysToPlotCompetition": 60,
+		"UJgroupsToCompare": [
+			"FOD_EVA",
+			"ROBO",
+			"OSO",
+			"Crew_Systems"
+			]
 	},
 	"manifest_version": 1
 }
