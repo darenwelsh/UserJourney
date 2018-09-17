@@ -119,16 +119,25 @@ class SpecialUserJourney extends SpecialPage {
 		}
 		else if ( $this->mMode == 'compare-activity-between-groups' ){
 
-			$comparatesArray = array(
-				'CX32' => array(
-					'competitor' => $this->getMembersOfGroup('CX32'),
-					'valueType'  => 'score'
-					),
-				'CX35' => array(
-					'competitor' => $this->getMembersOfGroup('CX35'),
-					'valueType'  => 'score'
-					),
-			);
+// 			$comparatesArray = array(
+// 				'CX32' => array(
+// 					'competitor' => $this->getMembersOfGroup('CX32'),
+// 					'valueType'  => 'score'
+// 					),
+// 				'CX35' => array(
+// 					'competitor' => $this->getMembersOfGroup('CX35'),
+// 					'valueType'  => 'score'
+// 					),
+// 			);
+			
+			global $wgUJgroupsToCompare;
+			$comparatesArray = array();
+			foreach( $wgUJgroupsToCompare as $group ){
+				$comparatesArray["$group"] = array(
+					'competitor'	=> $this->getMembersOfGroup("$group"),
+					'valueType'	=> 'score'
+					);
+			}
 
 			// $this->compare( $comparatesArray, 20150819000000, false );
 			$this->compare( $comparatesArray, false, false );
