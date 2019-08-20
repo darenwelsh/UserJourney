@@ -247,7 +247,7 @@ class SpecialUserJourney extends SpecialPage {
 		$html .= " That would be a time savings of {$userHoursSavedEstimate} hours!";
 		$html .= "</p>";
 
-		$html .= "<h2>History Overivew</h2>";
+		$html .= "<h2>History Overview</h2>";
 
 		// Query for revisions and pages grouped by year
 		$sql = "SELECT
