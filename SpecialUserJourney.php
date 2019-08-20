@@ -766,6 +766,7 @@ class SpecialUserJourney extends SpecialPage {
 
 		global $wgOut;
 		global $wgUJscoreDefinition;
+		global $wgRequest;
 
 		$filterUser = $wgRequest->getVal( 'filterUser' );
 		if( $filterUser ){
